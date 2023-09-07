@@ -1,5 +1,5 @@
 [workspace]
-members = ["junowen", "th19-seed"]
+members = ["junowen", "th19seed"]
 default-members = ["junowen"]
 resolver = "2"
 

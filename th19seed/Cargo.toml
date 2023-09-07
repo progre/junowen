@@ -1,5 +1,5 @@
 [package]
-name = "th19-seed"
+name = "th19seed"
 version.workspace = true
 edition = "2021"
 
