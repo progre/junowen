@@ -1,2 +1,11 @@
 [workspace]
-members = ["th19-seed"]
+members = ["junowen", "th19-seed"]
+default-members = ["junowen"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+authors = ["Progre"]
+
+[workspace.dependencies]
+anyhow = { version = "1.0.75", features = ["backtrace"] }

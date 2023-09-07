@@ -1,10 +1,8 @@
-mod memory_accessors;
-
 use std::env::args;
 
 use anyhow::Result;
 
-use memory_accessors::{ExternalProcess, MemoryAccessor};
+use junowen::memory_accessors::{ExternalProcess, MemoryAccessor};
 
 struct Th19<T>
 where
