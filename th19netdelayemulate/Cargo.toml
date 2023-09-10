@@ -1,0 +1,8 @@
+[package]
+name = "th19netdelayemulate"
+version.workspace = true
+edition = "2021"
+
+[dependencies]
+anyhow.workspace = true
+junowen = { path = "../junowen" }

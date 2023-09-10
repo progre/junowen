@@ -11,14 +11,16 @@ use windows::Win32::{
     System::{Console::AllocConsole, SystemServices::DLL_PROCESS_ATTACH},
 };
 
+static mut TH19: Option<Th19> = None;
+static mut STATE: Option<State> = None;
+
 struct State {
-    th19: Th19,
     original_fn_0a9000: usize,
     buttons: Vec<Vec<SimpleVertex>>,
 }
 
 impl State {
-    fn new(th19: Th19, original_fn_0a9000: usize) -> Self {
+    fn new(original_fn_0a9000: usize) -> Self {
         let mut buttons = Vec::new();
         let mut i = 0;
         let mut color = 0xffff2800;
@@ -41,7 +43,6 @@ impl State {
         }
 
         Self {
-            th19,
             original_fn_0a9000,
             buttons,
         }
@@ -56,7 +57,9 @@ struct SimpleVertex {
     _color: u32,
 }
 
-static mut STATE: Option<State> = None;
+fn th19() -> &'static Th19 {
+    unsafe { TH19.as_ref().unwrap() }
+}
 
 fn state() -> &'static State {
     unsafe { STATE.as_ref().unwrap() }
@@ -113,7 +116,7 @@ extern "fastcall" fn hook_0a9000(arg1: i32) {
     let func: Func = unsafe { transmute(state.original_fn_0a9000) };
     func(arg1);
 
-    let th19 = &state.th19;
+    let th19 = th19();
     let p1 = th19.p1_input().unwrap();
     let p2 = th19.p2_input().unwrap();
 
@@ -160,7 +163,8 @@ pub extern "stdcall" fn DllMain(
         }
         let th19 = Th19::new_hooked_process("th19.exe").unwrap();
         let original_fn_0a9000 = th19.hook_0a96b5(hook_0a9000 as _).unwrap();
-        unsafe { STATE = Some(State::new(th19, original_fn_0a9000)) };
+        unsafe { TH19 = Some(th19) };
+        unsafe { STATE = Some(State::new(original_fn_0a9000)) };
     }
     true
 }

@@ -22,6 +22,16 @@ impl MemoryAccessor {
         self.write(addr, &value.to_le_bytes())
     }
 
+    pub fn read_u32(&self, addr: usize) -> Result<u32> {
+        let mut buffer = [0; 4];
+        self.read(addr, &mut buffer)?;
+        Ok(u32::from_le_bytes(buffer))
+    }
+
+    pub fn write_u32(&self, addr: usize, value: u32) -> Result<()> {
+        self.write(addr, &value.to_le_bytes())
+    }
+
     fn read(&self, addr: usize, buffer: &mut [u8]) -> Result<()> {
         match self {
             MemoryAccessor::ExternalProcess(accessor) => accessor.read(addr, buffer),

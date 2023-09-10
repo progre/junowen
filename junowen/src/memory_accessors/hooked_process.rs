@@ -1,16 +1,13 @@
 use std::{ffi::c_void, mem::size_of};
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use windows::{
-    core::{Interface, HSTRING},
-    Win32::{
-        Graphics::Direct3D9::IDirect3DDevice9,
-        System::{
-            LibraryLoader::GetModuleHandleW,
-            Memory::{VirtualProtect, PAGE_PROTECTION_FLAGS},
-            ProcessStatus::{GetModuleInformation, MODULEINFO},
-            Threading::GetCurrentProcess,
-        },
+    core::HSTRING,
+    Win32::System::{
+        LibraryLoader::GetModuleHandleW,
+        Memory::{VirtualProtect, PAGE_PROTECTION_FLAGS},
+        ProcessStatus::{GetModuleInformation, MODULEINFO},
+        Threading::GetCurrentProcess,
     },
 };
 
@@ -47,13 +44,8 @@ impl HookedProcess {
         unsafe { ((self.base_addr + addr) as *mut u8).copy_from(buffer.as_ptr(), buffer.len()) };
     }
 
-    pub fn as_direct_3d_device(&self, address: usize) -> Result<&'static IDirect3DDevice9> {
-        unsafe {
-            IDirect3DDevice9::from_raw_borrowed(
-                &*((self.base_addr + address) as *const *mut c_void),
-            )
-        }
-        .ok_or_else(|| anyhow!("IDirect3DDevice9::from_raw_borrowed failed"))
+    pub fn raw_ptr(&self, addr: usize) -> *const c_void {
+        (self.base_addr + addr) as *const c_void
     }
 
     pub fn virtual_protect(
@@ -67,7 +59,7 @@ impl HookedProcess {
         Ok(old)
     }
 
-    pub fn hook_func(&self, addr: usize, target: usize) -> usize {
+    pub fn hook_call(&self, addr: usize, target: usize) -> usize {
         let addr = self.base_addr + addr;
 
         let jump_base_addr = addr + 5;
@@ -75,5 +67,31 @@ impl HookedProcess {
         let old = (jump_base_addr as i64 + unsafe { *jump_ref_addr } as i64) as usize;
         unsafe { *jump_ref_addr = (target as i64 - jump_base_addr as i64) as i32 };
         old
+    }
+
+    pub fn hook_assembly(&self, addr: usize, capacity: usize, target: usize) {
+        if capacity < 9 {
+            panic!("capacity must be at least 9");
+        }
+        let mut addr = (self.base_addr + addr) as *mut u8;
+        unsafe { *addr = 0x51 }; // push ecx
+        addr = addr.wrapping_add(1);
+        unsafe { *addr = 0x52 }; // push edx
+        addr = addr.wrapping_add(1);
+
+        let jump_base_addr = addr.wrapping_add(5) as u32;
+        let jump_ref_addr = addr.wrapping_add(1) as *mut i32;
+        unsafe { *addr = 0xe8 };
+        unsafe { *jump_ref_addr = (target as i64 - jump_base_addr as i64) as i32 };
+        addr = addr.wrapping_add(5);
+
+        unsafe { *addr = 0x5a }; // pop edx
+        addr = addr.wrapping_add(1);
+        unsafe { *addr = 0x59 }; // pop ecx
+        addr = addr.wrapping_add(1);
+
+        for i in 0..(capacity - 9) {
+            unsafe { *addr.wrapping_add(i) = 0x90 }; // nop
+        }
     }
 }

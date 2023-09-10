@@ -1,5 +1,12 @@
 [workspace]
-members = ["junowen", "th19padlight", "th19padlight-hook", "th19seed"]
+members = [
+  "junowen",
+  "th19netdelayemulate",
+  "th19netdelayemulate-hook",
+  "th19padlight",
+  "th19padlight-hook",
+  "th19seed"
+]
 default-members = ["junowen"]
 resolver = "2"
 
