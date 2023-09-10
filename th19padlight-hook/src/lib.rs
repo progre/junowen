@@ -4,7 +4,8 @@ use std::{
     mem::{size_of, transmute},
 };
 
-use junowen::{memory_accessors::HookedProcess, Th19};
+use anyhow::Result;
+use junowen::Th19;
 use windows::Win32::{
     Foundation::HINSTANCE,
     Graphics::Direct3D9::{D3DFVF_DIFFUSE, D3DFVF_XYZRHW, D3DPT_TRIANGLEFAN},
@@ -12,16 +13,16 @@ use windows::Win32::{
 };
 
 struct State {
-    th19: Th19<HookedProcess>,
+    th19: Th19,
     original_fn_0a9000: usize,
     buttons: Vec<Vec<SimpleVertex>>,
 }
 
 impl State {
-    fn new() -> Self {
-        let th19 = Th19::new(HookedProcess::new("th19.exe").unwrap());
+    fn new() -> Result<Self> {
+        let th19 = Th19::new_hooked_process("th19.exe")?;
         let original_fn_0a9000 = unsafe { th19.hook_0a96b5(hook_0a9000 as _) }.unwrap();
-        let mut buttons = Vec::<Vec<SimpleVertex>>::new();
+        let mut buttons = Vec::new();
         let mut i = 0;
         let mut color = 0xffff2800;
         for _ in 0..2 {
@@ -42,11 +43,11 @@ impl State {
             color = 0xff66ccff;
         }
 
-        Self {
+        Ok(Self {
             th19,
             original_fn_0a9000,
             buttons,
-        }
+        })
     }
 }
 
@@ -160,7 +161,7 @@ pub extern "stdcall" fn DllMain(
         if cfg!(debug_assertions) {
             unsafe { AllocConsole() }.unwrap();
         }
-        unsafe { STATE = Some(State::new()) };
+        unsafe { STATE = Some(State::new().unwrap()) };
     }
     true
 }

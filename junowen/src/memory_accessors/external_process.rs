@@ -3,10 +3,8 @@ use std::{ffi::c_void, mem::size_of};
 use anyhow::{anyhow, bail, Result};
 use windows::Win32::{
     Foundation::{CloseHandle, FALSE, HANDLE, HMODULE, MAX_PATH},
-    Graphics::Direct3D9::IDirect3DDevice9,
     System::{
         Diagnostics::Debug::{ReadProcessMemory, WriteProcessMemory},
-        Memory::PAGE_PROTECTION_FLAGS,
         ProcessStatus::{EnumProcessModules, GetModuleBaseNameA},
         Threading::{
             OpenProcess, PROCESS_QUERY_INFORMATION, PROCESS_VM_OPERATION, PROCESS_VM_READ,
@@ -16,8 +14,6 @@ use windows::Win32::{
 };
 
 use crate::find_process_id::find_process_id;
-
-use super::MemoryAccessor;
 
 fn find_base_module(process: HANDLE, exe_file: &str) -> Result<HMODULE> {
     let mut modules = [HMODULE::default(); 1024];
@@ -69,10 +65,8 @@ impl ExternalProcess {
             base_module,
         })
     }
-}
 
-impl MemoryAccessor for ExternalProcess {
-    fn read(&self, addr: usize, buffer: &mut [u8]) -> Result<()> {
+    pub fn read(&self, addr: usize, buffer: &mut [u8]) -> Result<()> {
         let mut number_of_bytes_read: usize = 0;
         unsafe {
             ReadProcessMemory(
@@ -89,7 +83,7 @@ impl MemoryAccessor for ExternalProcess {
         Ok(())
     }
 
-    fn write(&self, addr: usize, buffer: &[u8]) -> Result<()> {
+    pub fn write(&self, addr: usize, buffer: &[u8]) -> Result<()> {
         let mut number_of_bytes_written: usize = 0;
         unsafe {
             WriteProcessMemory(
@@ -104,23 +98,6 @@ impl MemoryAccessor for ExternalProcess {
             bail!("WriteProcessMemory failed");
         }
         Ok(())
-    }
-
-    fn as_direct_3d_device(&self, _addr: usize) -> Result<&'static IDirect3DDevice9> {
-        unimplemented!()
-    }
-
-    unsafe fn virtual_protect(
-        &self,
-        _addr: usize,
-        _size: usize,
-        _protect: PAGE_PROTECTION_FLAGS,
-    ) -> Result<PAGE_PROTECTION_FLAGS> {
-        unimplemented!()
-    }
-
-    unsafe fn hook_func(&self, _addr: usize, _target: usize) -> usize {
-        unimplemented!()
     }
 }
 
