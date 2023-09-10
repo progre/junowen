@@ -39,14 +39,12 @@ impl HookedProcess {
         })
     }
 
-    pub fn read(&self, addr: usize, buffer: &mut [u8]) -> Result<()> {
+    pub fn read(&self, addr: usize, buffer: &mut [u8]) {
         unsafe { ((self.base_addr + addr) as *mut u8).copy_to(buffer.as_mut_ptr(), buffer.len()) };
-        Ok(())
     }
 
-    pub fn write(&self, addr: usize, buffer: &[u8]) -> Result<()> {
+    pub fn write(&self, addr: usize, buffer: &[u8]) {
         unsafe { ((self.base_addr + addr) as *mut u8).copy_from(buffer.as_ptr(), buffer.len()) };
-        Ok(())
     }
 
     pub fn as_direct_3d_device(&self, address: usize) -> Result<&'static IDirect3DDevice9> {

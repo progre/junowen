@@ -37,8 +37,7 @@ impl Th19 {
         })
     }
 
-    /// # Safety
-    pub unsafe fn hook_0a96b5(&self, target: usize) -> Result<usize> {
+    pub fn hook_0a96b5(&self, target: usize) -> Result<usize> {
         let MemoryAccessor::HookedProcess(memory_accessor) = &self.memory_accessor else {
             bail!("Th19::hook_0a96b5 is only available for HookedProcess");
         };

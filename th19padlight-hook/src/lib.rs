@@ -4,7 +4,6 @@ use std::{
     mem::{size_of, transmute},
 };
 
-use anyhow::Result;
 use junowen::Th19;
 use windows::Win32::{
     Foundation::HINSTANCE,
@@ -19,9 +18,7 @@ struct State {
 }
 
 impl State {
-    fn new() -> Result<Self> {
-        let th19 = Th19::new_hooked_process("th19.exe")?;
-        let original_fn_0a9000 = unsafe { th19.hook_0a96b5(hook_0a9000 as _) }.unwrap();
+    fn new(th19: Th19, original_fn_0a9000: usize) -> Self {
         let mut buttons = Vec::new();
         let mut i = 0;
         let mut color = 0xffff2800;
@@ -43,11 +40,11 @@ impl State {
             color = 0xff66ccff;
         }
 
-        Ok(Self {
+        Self {
             th19,
             original_fn_0a9000,
             buttons,
-        })
+        }
     }
 }
 
@@ -161,7 +158,9 @@ pub extern "stdcall" fn DllMain(
         if cfg!(debug_assertions) {
             unsafe { AllocConsole() }.unwrap();
         }
-        unsafe { STATE = Some(State::new().unwrap()) };
+        let th19 = Th19::new_hooked_process("th19.exe").unwrap();
+        let original_fn_0a9000 = th19.hook_0a96b5(hook_0a9000 as _).unwrap();
+        unsafe { STATE = Some(State::new(th19, original_fn_0a9000)) };
     }
     true
 }

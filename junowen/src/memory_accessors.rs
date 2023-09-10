@@ -25,14 +25,20 @@ impl MemoryAccessor {
     fn read(&self, addr: usize, buffer: &mut [u8]) -> Result<()> {
         match self {
             MemoryAccessor::ExternalProcess(accessor) => accessor.read(addr, buffer),
-            MemoryAccessor::HookedProcess(accessor) => accessor.read(addr, buffer),
+            MemoryAccessor::HookedProcess(accessor) => {
+                accessor.read(addr, buffer);
+                Ok(())
+            }
         }
     }
 
     fn write(&self, addr: usize, buffer: &[u8]) -> Result<()> {
         match self {
             MemoryAccessor::ExternalProcess(accessor) => accessor.write(addr, buffer),
-            MemoryAccessor::HookedProcess(accessor) => accessor.write(addr, buffer),
+            MemoryAccessor::HookedProcess(accessor) => {
+                accessor.write(addr, buffer);
+                Ok(())
+            }
         }
     }
 }
