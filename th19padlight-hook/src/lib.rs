@@ -155,7 +155,7 @@ extern "fastcall" fn hook_0a9000(arg1: i32) {
 pub extern "stdcall" fn DllMain(_inst_dll: HINSTANCE, reason: u32, _reserved: u32) -> bool {
     if reason == DLL_PROCESS_ATTACH {
         if cfg!(debug_assertions) {
-            unsafe { AllocConsole() }.unwrap();
+            let _ = unsafe { AllocConsole() };
         }
         let th19 = Th19::new_hooked_process("th19.exe").unwrap();
         let original_fn_0a9000 = th19.hook_0a9540_0175(hook_0a9000).unwrap();

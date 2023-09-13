@@ -129,7 +129,7 @@ pub extern "stdcall" fn DllMain(_inst_dll: HINSTANCE, reason: u32, _reserved: u3
     match reason {
         DLL_PROCESS_ATTACH => {
             if cfg!(debug_assertions) {
-                unsafe { AllocConsole() }.unwrap();
+                let _ = unsafe { AllocConsole() };
             }
 
             let dll_instance = load_library("d3d9.dll");

@@ -104,7 +104,7 @@ fn init_interprecess(tx: mpsc::Sender<i8>) {
 pub extern "stdcall" fn DllMain(_inst_dll: HINSTANCE, reason: u32, _reserved: u32) -> bool {
     if reason == DLL_PROCESS_ATTACH {
         if cfg!(debug_assertions) {
-            unsafe { AllocConsole() }.unwrap();
+            let _ = unsafe { AllocConsole() };
         }
         let th19 = Th19::new_hooked_process("th19.exe").unwrap();
         th19.hook_0aba30_00fb(hook_0abb2b).unwrap();
