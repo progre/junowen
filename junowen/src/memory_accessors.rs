@@ -32,7 +32,7 @@ impl MemoryAccessor {
         self.write(addr, &value.to_le_bytes())
     }
 
-    fn read(&self, addr: usize, buffer: &mut [u8]) -> Result<()> {
+    pub fn read(&self, addr: usize, buffer: &mut [u8]) -> Result<()> {
         match self {
             MemoryAccessor::ExternalProcess(accessor) => accessor.read(addr, buffer),
             MemoryAccessor::HookedProcess(accessor) => {
@@ -42,7 +42,7 @@ impl MemoryAccessor {
         }
     }
 
-    fn write(&self, addr: usize, buffer: &[u8]) -> Result<()> {
+    pub fn write(&self, addr: usize, buffer: &[u8]) -> Result<()> {
         match self {
             MemoryAccessor::ExternalProcess(accessor) => accessor.write(addr, buffer),
             MemoryAccessor::HookedProcess(accessor) => {

@@ -152,11 +152,7 @@ extern "fastcall" fn hook_0a9000(arg1: i32) {
 }
 
 #[no_mangle]
-pub extern "stdcall" fn DllMain(
-    _inst_dll: HINSTANCE,
-    reason: u32,
-    _reserved: *const c_void,
-) -> bool {
+pub extern "stdcall" fn DllMain(_inst_dll: HINSTANCE, reason: u32, _reserved: u32) -> bool {
     if reason == DLL_PROCESS_ATTACH {
         if cfg!(debug_assertions) {
             unsafe { AllocConsole() }.unwrap();

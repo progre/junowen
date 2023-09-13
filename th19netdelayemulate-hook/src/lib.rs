@@ -1,10 +1,4 @@
-use std::{
-    cmp::Ordering,
-    ffi::{c_void, OsStr},
-    io::Read,
-    sync::mpsc,
-    thread::spawn,
-};
+use std::{cmp::Ordering, ffi::OsStr, io::Read, sync::mpsc, thread::spawn};
 
 use bytes::{Buf, BufMut, BytesMut};
 use interprocess::os::windows::named_pipe::{ByteReaderPipeStream, PipeListenerOptions, PipeMode};
@@ -107,11 +101,7 @@ fn init_interprecess(tx: mpsc::Sender<i8>) {
 }
 
 #[no_mangle]
-pub extern "stdcall" fn DllMain(
-    _inst_dll: HINSTANCE,
-    reason: u32,
-    _reserved: *const c_void,
-) -> bool {
+pub extern "stdcall" fn DllMain(_inst_dll: HINSTANCE, reason: u32, _reserved: u32) -> bool {
     if reason == DLL_PROCESS_ATTACH {
         if cfg!(debug_assertions) {
             unsafe { AllocConsole() }.unwrap();

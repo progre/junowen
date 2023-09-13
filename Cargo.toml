@@ -1,11 +1,13 @@
 [workspace]
 members = [
   "junowen",
+  "th19loader",
   "th19netdelayemulate",
   "th19netdelayemulate-hook",
   "th19padlight",
   "th19padlight-hook",
-  "th19seed"
+  "th19savesettingsseparately",
+  "th19seed",
 ]
 default-members = ["junowen"]
 resolver = "2"
