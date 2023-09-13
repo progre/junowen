@@ -28,6 +28,7 @@ impl MemoryAccessor {
         Ok(u32::from_le_bytes(buffer))
     }
 
+    #[allow(unused)]
     pub fn write_u32(&self, addr: usize, value: u32) -> Result<()> {
         self.write(addr, &value.to_le_bytes())
     }

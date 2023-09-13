@@ -107,7 +107,7 @@ pub extern "stdcall" fn DllMain(_inst_dll: HINSTANCE, reason: u32, _reserved: u3
             unsafe { AllocConsole() }.unwrap();
         }
         let th19 = Th19::new_hooked_process("th19.exe").unwrap();
-        th19.hook_0abb2b(hook_0abb2b as _).unwrap();
+        th19.hook_0aba30_00fb(hook_0abb2b).unwrap();
         let (tx, rx) = mpsc::channel();
         init_interprecess(tx);
         unsafe {

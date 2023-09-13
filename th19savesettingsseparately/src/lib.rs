@@ -111,12 +111,10 @@ pub extern "C" fn CheckVersion(hash: *const u8, length: usize) -> bool {
 pub extern "C" fn Initialize(_direct_3d: *const IDirect3D9) -> bool {
     let th19 = Th19::new_hooked_process("th19.exe").unwrap();
     let original_fn_from_13fe16 = th19
-        .hook_13fe16(post_read_battle_settings_from_menu_to_game as _)
+        .hook_13f9d0_0446(post_read_battle_settings_from_menu_to_game)
         .unwrap();
-    let original_fn_from_107540_0046 = th19.hook_107540_0046(on_open_settings_editor as _).unwrap();
-    let original_fn_from_107540_0937 = th19
-        .hook_107540_0937(on_close_settings_editor as _)
-        .unwrap();
+    let original_fn_from_107540_0046 = th19.hook_107540_0046(on_open_settings_editor).unwrap();
+    let original_fn_from_107540_0937 = th19.hook_107540_0937(on_close_settings_editor).unwrap();
     unsafe {
         PROP = Some(Prop::new(
             th19,
