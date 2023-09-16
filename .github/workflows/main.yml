@@ -12,23 +12,25 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/cache@v3
         with:
-          path: ~/.cargo/registry
-          key: cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions/cache@v3
-        with:
           path: ~/.cargo/git
           key: cargo-index-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: cargo-registry-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions/cache@v3
         with:
           path: target
           key: cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
       - shell: bash
-        run: rustup target add i686-pc-windows-msvc
-      - shell: bash
-        run: cargo build --release --workspace
-      - shell: bash
         run: |
-          mkdir artifact
+          rustup default nightly
+          rustup target add i686-pc-windows-msvc
+          cargo build --release --workspace
+          mkdir --parents artifact/modules
+          mv \
+            ./target/i686-pc-windows-msvc/release/th19_*.dll \
+            ./artifact/modules/
           mv \
             ./target/i686-pc-windows-msvc/release/*.dll \
             ./target/i686-pc-windows-msvc/release/*.exe \
@@ -45,7 +47,7 @@ jobs:
       - uses: actions/download-artifact@v2
         name: artifact
       - run: |
-          zip --junk-paths release ./artifact/*
+          zip --junk-paths release ./artifact/**/*
       - id: create_release
         uses: actions/create-release@v1
         env:
