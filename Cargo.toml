@@ -6,6 +6,9 @@ members = [
   "th19netdelayemulate-hook",
   "th19padlight",
   "th19padlight-hook",
+  "th19replayplayer",
+  "th19replayplayer-hook",
+  "th19replayrecorder",
   "th19savesettingsseparately",
   "th19seed",
 ]

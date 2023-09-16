@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, ffi::OsStr, io::Read, sync::mpsc, thread::spawn};
+use std::{cmp::Ordering, ffi::OsStr, io::Read, mem::transmute, sync::mpsc, thread::spawn};
 
 use bytes::{Buf, BufMut, BytesMut};
 use interprocess::os::windows::named_pipe::{ByteReaderPipeStream, PipeListenerOptions, PipeMode};
@@ -7,11 +7,16 @@ use windows::Win32::{
     System::{Console::AllocConsole, SystemServices::DLL_PROCESS_ATTACH},
 };
 
-use junowen::Th19;
+use junowen::{Input, Th19};
 
-static mut TH19: Option<Th19> = None;
+static mut PROPS: Option<Props> = None;
 static mut STATE: Option<State> = None;
-static mut NEW_DELAY_RECIEVER: Option<mpsc::Receiver<i8>> = None;
+
+struct Props {
+    th19: Th19,
+    original_fn_from_0aba30_00fb: Option<usize>,
+    new_delay_receiver: mpsc::Receiver<i8>,
+}
 
 struct State {
     p1_buffer: BytesMut,
@@ -27,25 +32,21 @@ impl State {
     }
 }
 
-fn th19() -> &'static Th19 {
-    unsafe { TH19.as_ref().unwrap() }
+fn props() -> &'static Props {
+    unsafe { PROPS.as_ref().unwrap() }
 }
 
 fn state_mut() -> &'static mut State {
     unsafe { STATE.as_mut().unwrap() }
 }
 
-fn new_delay_receiver() -> &'static mpsc::Receiver<i8> {
-    unsafe { NEW_DELAY_RECIEVER.as_ref().unwrap() }
-}
-
 extern "fastcall" fn hook_0abb2b() -> u32 {
-    let th19 = th19();
+    let th19 = &props().th19;
     let state = state_mut();
 
     let input = th19.input_mut();
 
-    let new_delay_receiver = new_delay_receiver();
+    let new_delay_receiver = &props().new_delay_receiver;
     if let Ok(delay) = new_delay_receiver.try_recv() {
         let old_delay = state.p1_buffer.len() / 4;
         println!("old delay: {}, new delay: {}", old_delay, delay);
@@ -66,22 +67,25 @@ extern "fastcall" fn hook_0abb2b() -> u32 {
         }
     }
 
-    let p1_idx = input.p1_input_idx;
     if !state.p1_buffer.is_empty() {
-        let old_p1 = state.p1_buffer.get_u32();
-        let p1 = input.input_device_array[p1_idx as usize].input;
-        input.input_device_array[p1_idx as usize].input = old_p1;
-        state.p1_buffer.put_u32(p1);
+        let old_p1 = Input(state.p1_buffer.get_u32());
+        let p1 = input.p1_input();
+        input.set_p1_input(old_p1);
+        state.p1_buffer.put_u32(p1.0);
 
-        let p2_idx = input.p2_input_idx;
-        let old_p2 = state.p2_buffer.get_u32();
-        let p2 = input.input_device_array[p2_idx as usize].input;
-        input.input_device_array[p2_idx as usize].input = old_p2;
-        state.p2_buffer.put_u32(p2);
+        let old_p2 = Input(state.p2_buffer.get_u32());
+        let p2 = input.p2_input();
+        input.set_p2_input(old_p2);
+        state.p2_buffer.put_u32(p2.0);
     }
 
-    // p1 の入力を返す
-    input.input_device_array[p1_idx as usize].input
+    if let Some(func) = props().original_fn_from_0aba30_00fb {
+        type Func = fn() -> u32;
+        let func: Func = unsafe { transmute(func) };
+        func()
+    } else {
+        input.p1_input().0 // p1 の入力を返す
+    }
 }
 
 fn init_interprecess(tx: mpsc::Sender<i8>) {
@@ -107,13 +111,16 @@ pub extern "stdcall" fn DllMain(_inst_dll: HINSTANCE, reason: u32, _reserved: u3
             let _ = unsafe { AllocConsole() };
         }
         let th19 = Th19::new_hooked_process("th19.exe").unwrap();
-        th19.hook_0aba30_00fb(hook_0abb2b).unwrap();
+        let original_fn_from_0aba30_00fb = th19.hook_0aba30_00fb(hook_0abb2b).unwrap();
         let (tx, rx) = mpsc::channel();
         init_interprecess(tx);
         unsafe {
-            TH19 = Some(th19);
+            PROPS = Some(Props {
+                th19,
+                original_fn_from_0aba30_00fb,
+                new_delay_receiver: rx,
+            });
             STATE = Some(State::new());
-            NEW_DELAY_RECIEVER = Some(rx);
         }
     }
     true

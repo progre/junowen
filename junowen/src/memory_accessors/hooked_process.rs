@@ -69,7 +69,7 @@ impl HookedProcess {
         old
     }
 
-    pub fn hook_assembly(&self, addr: usize, capacity: usize, target: usize) {
+    pub fn hook_assembly(&self, addr: usize, capacity: usize, target: usize) -> Option<usize> {
         if capacity < 9 {
             panic!("capacity must be at least 9");
         }
@@ -79,8 +79,13 @@ impl HookedProcess {
         unsafe { *addr = 0x52 }; // push edx
         addr = addr.wrapping_add(1);
 
+        // call target
         let jump_base_addr = addr.wrapping_add(5) as u32;
         let jump_ref_addr = addr.wrapping_add(1) as *mut i32;
+        let mut old = None;
+        if unsafe { *addr } == 0xe8 {
+            old = Some((jump_base_addr as i64 + unsafe { *jump_ref_addr } as i64) as usize);
+        }
         unsafe { *addr = 0xe8 };
         unsafe { *jump_ref_addr = (target as i64 - jump_base_addr as i64) as i32 };
         addr = addr.wrapping_add(5);
@@ -93,5 +98,7 @@ impl HookedProcess {
         for i in 0..(capacity - 9) {
             unsafe { *addr.wrapping_add(i) = 0x90 }; // nop
         }
+
+        old
     }
 }

@@ -18,7 +18,7 @@ pub extern "thiscall" fn post_read_battle_settings_from_menu_to_game(
         .or_else(|_| prop.th19.battle_settings_in_menu())
         .unwrap();
     prop.th19
-        .set_battle_settings_in_game(&battle_settings)
+        .put_battle_settings_in_game(&battle_settings)
         .unwrap();
 
     func(this, arg1)

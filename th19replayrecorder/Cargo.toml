@@ -1,17 +1,21 @@
 [package]
-name = "junowen"
+name = "th19replayrecorder"
 version.workspace = true
 edition = "2021"
 
+[lib]
+crate-type = ['cdylib']
+name = "th19_replayrecorder"
+
 [dependencies]
 anyhow.workspace = true
-getset = "0.1.2"
+bytes = "1.5.0"
+chrono = "0.4.30"
+junowen = { path = "../junowen" }
+th19replayplayer = { path = "../th19replayplayer" }
 windows = { version = "0.51.1", features = [
   "Win32_Foundation",
   "Win32_Graphics_Direct3D9",
-  "Win32_Graphics_Gdi",
-  "Win32_Security",
-  "Win32_Storage_FileSystem",
   "Win32_System_Console",
   "Win32_System_Diagnostics_Debug",
   "Win32_System_Diagnostics_ToolHelp",

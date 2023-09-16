@@ -1,21 +1,61 @@
 use std::mem::transmute;
 
 use anyhow::{bail, Result};
+use getset::{CopyGetters, Setters};
 
-#[repr(C)]
-pub struct InputDevice {
-    pub input: u32,
-    _unknown2: [u8; 0x3d0],
+#[derive(Clone, Copy, PartialEq)]
+pub struct Input(pub u32);
+
+impl Input {
+    pub const NULL:  /*-*/u32 = 0b00000000_00000000;
+    pub const SHOT:  /*-*/u32 = 0b00000000_00000001;
+    pub const CHARGE:/*-*/u32 = 0b00000000_00000010;
+    pub const BOMB:  /*-*/u32 = 0b00000000_00000100;
+    pub const SLOW:  /*-*/u32 = 0b00000000_00001000;
+    pub const UP:    /*-*/u32 = 0b00000000_00010000;
+    pub const DOWN:  /*-*/u32 = 0b00000000_00100000;
+    pub const LEFT:  /*-*/u32 = 0b00000000_01000000;
+    pub const RIGHT: /*-*/u32 = 0b00000000_10000000;
+    pub const START: /*-*/u32 = 0b00000001_00000000;
 }
 
 #[repr(C)]
-pub struct Input {
+pub struct InputDevice {
+    pub input: Input,
+    pub prev_input: Input,
+    _unknown2: [u8; 0x3cc],
+}
+
+#[repr(C)]
+pub struct DevicesInput {
     pub _unknown1: [u8; 0x30],
     pub input_device_array: [InputDevice; 3 + 9],
     _unknown2: u32,
     pub p1_input_idx: u32,
     pub p2_input_idx: u32,
     // unknown continues...
+}
+
+impl DevicesInput {
+    pub fn p1_input(&self) -> Input {
+        self.input_device_array[self.p1_input_idx as usize].input
+    }
+    pub fn set_p1_input(&mut self, value: Input) {
+        self.input_device_array[self.p1_input_idx as usize].input = value;
+    }
+    pub fn p1_prev_input(&self) -> Input {
+        self.input_device_array[self.p1_input_idx as usize].prev_input
+    }
+
+    pub fn p2_input(&self) -> Input {
+        self.input_device_array[self.p2_input_idx as usize].input
+    }
+    pub fn set_p2_input(&mut self, value: Input) {
+        self.input_device_array[self.p2_input_idx as usize].input = value;
+    }
+    pub fn p2_prev_input(&self) -> Input {
+        self.input_device_array[self.p2_input_idx as usize].prev_input
+    }
 }
 
 #[derive(Default)]
@@ -36,8 +76,10 @@ pub struct Settings {
 #[repr(C)]
 pub struct GameMainsLinkedListItem {
     pub id: usize,
-    _unknown2: usize,
+    _unknown1: usize,
     func: usize,
+    _unknown2: [u8; 0x18],
+    arg: usize,
 }
 
 #[repr(C)]
@@ -65,6 +107,15 @@ impl GameMainsLinkedList {
         self.len() == 0
     }
 
+    pub fn find_menu(&self) -> Option<&'static Menu> {
+        let arg = self.to_vec().iter().find(|item| item.id == 0x0a)?.arg as *const Menu;
+        unsafe { arg.as_ref() }
+    }
+    pub fn find_menu_mut(&self) -> Option<&'static mut Menu> {
+        let arg = self.to_vec().iter().find(|item| item.id == 0x0a)?.arg as *mut Menu;
+        unsafe { arg.as_mut() }
+    }
+
     pub fn to_vec(&self) -> Vec<&GameMainsLinkedListItem> {
         let mut vec = Vec::new();
         let mut list = self as *const Self;
@@ -84,6 +135,49 @@ pub struct Game {
     pub game_mains: &'static GameMainsLinkedList,
 }
 
+#[repr(C)]
+pub struct Battle {
+    _unknown: [u8; 0x10],
+    pub pre_frame: u32,
+    pub frame: u32,
+}
+
+#[derive(CopyGetters, Setters)]
+#[repr(C)]
+pub struct BattlePlayer {
+    _unknown1: [u8; 0x0c],
+    #[get_copy = "pub"]
+    character: u32,
+    _unknown2: [u8; 0x80],
+    #[getset(get_copy = "pub", set = "pub")]
+    card: u32,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+#[repr(u32)]
+pub enum Difficulty {
+    Easy,
+    Normal,
+    Hard,
+    Lunatic,
+}
+
+impl Default for Difficulty {
+    fn default() -> Self {
+        Self::Normal
+    }
+}
+
+impl TryFrom<u32> for Difficulty {
+    type Error = anyhow::Error;
+    fn try_from(value: u32) -> Result<Self> {
+        if !(0..4).contains(&value) {
+            bail!("Invalid Difficulty: {}", value);
+        }
+        Ok(unsafe { transmute(value) })
+    }
+}
+
 #[derive(PartialEq)]
 #[repr(u32)]
 pub enum GameMode {
@@ -94,16 +188,15 @@ pub enum GameMode {
 
 impl TryFrom<u32> for GameMode {
     type Error = anyhow::Error;
-
     fn try_from(value: u32) -> Result<Self> {
-        if !(0..=2).contains(&value) {
+        if !(0..3).contains(&value) {
             bail!("Invalid GameMode: {}", value);
         }
         Ok(unsafe { transmute(value) })
     }
 }
 
-#[derive(PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 #[repr(u32)]
 pub enum PlayerMatchup {
     HumanVsHuman,
@@ -112,13 +205,67 @@ pub enum PlayerMatchup {
     YoukaiVsYoukai,
 }
 
+impl Default for PlayerMatchup {
+    fn default() -> Self {
+        Self::HumanVsHuman
+    }
+}
+
 impl TryFrom<u32> for PlayerMatchup {
     type Error = anyhow::Error;
-
     fn try_from(value: u32) -> Result<Self> {
-        if !(0..=3).contains(&value) {
+        if !(0..4).contains(&value) {
             bail!("Invalid PlayerMatchup: {}", value);
         }
         Ok(unsafe { transmute(value) })
     }
+}
+
+#[derive(Clone, Copy, PartialEq)]
+#[repr(u32)]
+pub enum ScreenId {
+    Loading,
+    Title,
+    BattleLoading,
+    Option,
+    ControllerSettings,
+    BattleSettings,
+    Unknown2,
+    DifficultySelect,
+    PlayerMatchupSelect,
+    OnlineMenu,
+    CharacterSelect,
+    Unknown3,
+    Unknown4,
+    Unknown5,
+    Unknown6,
+    MusicRoom,
+    Unknown7,
+    Unknown8,
+    Manual,
+    Unknown9,
+    Archievements,
+}
+
+#[repr(C)]
+pub struct CharacterCursor {
+    pub cursor: u32,
+    pub prev_cursor: u32,
+    _unknown1: [u8; 0xd0],
+}
+
+#[repr(C)]
+pub struct Menu {
+    _unknown1: [u8; 0x18],
+    pub screen_id: ScreenId,
+    _prev_screen_id: u32,
+    _unknown2: u32,
+    _unknown3: u32,
+    _unknown4: u32,
+    pub cursor: u32,
+    _prev_cursor: u32,
+    pub max_cursor: u32,
+    _unknown5: [u8; 0xcc],
+    pub p1_cursor: CharacterCursor,
+    pub p2_cursor: CharacterCursor,
 }

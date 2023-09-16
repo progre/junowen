@@ -23,7 +23,7 @@ pub extern "thiscall" fn on_open_settings_editor(this: *const c_void, arg1: u32)
         .or_else(|_| prop.th19.battle_settings_in_menu())
         .unwrap();
     prop.th19
-        .set_battle_settings_in_menu(&settings_of_file)
+        .put_battle_settings_in_menu(&settings_of_file)
         .unwrap();
 
     func(this, arg1)
@@ -41,7 +41,7 @@ pub extern "thiscall" fn on_close_settings_editor(this: *const c_void) {
     let current = prop.th19.battle_settings_in_menu().unwrap();
     write_to_file(&prop.settings_path, &current).unwrap();
     prop.th19
-        .set_battle_settings_in_menu(&state().tmp_battle_settings)
+        .put_battle_settings_in_menu(&state().tmp_battle_settings)
         .unwrap();
 
     func(this)
