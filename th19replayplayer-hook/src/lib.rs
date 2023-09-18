@@ -10,7 +10,7 @@ use std::{
 use anyhow::Result;
 use bytes::{Buf, BytesMut};
 use interprocess::os::windows::named_pipe::{ByteReaderPipeStream, PipeListenerOptions, PipeMode};
-use junowen::{
+use junowen_lib::{
     Battle, BattleSettings, DevicesInput, Difficulty, GameMode, Input, Menu, PlayerMatchup,
     ScreenId, Th19,
 };

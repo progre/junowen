@@ -10,5 +10,5 @@ crate-type = ['cdylib']
 anyhow.workspace = true
 bytes = "1.5.0"
 interprocess = "1.2.1"
-junowen = { path = "../junowen" }
+junowen-lib = { path = "../junowen-lib" }
 windows = "0.51.1"

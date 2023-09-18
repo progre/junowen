@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "junowen",
+  "junowen-lib",
   "th19loader",
   "th19netdelayemulate",
   "th19netdelayemulate-hook",

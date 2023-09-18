@@ -4,7 +4,7 @@ use std::{
     mem::{size_of, transmute},
 };
 
-use junowen::Th19;
+use junowen_lib::Th19;
 use windows::Win32::{
     Foundation::HINSTANCE,
     Graphics::Direct3D9::{D3DFVF_DIFFUSE, D3DFVF_XYZRHW, D3DPT_TRIANGLEFAN},

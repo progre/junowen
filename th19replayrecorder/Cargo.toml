@@ -11,7 +11,7 @@ name = "th19_replayrecorder"
 anyhow.workspace = true
 bytes = "1.5.0"
 chrono = "0.4.30"
-junowen = { path = "../junowen" }
+junowen-lib = { path = "../junowen-lib" }
 th19replayplayer = { path = "../th19replayplayer" }
 windows = { version = "0.51.1", features = [
   "Win32_Foundation",

@@ -7,7 +7,7 @@ use windows::Win32::{
     System::{Console::AllocConsole, SystemServices::DLL_PROCESS_ATTACH},
 };
 
-use junowen::{Input, Th19};
+use junowen_lib::{Input, Th19};
 
 static mut PROPS: Option<Props> = None;
 static mut STATE: Option<State> = None;

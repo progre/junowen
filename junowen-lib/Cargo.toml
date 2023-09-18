@@ -1,21 +1,17 @@
 [package]
-name = "th19replayplayer-hook"
+name = "junowen-lib"
 version.workspace = true
 edition = "2021"
 
-[lib]
-crate-type = ['cdylib']
-
 [dependencies]
 anyhow.workspace = true
-bytes = "1.5.0"
-interprocess = "1.2.1"
-junowen-lib = { path = "../junowen-lib" }
-th19replayplayer = { path = "../th19replayplayer" }
+getset = "0.1.2"
 windows = { version = "0.51.1", features = [
   "Win32_Foundation",
   "Win32_Graphics_Direct3D9",
   "Win32_Graphics_Gdi",
+  "Win32_Security",
+  "Win32_Storage_FileSystem",
   "Win32_System_Console",
   "Win32_System_Diagnostics_Debug",
   "Win32_System_Diagnostics_ToolHelp",
@@ -25,5 +21,4 @@ windows = { version = "0.51.1", features = [
   "Win32_System_SystemInformation",
   "Win32_System_SystemServices",
   "Win32_System_Threading",
-  "Win32_UI_WindowsAndMessaging",
 ] }

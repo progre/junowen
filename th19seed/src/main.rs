@@ -2,7 +2,7 @@ use std::env::args;
 
 use anyhow::Result;
 
-use junowen::Th19;
+use junowen_lib::Th19;
 
 fn main() -> Result<()> {
     let mut args = args();

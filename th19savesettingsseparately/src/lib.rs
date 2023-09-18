@@ -4,7 +4,7 @@ mod settings_editor;
 
 use std::path::Path;
 
-use junowen::{BattleSettings, Th19};
+use junowen_lib::{BattleSettings, Th19};
 use settings_editor::{on_close_settings_editor, on_open_settings_editor};
 use windows::{
     core::PCWSTR,

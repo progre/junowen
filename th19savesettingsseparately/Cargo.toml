@@ -9,7 +9,7 @@ name = "th19_savesettingsseparately"
 
 [dependencies]
 anyhow.workspace = true
-junowen = { path = "../junowen" }
+junowen-lib = { path = "../junowen-lib" }
 windows = { version = "0.51.1", features = [
   "Win32_Foundation",
   "Win32_Graphics_Direct3D9",

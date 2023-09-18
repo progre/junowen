@@ -6,4 +6,4 @@ edition = "2021"
 [dependencies]
 anyhow.workspace = true
 interprocess = "1.2.1"
-junowen = { path = "../junowen" }
+junowen-lib = { path = "../junowen-lib" }

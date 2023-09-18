@@ -6,7 +6,7 @@ use std::{
 
 use anyhow::Result;
 use interprocess::os::windows::named_pipe::ByteWriterPipeStream;
-use junowen::inject_dll::inject_dll;
+use junowen_lib::inject_dll::inject_dll;
 
 fn main() -> Result<()> {
     let name = OsStr::new("th19netdelayemulate");

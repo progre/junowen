@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use junowen::{DevicesInput, ScreenId, Th19};
+use junowen_lib::{DevicesInput, ScreenId, Th19};
 use th19replayplayer::{FileInputList, ReplayFile};
 use windows::{
     core::PCWSTR,

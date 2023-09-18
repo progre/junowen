@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 anyhow.workspace = true
-junowen = { path = "../junowen" }
+junowen-lib = { path = "../junowen-lib" }
