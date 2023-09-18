@@ -1,9 +1,0 @@
-[package]
-name = "th19netdelayemulate"
-version.workspace = true
-edition = "2021"
-
-[dependencies]
-anyhow.workspace = true
-interprocess = "1.2.1"
-junowen-lib = { path = "../junowen-lib" }

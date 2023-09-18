@@ -1,0 +1,8 @@
+[package]
+name = "th19seed"
+version.workspace = true
+edition = "2021"
+
+[dependencies]
+anyhow.workspace = true
+junowen-lib.workspace = true

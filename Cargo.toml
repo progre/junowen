@@ -1,17 +1,17 @@
 [workspace]
 members = [
+  "archives/th19netdelayemulate",
+  "archives/th19netdelayemulate-hook",
+  "archives/th19padlight",
+  "archives/th19padlight-hook",
+  "archives/th19seed",
   "junowen",
   "junowen-lib",
   "th19loader",
-  "th19netdelayemulate",
-  "th19netdelayemulate-hook",
-  "th19padlight",
-  "th19padlight-hook",
   "th19replayplayer",
   "th19replayplayer-hook",
   "th19replayrecorder",
   "th19savesettingsseparately",
-  "th19seed",
 ]
 default-members = ["junowen"]
 resolver = "2"
@@ -23,3 +23,4 @@ license = "GPL-3.0"
 
 [workspace.dependencies]
 anyhow = { version = "1.0.75", features = ["backtrace"] }
+junowen-lib = { path = "./junowen-lib" }
