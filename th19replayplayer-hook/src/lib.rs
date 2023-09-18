@@ -25,39 +25,48 @@ static mut PROPS: Option<Props> = None;
 static mut STATE: Option<State> = None;
 
 struct Props {
-    th19: Th19,
     original_fn_from_0aba30_00fb: Option<usize>,
     rx: mpsc::Receiver<ReplayFile>,
 }
 
 enum ReplayPlayerState<'a> {
     Standby,
-    Prepare(&'a ReplayFile),
-    InGame(&'a ReplayFile),
+    Prepare {
+        th19: &'a mut Th19,
+        replay_file: &'a ReplayFile,
+    },
+    InGame {
+        th19: &'a mut Th19,
+        replay_file: &'a ReplayFile,
+    },
 }
 
-#[derive(Default)]
 struct State {
+    th19: Th19,
     in_game: bool,
     replay_file: Option<ReplayFile>,
 }
 
 impl State {
-    fn replay_player_state(&self) -> ReplayPlayerState {
+    fn replay_player_state(&mut self) -> ReplayPlayerState {
         match self {
             State {
+                th19: _,
                 in_game: false,
                 replay_file: None,
             } => ReplayPlayerState::Standby,
             State {
+                th19,
                 in_game: false,
                 replay_file: Some(replay_file),
-            } => ReplayPlayerState::Prepare(replay_file),
+            } => ReplayPlayerState::Prepare { th19, replay_file },
             State {
+                th19,
                 in_game: true,
                 replay_file: Some(replay_file),
-            } => ReplayPlayerState::InGame(replay_file),
+            } => ReplayPlayerState::InGame { th19, replay_file },
             State {
+                th19: _,
                 in_game: true,
                 replay_file: None,
             } => unreachable!(),
@@ -88,6 +97,9 @@ fn props() -> &'static Props {
     unsafe { PROPS.as_ref().unwrap() }
 }
 
+fn state() -> &'static State {
+    unsafe { STATE.as_ref().unwrap() }
+}
 fn state_mut() -> &'static mut State {
     unsafe { STATE.as_mut().unwrap() }
 }
@@ -140,7 +152,7 @@ fn init_interprecess(tx: mpsc::Sender<ReplayFile>) {
     });
 }
 
-fn init_battle(th19: &Th19, replay_file: &ReplayFile) {
+fn init_battle(th19: &mut Th19, replay_file: &ReplayFile) {
     th19.set_rand_seed1(replay_file.rand_seed1).unwrap();
     th19.set_rand_seed2(replay_file.rand_seed2).unwrap();
 }
@@ -196,7 +208,7 @@ struct InitialBattleInformation<'a> {
     p2_card: u8,
 }
 
-fn move_to_battle(th19: &Th19, menu: &mut Menu, inits: InitialBattleInformation) -> bool {
+fn move_to_battle(th19: &mut Th19, menu: &mut Menu, inits: InitialBattleInformation) -> bool {
     match (
         menu.screen_id,
         th19.game_mode().unwrap(),
@@ -259,9 +271,7 @@ fn on_input() {
             state.change_to_prepare(ok);
             on_input();
         }
-        ReplayPlayerState::Prepare(replay_file) => {
-            let th19 = &props().th19;
-
+        ReplayPlayerState::Prepare { th19, replay_file } => {
             let Some(menu) = th19.game().game_mains.find_menu_mut() else {
                 return;
             };
@@ -282,8 +292,7 @@ fn on_input() {
                 state.change_to_in_game();
             }
         }
-        ReplayPlayerState::InGame(replay_file) => {
-            let th19 = &props().th19;
+        ReplayPlayerState::InGame { th19, replay_file } => {
             if let Some(battle) = th19.battle() {
                 if tick_battle(th19.input_mut(), battle, replay_file) {
                     return;
@@ -303,7 +312,7 @@ extern "fastcall" fn from_0aba30_00fb() -> u32 {
         let func: Func = unsafe { transmute(func) };
         func()
     } else {
-        props.th19.input().p1_input().0 // p1 の入力を返す
+        state().th19.input().p1_input().0 // p1 の入力を返す
     }
 }
 
@@ -322,11 +331,14 @@ pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32
         let original_fn_from_0aba30_00fb = th19.hook_0aba30_00fb(from_0aba30_00fb).unwrap();
         unsafe {
             PROPS = Some(Props {
-                th19,
                 original_fn_from_0aba30_00fb,
                 rx,
             });
-            STATE = Some(Default::default());
+            STATE = Some(State {
+                th19,
+                in_game: false,
+                replay_file: None,
+            });
         }
     }
     true

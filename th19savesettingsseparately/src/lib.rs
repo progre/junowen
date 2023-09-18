@@ -21,20 +21,18 @@ use windows::{
 use character_selecter::post_read_battle_settings_from_menu_to_game;
 
 static mut MODULE: HMODULE = HMODULE(0);
-static mut PROP: Option<Prop> = None;
+static mut PROPS: Option<Props> = None;
 static mut STATE: Option<State> = None;
 
-struct Prop {
-    th19: Th19,
+struct Props {
     settings_path: String,
     original_fn_from_13fe16: usize,
     original_fn_from_107540_0046: usize,
     original_fn_from_107540_0937: usize,
 }
 
-impl Prop {
+impl Props {
     fn new(
-        th19: Th19,
         original_fn_from_13fe16: usize,
         original_fn_from_107540_0046: usize,
         original_fn_from_107540_0937: usize,
@@ -48,7 +46,6 @@ impl Prop {
         };
 
         Self {
-            th19,
             settings_path: Path::new(&dll_path)
                 .with_extension("cfg")
                 .to_string_lossy()
@@ -60,13 +57,13 @@ impl Prop {
     }
 }
 
-#[derive(Default)]
 struct State {
+    th19: Th19,
     tmp_battle_settings: BattleSettings,
 }
 
-fn prop() -> &'static Prop {
-    unsafe { PROP.as_ref().unwrap() }
+fn props() -> &'static Props {
+    unsafe { PROPS.as_ref().unwrap() }
 }
 
 fn state() -> &'static State {
@@ -116,13 +113,15 @@ pub extern "C" fn Initialize(_direct_3d: *const IDirect3D9) -> bool {
     let original_fn_from_107540_0046 = th19.hook_107540_0046(on_open_settings_editor).unwrap();
     let original_fn_from_107540_0937 = th19.hook_107540_0937(on_close_settings_editor).unwrap();
     unsafe {
-        PROP = Some(Prop::new(
-            th19,
+        PROPS = Some(Props::new(
             original_fn_from_13fe16,
             original_fn_from_107540_0046,
             original_fn_from_107540_0937,
         ));
-        STATE = Some(Default::default());
+        STATE = Some(State {
+            th19,
+            tmp_battle_settings: Default::default(),
+        });
     }
 
     true

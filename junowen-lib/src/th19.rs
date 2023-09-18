@@ -24,7 +24,7 @@ macro_rules! u16_prop {
 
     ($addr:expr, $getter:ident, $setter:ident) => {
         u16_prop!($addr, $getter);
-        pub fn $setter(&self, value: u16) -> Result<()> {
+        pub fn $setter(&mut self, value: u16) -> Result<()> {
             self.memory_accessor.write_u16($addr, value)
         }
     };
@@ -103,7 +103,7 @@ impl Th19 {
     pub fn input(&self) -> &'static DevicesInput {
         self.pointer(0x1ae3a0).unwrap()
     }
-    pub fn input_mut(&self) -> &'static mut DevicesInput {
+    pub fn input_mut(&mut self) -> &'static mut DevicesInput {
         self.pointer_mut(0x1ae3a0).unwrap()
     }
 
@@ -125,14 +125,14 @@ impl Th19 {
     pub fn battle_p1(&self) -> &'static BattlePlayer {
         self.value(0x207910)
     }
-    pub fn battle_p1_mut(&self) -> &'static mut BattlePlayer {
+    pub fn battle_p1_mut(&mut self) -> &'static mut BattlePlayer {
         self.value_mut(0x207910)
     }
 
     pub fn battle_p2(&self) -> &'static BattlePlayer {
         self.value(0x2079d0)
     }
-    pub fn battle_p2_mut(&self) -> &'static mut BattlePlayer {
+    pub fn battle_p2_mut(&mut self) -> &'static mut BattlePlayer {
         self.value_mut(0x2079d0)
     }
 
@@ -150,7 +150,7 @@ impl Th19 {
     pub fn battle_settings_in_game(&self) -> Result<BattleSettings> {
         self.battle_settings_from(0x208350)
     }
-    pub fn put_battle_settings_in_game(&self, battle_settings: &BattleSettings) -> Result<()> {
+    pub fn put_battle_settings_in_game(&mut self, battle_settings: &BattleSettings) -> Result<()> {
         self.put_battle_settings_to(0x208350, battle_settings)
     }
 
@@ -166,7 +166,7 @@ impl Th19 {
     pub fn battle_settings_in_menu(&self) -> Result<BattleSettings> {
         self.battle_settings_from(0x208644)
     }
-    pub fn put_battle_settings_in_menu(&self, battle_settings: &BattleSettings) -> Result<()> {
+    pub fn put_battle_settings_in_menu(&mut self, battle_settings: &BattleSettings) -> Result<()> {
         self.put_battle_settings_to(0x208644, battle_settings)
     }
 
@@ -191,7 +191,7 @@ impl Th19 {
         let p_obj = memory_accessor.raw_ptr(addr) as *const T;
         unsafe { p_obj.as_ref().unwrap() }
     }
-    fn value_mut<T>(&self, addr: usize) -> &'static mut T {
+    fn value_mut<T>(&mut self, addr: usize) -> &'static mut T {
         let MemoryAccessor::HookedProcess(memory_accessor) = &self.memory_accessor else {
             panic!("Th19::object is only available for HookedProcess");
         };
@@ -206,7 +206,7 @@ impl Th19 {
         let p_p_obj = memory_accessor.raw_ptr(addr) as *const *const T;
         unsafe { (*p_p_obj).as_ref() }
     }
-    fn pointer_mut<T>(&self, addr: usize) -> Option<&'static mut T> {
+    fn pointer_mut<T>(&mut self, addr: usize) -> Option<&'static mut T> {
         let MemoryAccessor::HookedProcess(memory_accessor) = &self.memory_accessor else {
             panic!("Th19::object is only available for HookedProcess");
         };
@@ -229,7 +229,11 @@ impl Th19 {
         self.memory_accessor.read(addr, &mut buffer)?;
         Ok(unsafe { transmute(buffer) })
     }
-    fn put_battle_settings_to(&self, addr: usize, battle_settings: &BattleSettings) -> Result<()> {
+    fn put_battle_settings_to(
+        &mut self,
+        addr: usize,
+        battle_settings: &BattleSettings,
+    ) -> Result<()> {
         let buffer: &[u8; 12] = unsafe { transmute(battle_settings) };
         self.memory_accessor.write(addr, buffer)
     }

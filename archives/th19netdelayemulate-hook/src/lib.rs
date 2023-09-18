@@ -13,19 +13,20 @@ static mut PROPS: Option<Props> = None;
 static mut STATE: Option<State> = None;
 
 struct Props {
-    th19: Th19,
     original_fn_from_0aba30_00fb: Option<usize>,
     new_delay_receiver: mpsc::Receiver<i8>,
 }
 
 struct State {
+    th19: Th19,
     p1_buffer: BytesMut,
     p2_buffer: BytesMut,
 }
 
 impl State {
-    fn new() -> Self {
+    fn new(th19: Th19) -> Self {
         Self {
+            th19,
             p1_buffer: BytesMut::new(),
             p2_buffer: BytesMut::new(),
         }
@@ -41,7 +42,7 @@ fn state_mut() -> &'static mut State {
 }
 
 extern "fastcall" fn hook_0abb2b() -> u32 {
-    let th19 = &props().th19;
+    let th19 = &mut state_mut().th19;
     let state = state_mut();
 
     let input = th19.input_mut();
@@ -116,11 +117,10 @@ pub extern "stdcall" fn DllMain(_inst_dll: HINSTANCE, reason: u32, _reserved: u3
         init_interprecess(tx);
         unsafe {
             PROPS = Some(Props {
-                th19,
                 original_fn_from_0aba30_00fb,
                 new_delay_receiver: rx,
             });
-            STATE = Some(State::new());
+            STATE = Some(State::new(th19));
         }
     }
     true

@@ -359,6 +359,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "junowen-lib"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "getset",
+ "windows 0.51.1",
+]
+
+[[package]]
 name = "keccak"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -555,7 +564,6 @@ name = "th19loader"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "junowen",
  "sha3",
  "windows 0.51.1",
 ]
@@ -566,7 +574,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "interprocess",
- "junowen",
+ "junowen-lib",
 ]
 
 [[package]]
@@ -576,7 +584,7 @@ dependencies = [
  "anyhow",
  "bytes",
  "interprocess",
- "junowen",
+ "junowen-lib",
  "windows 0.51.1",
 ]
 
@@ -585,7 +593,7 @@ name = "th19padlight"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "junowen",
+ "junowen-lib",
  "windows 0.51.1",
 ]
 
@@ -594,7 +602,7 @@ name = "th19padlight-hook"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "junowen",
+ "junowen-lib",
  "windows 0.51.1",
 ]
 
@@ -605,7 +613,7 @@ dependencies = [
  "anyhow",
  "bytes",
  "interprocess",
- "junowen",
+ "junowen-lib",
  "windows 0.51.1",
 ]
 
@@ -616,7 +624,7 @@ dependencies = [
  "anyhow",
  "bytes",
  "interprocess",
- "junowen",
+ "junowen-lib",
  "th19replayplayer",
  "windows 0.51.1",
 ]
@@ -628,7 +636,7 @@ dependencies = [
  "anyhow",
  "bytes",
  "chrono",
- "junowen",
+ "junowen-lib",
  "th19replayplayer",
  "windows 0.51.1",
 ]
@@ -638,7 +646,7 @@ name = "th19savesettingsseparately"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "junowen",
+ "junowen-lib",
  "windows 0.51.1",
 ]
 
@@ -647,7 +655,7 @@ name = "th19seed"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "junowen",
+ "junowen-lib",
 ]
 
 [[package]]
