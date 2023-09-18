@@ -18,7 +18,7 @@ impl MemoryAccessor {
         Ok(u16::from_le_bytes(buffer))
     }
 
-    pub fn write_u16(&self, addr: usize, value: u16) -> Result<()> {
+    pub fn write_u16(&mut self, addr: usize, value: u16) -> Result<()> {
         self.write(addr, &value.to_le_bytes())
     }
 
@@ -29,7 +29,7 @@ impl MemoryAccessor {
     }
 
     #[allow(unused)]
-    pub fn write_u32(&self, addr: usize, value: u32) -> Result<()> {
+    pub fn write_u32(&mut self, addr: usize, value: u32) -> Result<()> {
         self.write(addr, &value.to_le_bytes())
     }
 
@@ -43,7 +43,7 @@ impl MemoryAccessor {
         }
     }
 
-    pub fn write(&self, addr: usize, buffer: &[u8]) -> Result<()> {
+    pub fn write(&mut self, addr: usize, buffer: &[u8]) -> Result<()> {
         match self {
             MemoryAccessor::ExternalProcess(accessor) => accessor.write(addr, buffer),
             MemoryAccessor::HookedProcess(accessor) => {

@@ -172,7 +172,7 @@ extern "fastcall" fn from_0aba30_00fb() -> u32 {
 #[allow(non_snake_case)]
 #[no_mangle]
 pub extern "C" fn Initialize(_direct_3d: *const IDirect3D9) -> bool {
-    let th19 = Th19::new_hooked_process("th19.exe").unwrap();
+    let mut th19 = Th19::new_hooked_process("th19.exe").unwrap();
     let original_fn_from_0aba30_00fb = th19.hook_0aba30_00fb(from_0aba30_00fb).unwrap();
     unsafe {
         PROPS = Some(Props::new(th19, original_fn_from_0aba30_00fb));

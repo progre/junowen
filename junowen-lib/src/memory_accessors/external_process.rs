@@ -83,7 +83,7 @@ impl ExternalProcess {
         Ok(())
     }
 
-    pub fn write(&self, addr: usize, buffer: &[u8]) -> Result<()> {
+    pub fn write(&mut self, addr: usize, buffer: &[u8]) -> Result<()> {
         let mut number_of_bytes_written: usize = 0;
         unsafe {
             WriteProcessMemory(

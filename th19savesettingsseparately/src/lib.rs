@@ -106,7 +106,7 @@ pub extern "C" fn CheckVersion(hash: *const u8, length: usize) -> bool {
 #[allow(non_snake_case)]
 #[no_mangle]
 pub extern "C" fn Initialize(_direct_3d: *const IDirect3D9) -> bool {
-    let th19 = Th19::new_hooked_process("th19.exe").unwrap();
+    let mut th19 = Th19::new_hooked_process("th19.exe").unwrap();
     let original_fn_from_13fe16 = th19
         .hook_13f9d0_0446(post_read_battle_settings_from_menu_to_game)
         .unwrap();

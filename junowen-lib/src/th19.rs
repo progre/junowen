@@ -43,13 +43,16 @@ impl Th19 {
         })
     }
 
-    pub fn hook_0a9540_0175(&self, target: extern "fastcall" fn(arg1: i32)) -> Result<usize> {
+    pub fn hook_0a9540_0175(&mut self, target: extern "fastcall" fn(arg1: i32)) -> Result<usize> {
         self.hook_call(0x0a9540 + 0x0175, target as _)
     }
 
-    pub fn hook_0aba30_00fb(&self, target: extern "fastcall" fn() -> u32) -> Result<Option<usize>> {
+    pub fn hook_0aba30_00fb(
+        &mut self,
+        target: extern "fastcall" fn() -> u32,
+    ) -> Result<Option<usize>> {
         let addr = 0x0aba30 + 0x00fb;
-        let MemoryAccessor::HookedProcess(memory_accessor) = &self.memory_accessor else {
+        let MemoryAccessor::HookedProcess(memory_accessor) = &mut self.memory_accessor else {
             panic!("Th19::hook_0abb2b is only available for HookedProcess");
         };
         let old = memory_accessor.virtual_protect(addr, 14, PAGE_EXECUTE_WRITECOPY)?;
@@ -58,41 +61,41 @@ impl Th19 {
         Ok(old_addr)
     }
 
-    pub fn hook_107260_0067(&self, target: usize) -> Result<usize> {
+    pub fn hook_107260_0067(&mut self, target: usize) -> Result<usize> {
         self.hook_call(0x107260 + 0x0067, target)
     }
-    pub fn hook_107260_01ba(&self, target: usize) -> Result<usize> {
+    pub fn hook_107260_01ba(&mut self, target: usize) -> Result<usize> {
         self.hook_call(0x107260 + 0x01ba, target)
     }
 
     pub fn hook_107540_0046(
-        &self,
+        &mut self,
         target: extern "thiscall" fn(this: *const c_void, arg1: u32) -> u32,
     ) -> Result<usize> {
         self.hook_call(0x107540 + 0x0046, target as _)
     }
-    pub fn hook_107540_045c(&self, target: usize) -> Result<usize> {
+    pub fn hook_107540_045c(&mut self, target: usize) -> Result<usize> {
         self.hook_call(0x107540 + 0x045c, target)
     }
-    pub fn hook_107540_07bf(&self, target: usize) -> Result<usize> {
+    pub fn hook_107540_07bf(&mut self, target: usize) -> Result<usize> {
         self.hook_call(0x107540 + 0x07bf, target)
     }
-    pub fn hook_107540_08a1(&self, target: usize) -> Result<usize> {
+    pub fn hook_107540_08a1(&mut self, target: usize) -> Result<usize> {
         self.hook_call(0x107540 + 0x08a1, target)
     }
     pub fn hook_107540_0937(
-        &self,
+        &mut self,
         target: extern "thiscall" fn(this: *const c_void),
     ) -> Result<usize> {
         self.hook_call(0x107540 + 0x0937, target as _)
     }
 
-    pub fn hook_120ca0_0115(&self, target: usize) -> Result<usize> {
+    pub fn hook_120ca0_0115(&mut self, target: usize) -> Result<usize> {
         self.hook_call(0x120ca0 + 0x0115, target)
     }
 
     pub fn hook_13f9d0_0446(
-        &self,
+        &mut self,
         target: extern "thiscall" fn(this: *const c_void, arg1: u32) -> u32,
     ) -> Result<usize> {
         self.hook_call(0x13f9d0 + 0x0446, target as _)
@@ -214,8 +217,8 @@ impl Th19 {
         unsafe { (*p_p_obj).as_mut() }
     }
 
-    fn hook_call(&self, addr: usize, target: usize) -> Result<usize> {
-        let MemoryAccessor::HookedProcess(memory_accessor) = &self.memory_accessor else {
+    fn hook_call(&mut self, addr: usize, target: usize) -> Result<usize> {
+        let MemoryAccessor::HookedProcess(memory_accessor) = &mut self.memory_accessor else {
             panic!("Th19::hook_call is only available for HookedProcess");
         };
         let old = memory_accessor.virtual_protect(addr, 5, PAGE_EXECUTE_WRITECOPY)?;

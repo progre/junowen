@@ -40,7 +40,7 @@ impl HookedProcess {
         unsafe { ((self.base_addr + addr) as *mut u8).copy_to(buffer.as_mut_ptr(), buffer.len()) };
     }
 
-    pub fn write(&self, addr: usize, buffer: &[u8]) {
+    pub fn write(&mut self, addr: usize, buffer: &[u8]) {
         unsafe { ((self.base_addr + addr) as *mut u8).copy_from(buffer.as_ptr(), buffer.len()) };
     }
 
@@ -49,7 +49,7 @@ impl HookedProcess {
     }
 
     pub fn virtual_protect(
-        &self,
+        &mut self,
         addr: usize,
         size: usize,
         protect: PAGE_PROTECTION_FLAGS,
@@ -59,7 +59,7 @@ impl HookedProcess {
         Ok(old)
     }
 
-    pub fn hook_call(&self, addr: usize, target: usize) -> usize {
+    pub fn hook_call(&mut self, addr: usize, target: usize) -> usize {
         let addr = self.base_addr + addr;
 
         let jump_base_addr = addr + 5;
@@ -69,7 +69,7 @@ impl HookedProcess {
         old
     }
 
-    pub fn hook_assembly(&self, addr: usize, capacity: usize, target: usize) -> Option<usize> {
+    pub fn hook_assembly(&mut self, addr: usize, capacity: usize, target: usize) -> Option<usize> {
         if capacity < 9 {
             panic!("capacity must be at least 9");
         }
