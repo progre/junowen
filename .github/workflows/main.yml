@@ -26,7 +26,7 @@ jobs:
         run: |
           rustup default nightly
           rustup target add i686-pc-windows-msvc
-          cargo build --release --workspace
+          cargo build --locked --release --workspace
           mkdir --parents artifact/modules
           mv \
             ./target/i686-pc-windows-msvc/release/th19_*.dll \
