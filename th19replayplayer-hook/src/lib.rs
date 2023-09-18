@@ -117,27 +117,25 @@ fn init_interprecess(tx: mpsc::Sender<ReplayFile>) {
         .unwrap();
 
     spawn(move || loop {
+        let mut reader: ByteReaderPipeStream = pipe.accept().unwrap();
         loop {
-            let mut reader: ByteReaderPipeStream = pipe.accept().unwrap();
-            loop {
-                let replay_file = match read_file(&mut reader) {
-                    Ok(ok) => ok,
-                    Err(err) => match err.downcast::<std::io::Error>() {
-                        Ok(err) => {
-                            if err.kind() == ErrorKind::BrokenPipe {
-                                break;
-                            }
-                            eprintln!("{:?}", err);
+            let replay_file = match read_file(&mut reader) {
+                Ok(ok) => ok,
+                Err(err) => match err.downcast::<std::io::Error>() {
+                    Ok(err) => {
+                        if err.kind() == ErrorKind::BrokenPipe {
                             break;
                         }
-                        Err(err) => {
-                            eprintln!("{:?}", err);
-                            break;
-                        }
-                    },
-                };
-                tx.send(replay_file).unwrap();
-            }
+                        eprintln!("{:?}", err);
+                        break;
+                    }
+                    Err(err) => {
+                        eprintln!("{:?}", err);
+                        break;
+                    }
+                },
+            };
+            tx.send(replay_file).unwrap();
         }
     });
 }
