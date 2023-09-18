@@ -1,10 +1,6 @@
-use std::{
-    f32::consts::PI,
-    ffi::c_void,
-    mem::{size_of, transmute},
-};
+use std::{f32::consts::PI, ffi::c_void, mem::size_of};
 
-use junowen_lib::Th19;
+use junowen_lib::{Fn0a9000, Th19};
 use windows::Win32::{
     Foundation::HINSTANCE,
     Graphics::Direct3D9::{D3DFVF_DIFFUSE, D3DFVF_XYZRHW, D3DPT_TRIANGLEFAN},
@@ -15,12 +11,12 @@ static mut TH19: Option<Th19> = None;
 static mut STATE: Option<State> = None;
 
 struct State {
-    original_fn_0a9000: usize,
+    original_fn_0a9000: Fn0a9000,
     buttons: Vec<Vec<SimpleVertex>>,
 }
 
 impl State {
-    fn new(original_fn_0a9000: usize) -> Self {
+    fn new(original_fn_0a9000: Fn0a9000) -> Self {
         let mut buttons = Vec::new();
         let mut i = 0;
         let mut color = 0xffff2800;
@@ -112,9 +108,7 @@ fn create_vertex(center_x: f32, color: u32, (sides, sin_cos, invert): Shape) -> 
 extern "fastcall" fn hook_0a9000(arg1: i32) {
     let state = state();
 
-    type Func = extern "fastcall" fn(arg1: i32);
-    let func: Func = unsafe { transmute(state.original_fn_0a9000) };
-    func(arg1);
+    (state.original_fn_0a9000)(arg1);
 
     let th19 = th19();
     let p1 = th19.p1_input().unwrap();

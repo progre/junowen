@@ -1,4 +1,4 @@
-use std::{ffi::c_void, mem::transmute};
+use std::ffi::c_void;
 
 use crate::{
     file::{read_from_file, write_to_file},
@@ -10,10 +10,9 @@ use crate::{
 // 既知の不具合: 編集中に正規の手段で終了すると値が保存されてしまう
 
 pub extern "thiscall" fn on_open_settings_editor(this: *const c_void, arg1: u32) -> u32 {
-    type Func = extern "thiscall" fn(this: *const c_void, arg1: u32) -> u32;
     let props = props();
     let th19 = &mut state_mut().th19;
-    let func: Func = unsafe { transmute(props.original_fn_from_107540_0046) };
+    let func = props.original_fn_from_107540_0046;
     if th19.is_network_mode() {
         return func(this, arg1);
     }
@@ -29,10 +28,9 @@ pub extern "thiscall" fn on_open_settings_editor(this: *const c_void, arg1: u32)
 }
 
 pub extern "thiscall" fn on_close_settings_editor(this: *const c_void) {
-    type Func = extern "thiscall" fn(this: *const c_void);
     let props = props();
     let th19 = &mut state_mut().th19;
-    let func: Func = unsafe { transmute(props.original_fn_from_107540_0937) };
+    let func = props.original_fn_from_107540_0937;
     if th19.is_network_mode() {
         return func(this);
     }

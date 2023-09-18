@@ -2,7 +2,6 @@ use std::{
     ffi::OsStr,
     fs::File,
     io::{BufReader, ErrorKind, Read},
-    mem::transmute,
     sync::mpsc,
     thread::spawn,
 };
@@ -11,8 +10,8 @@ use anyhow::Result;
 use bytes::{Buf, BytesMut};
 use interprocess::os::windows::named_pipe::{ByteReaderPipeStream, PipeListenerOptions, PipeMode};
 use junowen_lib::{
-    Battle, BattleSettings, DevicesInput, Difficulty, GameMode, Input, Menu, PlayerMatchup,
-    ScreenId, Th19,
+    Battle, BattleSettings, DevicesInput, Difficulty, FnFrom0aba30_00fb, GameMode, Input, Menu,
+    PlayerMatchup, ScreenId, Th19,
 };
 use th19replayplayer::{FileInputList, ReplayFile};
 use windows::Win32::{
@@ -25,7 +24,7 @@ static mut PROPS: Option<Props> = None;
 static mut STATE: Option<State> = None;
 
 struct Props {
-    original_fn_from_0aba30_00fb: Option<usize>,
+    original_fn_from_0aba30_00fb: Option<FnFrom0aba30_00fb>,
     rx: mpsc::Receiver<ReplayFile>,
 }
 
@@ -308,8 +307,6 @@ extern "fastcall" fn from_0aba30_00fb() -> u32 {
 
     let props = props();
     if let Some(func) = props.original_fn_from_0aba30_00fb {
-        type Func = fn() -> u32;
-        let func: Func = unsafe { transmute(func) };
         func()
     } else {
         state().th19.input().p1_input().0 // p1 の入力を返す

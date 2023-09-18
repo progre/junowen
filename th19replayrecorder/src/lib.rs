@@ -1,11 +1,10 @@
 use std::{
     fs::{create_dir_all, File},
     io::BufWriter,
-    mem::transmute,
     path::{Path, PathBuf},
 };
 
-use junowen_lib::{DevicesInput, ScreenId, Th19};
+use junowen_lib::{DevicesInput, FnFrom0aba30_00fb, ScreenId, Th19};
 use th19replayplayer::{FileInputList, ReplayFile};
 use windows::{
     core::PCWSTR,
@@ -25,12 +24,12 @@ static mut STATE: Option<State> = None;
 
 struct Props {
     th19: Th19,
-    original_fn_from_0aba30_00fb: Option<usize>,
+    original_fn_from_0aba30_00fb: Option<FnFrom0aba30_00fb>,
     replay_dir_path: String,
 }
 
 impl Props {
-    fn new(th19: Th19, original_fn_from_0aba30_00fb: Option<usize>) -> Self {
+    fn new(th19: Th19, original_fn_from_0aba30_00fb: Option<FnFrom0aba30_00fb>) -> Self {
         let dll_path = {
             let mut buf = [0u16; MAX_PATH as usize];
             if unsafe { GetModuleFileNameW(MODULE, &mut buf) } == 0 {
@@ -161,8 +160,6 @@ extern "fastcall" fn from_0aba30_00fb() -> u32 {
 
     let props = props();
     if let Some(func) = props.original_fn_from_0aba30_00fb {
-        type Func = fn() -> u32;
-        let func: Func = unsafe { transmute(func) };
         func()
     } else {
         props.th19.input().p1_input().0 // p1 の入力を返す

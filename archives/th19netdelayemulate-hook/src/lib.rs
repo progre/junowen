@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, ffi::OsStr, io::Read, mem::transmute, sync::mpsc, thread::spawn};
+use std::{cmp::Ordering, ffi::OsStr, io::Read, sync::mpsc, thread::spawn};
 
 use bytes::{Buf, BufMut, BytesMut};
 use interprocess::os::windows::named_pipe::{ByteReaderPipeStream, PipeListenerOptions, PipeMode};
@@ -7,13 +7,13 @@ use windows::Win32::{
     System::{Console::AllocConsole, SystemServices::DLL_PROCESS_ATTACH},
 };
 
-use junowen_lib::{Input, Th19};
+use junowen_lib::{FnFrom0aba30_00fb, Input, Th19};
 
 static mut PROPS: Option<Props> = None;
 static mut STATE: Option<State> = None;
 
 struct Props {
-    original_fn_from_0aba30_00fb: Option<usize>,
+    original_fn_from_0aba30_00fb: Option<FnFrom0aba30_00fb>,
     new_delay_receiver: mpsc::Receiver<i8>,
 }
 
@@ -81,8 +81,6 @@ extern "fastcall" fn hook_0abb2b() -> u32 {
     }
 
     if let Some(func) = props().original_fn_from_0aba30_00fb {
-        type Func = fn() -> u32;
-        let func: Func = unsafe { transmute(func) };
         func()
     } else {
         input.p1_input().0 // p1 の入力を返す

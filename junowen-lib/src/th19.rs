@@ -11,6 +11,12 @@ use windows::{
 use crate::memory_accessors::{ExternalProcess, HookedProcess, MemoryAccessor};
 pub use th19_structs::*;
 
+pub type Fn002530 = extern "thiscall" fn(this: *const c_void);
+pub type Fn009fa0 = extern "thiscall" fn(this: *const c_void, arg1: u32) -> u32;
+pub type Fn012480 = extern "thiscall" fn(this: *const c_void, arg1: u32) -> u32;
+pub type Fn0a9000 = extern "fastcall" fn(arg1: i32);
+pub type FnFrom0aba30_00fb = extern "fastcall" fn() -> u32;
+
 pub struct Th19 {
     memory_accessor: MemoryAccessor,
 }
@@ -43,14 +49,14 @@ impl Th19 {
         })
     }
 
-    pub fn hook_0a9540_0175(&mut self, target: extern "fastcall" fn(arg1: i32)) -> Result<usize> {
-        self.hook_call(0x0a9540 + 0x0175, target as _)
+    pub fn hook_0a9540_0175(&mut self, target: Fn0a9000) -> Result<Fn0a9000> {
+        Ok(unsafe { transmute(self.hook_call(0x0a9540 + 0x0175, target as _)?) })
     }
 
     pub fn hook_0aba30_00fb(
         &mut self,
-        target: extern "fastcall" fn() -> u32,
-    ) -> Result<Option<usize>> {
+        target: FnFrom0aba30_00fb,
+    ) -> Result<Option<FnFrom0aba30_00fb>> {
         let addr = 0x0aba30 + 0x00fb;
         let MemoryAccessor::HookedProcess(memory_accessor) = &mut self.memory_accessor else {
             panic!("Th19::hook_0abb2b is only available for HookedProcess");
@@ -58,47 +64,18 @@ impl Th19 {
         let old = memory_accessor.virtual_protect(addr, 14, PAGE_EXECUTE_WRITECOPY)?;
         let old_addr = memory_accessor.hook_assembly(addr, 14, target as _);
         memory_accessor.virtual_protect(addr, 14, old)?;
-        Ok(old_addr)
+        Ok(old_addr.map(|old_addr| unsafe { transmute(old_addr) }))
     }
 
-    pub fn hook_107260_0067(&mut self, target: usize) -> Result<usize> {
-        self.hook_call(0x107260 + 0x0067, target)
+    pub fn hook_107540_0046(&mut self, target: Fn012480) -> Result<Fn012480> {
+        Ok(unsafe { transmute(self.hook_call(0x107540 + 0x0046, target as _)?) })
     }
-    pub fn hook_107260_01ba(&mut self, target: usize) -> Result<usize> {
-        self.hook_call(0x107260 + 0x01ba, target)
-    }
-
-    pub fn hook_107540_0046(
-        &mut self,
-        target: extern "thiscall" fn(this: *const c_void, arg1: u32) -> u32,
-    ) -> Result<usize> {
-        self.hook_call(0x107540 + 0x0046, target as _)
-    }
-    pub fn hook_107540_045c(&mut self, target: usize) -> Result<usize> {
-        self.hook_call(0x107540 + 0x045c, target)
-    }
-    pub fn hook_107540_07bf(&mut self, target: usize) -> Result<usize> {
-        self.hook_call(0x107540 + 0x07bf, target)
-    }
-    pub fn hook_107540_08a1(&mut self, target: usize) -> Result<usize> {
-        self.hook_call(0x107540 + 0x08a1, target)
-    }
-    pub fn hook_107540_0937(
-        &mut self,
-        target: extern "thiscall" fn(this: *const c_void),
-    ) -> Result<usize> {
-        self.hook_call(0x107540 + 0x0937, target as _)
+    pub fn hook_107540_0937(&mut self, target: Fn002530) -> Result<Fn002530> {
+        Ok(unsafe { transmute(self.hook_call(0x107540 + 0x0937, target as _)?) })
     }
 
-    pub fn hook_120ca0_0115(&mut self, target: usize) -> Result<usize> {
-        self.hook_call(0x120ca0 + 0x0115, target)
-    }
-
-    pub fn hook_13f9d0_0446(
-        &mut self,
-        target: extern "thiscall" fn(this: *const c_void, arg1: u32) -> u32,
-    ) -> Result<usize> {
-        self.hook_call(0x13f9d0 + 0x0446, target as _)
+    pub fn hook_13f9d0_0446(&mut self, target: Fn009fa0) -> Result<Fn009fa0> {
+        Ok(unsafe { transmute(self.hook_call(0x13f9d0 + 0x0446, target as _)?) })
     }
 
     // -------------------------------------------------------------------------

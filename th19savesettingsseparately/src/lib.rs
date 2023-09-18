@@ -4,7 +4,7 @@ mod settings_editor;
 
 use std::path::Path;
 
-use junowen_lib::{BattleSettings, Th19};
+use junowen_lib::{BattleSettings, Fn002530, Fn009fa0, Fn012480, Th19};
 use settings_editor::{on_close_settings_editor, on_open_settings_editor};
 use windows::{
     core::PCWSTR,
@@ -26,16 +26,16 @@ static mut STATE: Option<State> = None;
 
 struct Props {
     settings_path: String,
-    original_fn_from_13fe16: usize,
-    original_fn_from_107540_0046: usize,
-    original_fn_from_107540_0937: usize,
+    original_fn_from_13f9d0_0446: Fn009fa0,
+    original_fn_from_107540_0046: Fn012480,
+    original_fn_from_107540_0937: Fn002530,
 }
 
 impl Props {
     fn new(
-        original_fn_from_13fe16: usize,
-        original_fn_from_107540_0046: usize,
-        original_fn_from_107540_0937: usize,
+        original_fn_from_13f9d0_0446: Fn009fa0,
+        original_fn_from_107540_0046: Fn012480,
+        original_fn_from_107540_0937: Fn002530,
     ) -> Self {
         let dll_path = {
             let mut buf = [0u16; MAX_PATH as usize];
@@ -50,7 +50,7 @@ impl Props {
                 .with_extension("cfg")
                 .to_string_lossy()
                 .to_string(),
-            original_fn_from_13fe16,
+            original_fn_from_13f9d0_0446,
             original_fn_from_107540_0046,
             original_fn_from_107540_0937,
         }
@@ -107,14 +107,14 @@ pub extern "C" fn CheckVersion(hash: *const u8, length: usize) -> bool {
 #[no_mangle]
 pub extern "C" fn Initialize(_direct_3d: *const IDirect3D9) -> bool {
     let mut th19 = Th19::new_hooked_process("th19.exe").unwrap();
-    let original_fn_from_13fe16 = th19
+    let original_fn_from_13f9d0_0446 = th19
         .hook_13f9d0_0446(post_read_battle_settings_from_menu_to_game)
         .unwrap();
     let original_fn_from_107540_0046 = th19.hook_107540_0046(on_open_settings_editor).unwrap();
     let original_fn_from_107540_0937 = th19.hook_107540_0937(on_close_settings_editor).unwrap();
     unsafe {
         PROPS = Some(Props::new(
-            original_fn_from_13fe16,
+            original_fn_from_13f9d0_0446,
             original_fn_from_107540_0046,
             original_fn_from_107540_0937,
         ));
