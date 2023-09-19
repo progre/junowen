@@ -31,7 +31,7 @@ pub fn select_cursor(input: &mut DevicesInput, current: &mut u32, target: u32) {
 pub fn move_to_local_versus_difficulty_select(
     th19: &mut Th19,
     menu: &mut Menu,
-    inits: &InitialBattleInformation,
+    player_matchup: PlayerMatchup,
 ) -> bool {
     match (
         menu.screen_id,
@@ -49,7 +49,7 @@ pub fn move_to_local_versus_difficulty_select(
             false
         }
         (ScreenId::PlayerMatchupSelect, _, _) => {
-            let target = if inits.player_matchup == PlayerMatchup::HumanVsCpu {
+            let target = if player_matchup == PlayerMatchup::HumanVsCpu {
                 1
             } else {
                 0

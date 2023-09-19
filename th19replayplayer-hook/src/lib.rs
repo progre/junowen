@@ -191,7 +191,7 @@ fn move_to_battle(th19: &mut Th19, menu: &mut Menu, inits: &InitialBattleInforma
         (ScreenId::Loading, _, _)
         | (ScreenId::Title, _, _)
         | (ScreenId::PlayerMatchupSelect, _, _) => {
-            move_to_local_versus_difficulty_select(th19, menu, inits);
+            move_to_local_versus_difficulty_select(th19, menu, inits.player_matchup);
             false
         }
         (
