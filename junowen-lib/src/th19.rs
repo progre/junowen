@@ -8,7 +8,10 @@ use windows::{
     Win32::{Graphics::Direct3D9::IDirect3DDevice9, System::Memory::PAGE_EXECUTE_WRITECOPY},
 };
 
-use crate::memory_accessors::{ExternalProcess, HookedProcess, MemoryAccessor};
+use crate::{
+    memory_accessors::{ExternalProcess, HookedProcess, MemoryAccessor},
+    pointer, ptr_opt, u16_prop, value,
+};
 pub use th19_structs::*;
 
 pub type Fn002530 = extern "thiscall" fn(this: *const c_void);
@@ -19,21 +22,6 @@ pub type FnFrom0aba30_00fb = extern "fastcall" fn() -> u32;
 
 pub struct Th19 {
     memory_accessor: MemoryAccessor,
-}
-
-macro_rules! u16_prop {
-    ($addr:expr, $getter:ident) => {
-        pub fn $getter(&self) -> Result<u16> {
-            self.memory_accessor.read_u16($addr)
-        }
-    };
-
-    ($addr:expr, $getter:ident, $setter:ident) => {
-        u16_prop!($addr, $getter);
-        pub fn $setter(&mut self, value: u16) -> Result<()> {
-            self.memory_accessor.write_u16($addr, value)
-        }
-    };
 }
 
 impl Th19 {
@@ -80,41 +68,15 @@ impl Th19 {
 
     // -------------------------------------------------------------------------
 
-    pub fn input(&self) -> &'static DevicesInput {
-        self.pointer(0x1ae3a0).unwrap()
-    }
-    pub fn input_mut(&mut self) -> &'static mut DevicesInput {
-        self.pointer_mut(0x1ae3a0).unwrap()
-    }
-
+    pointer!(0x_1ae3a0, input, input_mut, DevicesInput);
     u16_prop!(0x1ae410, rand_seed1, set_rand_seed1);
-
-    pub fn game(&self) -> &'static Game {
-        self.pointer(0x1ae41c).unwrap()
-    }
-
+    pointer!(0x_1ae41c, game, Game);
     u16_prop!(0x1ae430, rand_seed2, set_rand_seed2);
-
-    pub fn battle(&self) -> Option<&'static Battle> {
-        self.pointer(0x1ae464)
-    }
-
+    ptr_opt!(0x_1ae464, battle, Battle);
     u16_prop!(0x200850, p1_input);
     u16_prop!(0x200b10, p2_input);
-
-    pub fn battle_p1(&self) -> &'static BattlePlayer {
-        self.value(0x207910)
-    }
-    pub fn battle_p1_mut(&mut self) -> &'static mut BattlePlayer {
-        self.value_mut(0x207910)
-    }
-
-    pub fn battle_p2(&self) -> &'static BattlePlayer {
-        self.value(0x2079d0)
-    }
-    pub fn battle_p2_mut(&mut self) -> &'static mut BattlePlayer {
-        self.value_mut(0x2079d0)
-    }
+    value!(0x___207910, battle_p1, battle_p1_mut, BattlePlayer);
+    value!(0x___2079d0, battle_p2, battle_p2_mut, BattlePlayer);
 
     pub fn difficulty(&self) -> Result<Difficulty> {
         self.memory_accessor.read_u32(0x207a90)?.try_into()
@@ -135,9 +97,7 @@ impl Th19 {
     }
 
     pub fn direct_3d_device(&self) -> Result<&'static IDirect3DDevice9> {
-        let MemoryAccessor::HookedProcess(memory_accessor) = &self.memory_accessor else {
-            panic!("Th19::direct_3d_device is only available for HookedProcess");
-        };
+        let memory_accessor = self.hooked_process_memory_accessor();
         let p_p_direct_3d_device = memory_accessor.raw_ptr(0x208388) as *const *mut c_void;
         unsafe { IDirect3DDevice9::from_raw_borrowed(&*p_p_direct_3d_device) }
             .ok_or_else(|| anyhow!("IDirect3DDevice9::from_raw_borrowed failed"))
@@ -164,40 +124,28 @@ impl Th19 {
             .any(|item| item.id == 3 || item.id == 4)
     }
 
+    // -------------------------------------------------------------------------
+
     fn value<T>(&self, addr: usize) -> &'static T {
-        let MemoryAccessor::HookedProcess(memory_accessor) = &self.memory_accessor else {
-            panic!("Th19::object is only available for HookedProcess");
-        };
-        let p_obj = memory_accessor.raw_ptr(addr) as *const T;
+        let p_obj = self.hooked_process_memory_accessor().raw_ptr(addr) as *const T;
         unsafe { p_obj.as_ref().unwrap() }
     }
     fn value_mut<T>(&mut self, addr: usize) -> &'static mut T {
-        let MemoryAccessor::HookedProcess(memory_accessor) = &self.memory_accessor else {
-            panic!("Th19::object is only available for HookedProcess");
-        };
-        let p_obj = memory_accessor.raw_ptr(addr) as *mut T;
+        let p_obj = self.hooked_process_memory_accessor_mut().raw_ptr(addr) as *mut T;
         unsafe { p_obj.as_mut().unwrap() }
     }
 
     fn pointer<T>(&self, addr: usize) -> Option<&'static T> {
-        let MemoryAccessor::HookedProcess(memory_accessor) = &self.memory_accessor else {
-            panic!("Th19::object is only available for HookedProcess");
-        };
-        let p_p_obj = memory_accessor.raw_ptr(addr) as *const *const T;
+        let p_p_obj = self.hooked_process_memory_accessor().raw_ptr(addr) as *const *const T;
         unsafe { (*p_p_obj).as_ref() }
     }
     fn pointer_mut<T>(&mut self, addr: usize) -> Option<&'static mut T> {
-        let MemoryAccessor::HookedProcess(memory_accessor) = &self.memory_accessor else {
-            panic!("Th19::object is only available for HookedProcess");
-        };
-        let p_p_obj = memory_accessor.raw_ptr(addr) as *const *mut T;
+        let p_p_obj = self.hooked_process_memory_accessor_mut().raw_ptr(addr) as *const *mut T;
         unsafe { (*p_p_obj).as_mut() }
     }
 
     fn hook_call(&mut self, addr: usize, target: usize) -> Result<usize> {
-        let MemoryAccessor::HookedProcess(memory_accessor) = &mut self.memory_accessor else {
-            panic!("Th19::hook_call is only available for HookedProcess");
-        };
+        let memory_accessor = self.hooked_process_memory_accessor_mut();
         let old = memory_accessor.virtual_protect(addr, 5, PAGE_EXECUTE_WRITECOPY)?;
         let original = memory_accessor.hook_call(addr, target);
         memory_accessor.virtual_protect(addr, 5, old)?;
@@ -216,5 +164,18 @@ impl Th19 {
     ) -> Result<()> {
         let buffer: &[u8; 12] = unsafe { transmute(battle_settings) };
         self.memory_accessor.write(addr, buffer)
+    }
+
+    fn hooked_process_memory_accessor(&self) -> &HookedProcess {
+        let MemoryAccessor::HookedProcess(memory_accessor) = &self.memory_accessor else {
+            panic!("Th19::hooked_process_memory_accessor is only available for HookedProcess");
+        };
+        memory_accessor
+    }
+    fn hooked_process_memory_accessor_mut(&mut self) -> &mut HookedProcess {
+        let MemoryAccessor::HookedProcess(memory_accessor) = &mut self.memory_accessor else {
+            panic!("Th19::hooked_process_memory_accessor_mut is only available for HookedProcess");
+        };
+        memory_accessor
     }
 }
