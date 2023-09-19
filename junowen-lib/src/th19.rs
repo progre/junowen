@@ -1,3 +1,4 @@
+mod th19_helpers;
 mod th19_structs;
 
 use std::{ffi::c_void, mem::transmute};
@@ -12,6 +13,7 @@ use crate::{
     memory_accessors::{ExternalProcess, HookedProcess, MemoryAccessor},
     pointer, ptr_opt, u16_prop, value,
 };
+pub use th19_helpers::*;
 pub use th19_structs::*;
 
 pub type Fn002530 = extern "thiscall" fn(this: *const c_void);

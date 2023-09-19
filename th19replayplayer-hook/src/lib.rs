@@ -10,8 +10,9 @@ use anyhow::Result;
 use bytes::{Buf, BytesMut};
 use interprocess::os::windows::named_pipe::{ByteReaderPipeStream, PipeListenerOptions, PipeMode};
 use junowen_lib::{
-    Battle, BattleSettings, DevicesInput, Difficulty, FnFrom0aba30_00fb, GameMode, Input, Menu,
-    PlayerMatchup, ScreenId, Th19,
+    move_to_local_versus_difficulty_select, select_cursor, shot_repeatedly, Battle, DevicesInput,
+    FnFrom0aba30_00fb, GameMode, InitialBattleInformation, Input, Menu, PlayerMatchup, ScreenId,
+    Th19,
 };
 use th19replayplayer::{FileInputList, ReplayFile};
 use windows::Win32::{
@@ -181,55 +182,16 @@ fn tick_battle(
     true
 }
 
-fn shot_repeatedly(prev: Input) -> Input {
-    if prev.0 == Input::SHOT {
-        Input(Input::NULL)
-    } else {
-        Input(Input::SHOT)
-    }
-}
-
-fn move_cursor(input: &mut DevicesInput, current: &mut u32, target: u32) {
-    if *current != target {
-        *current = target;
-    }
-    input.set_p1_input(shot_repeatedly(input.p1_prev_input()));
-    input.set_p2_input(Input(Input::NULL));
-}
-
-struct InitialBattleInformation<'a> {
-    difficulty: Difficulty,
-    player_matchup: PlayerMatchup,
-    battle_settings: &'a BattleSettings,
-    p1_character: u8,
-    p1_card: u8,
-    p2_character: u8,
-    p2_card: u8,
-}
-
-fn move_to_battle(th19: &mut Th19, menu: &mut Menu, inits: InitialBattleInformation) -> bool {
+fn move_to_battle(th19: &mut Th19, menu: &mut Menu, inits: &InitialBattleInformation) -> bool {
     match (
         menu.screen_id,
         th19.game_mode().unwrap(),
         th19.player_matchup().unwrap(),
     ) {
-        (ScreenId::Loading, _, _) => {
-            let input = th19.input_mut();
-            input.set_p1_input(Input(Input::NULL));
-            input.set_p2_input(Input(Input::NULL));
-            false
-        }
-        (ScreenId::Title, _, _) => {
-            move_cursor(th19.input_mut(), &mut menu.cursor, 1);
-            false
-        }
-        (ScreenId::PlayerMatchupSelect, _, _) => {
-            let target = if inits.player_matchup == PlayerMatchup::HumanVsCpu {
-                1
-            } else {
-                0
-            };
-            move_cursor(th19.input_mut(), &mut menu.cursor, target);
+        (ScreenId::Loading, _, _)
+        | (ScreenId::Title, _, _)
+        | (ScreenId::PlayerMatchupSelect, _, _) => {
+            move_to_local_versus_difficulty_select(th19, menu, inits);
             false
         }
         (
@@ -237,7 +199,7 @@ fn move_to_battle(th19: &mut Th19, menu: &mut Menu, inits: InitialBattleInformat
             GameMode::Versus,
             PlayerMatchup::HumanVsHuman | PlayerMatchup::HumanVsCpu | PlayerMatchup::CpuVsCpu,
         ) => {
-            move_cursor(th19.input_mut(), &mut menu.cursor, inits.difficulty as u32);
+            select_cursor(th19.input_mut(), &mut menu.cursor, inits.difficulty as u32);
             false
         }
         (ScreenId::CharacterSelect, GameMode::Versus, _) => {
@@ -277,7 +239,7 @@ fn on_input() {
             if move_to_battle(
                 th19,
                 menu,
-                InitialBattleInformation {
+                &InitialBattleInformation {
                     difficulty: replay_file.difficulty,
                     player_matchup: replay_file.player_matchup,
                     battle_settings: &replay_file.battle_settings,
