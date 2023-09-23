@@ -16,7 +16,7 @@ use tokio::{
 };
 use webrtc::{
     api::media_engine::MediaEngine,
-    data_channel::RTCDataChannel,
+    data_channel::{data_channel_init::RTCDataChannelInit, RTCDataChannel},
     ice_transport::ice_server::RTCIceServer,
     interceptor::registry::Registry,
     peer_connection::{
@@ -241,7 +241,16 @@ impl PeerConnectionImpl {
 #[async_trait]
 impl PeerConnection for PeerConnectionImpl {
     async fn start_as_host(&mut self) -> Result<CompressedSessionDesc> {
-        let rtc_data_channel = self.rtc.create_data_channel("data", None).await?;
+        let rtc_data_channel = self
+            .rtc
+            .create_data_channel(
+                "data",
+                Some(RTCDataChannelInit {
+                    protocol: Some("JUNOWEN/1.0".to_owned()),
+                    ..Default::default()
+                }),
+            )
+            .await?;
         Self::send_data_channel(
             &self.data_channel_tx,
             rtc_data_channel,
