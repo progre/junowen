@@ -5,7 +5,17 @@ edition = "2021"
 
 [dependencies]
 anyhow.workspace = true
+async-trait = "0.1.73"
+bytes = "1.5.0"
+clipboard-win = "4.5.0"
+flate2 = "1.0.27"
 getset = "0.1.2"
+regex = "1.9.5"
+rmp-serde = "1.1.2"
+serde = "1.0.188"
+tokio = "1.32.0"
+toml = "0.8.0"
+webrtc = "0.9.0"
 windows = { version = "0.51.1", features = [
   "Win32_Foundation",
   "Win32_Graphics_Direct3D9",
@@ -22,3 +32,4 @@ windows = { version = "0.51.1", features = [
   "Win32_System_SystemServices",
   "Win32_System_Threading",
 ] }
+z85 = "3.0.5"
