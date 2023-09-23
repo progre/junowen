@@ -976,6 +976,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "base64",
  "bytes",
  "clipboard-win",
  "flate2",
@@ -987,7 +988,6 @@ dependencies = [
  "toml",
  "webrtc",
  "windows 0.51.1",
- "z85",
 ]
 
 [[package]]
@@ -2605,12 +2605,6 @@ checksum = "e17bb3549cc1321ae1296b9cdc2698e2b6cb1992adfa19a8c72e5b7a738f44cd"
 dependencies = [
  "time",
 ]
-
-[[package]]
-name = "z85"
-version = "3.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a599daf1b507819c1121f0bf87fa37eb19daac6aff3aefefd4e6e2e0f2020fc"
 
 [[package]]
 name = "zeroize"

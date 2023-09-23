@@ -2,6 +2,7 @@ use std::{io::Write, sync::Arc, time::Duration};
 
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
+use base64::{prelude::BASE64_STANDARD_NO_PAD, Engine};
 use bytes::Bytes;
 use flate2::{
     write::{DeflateDecoder, DeflateEncoder},
@@ -35,12 +36,17 @@ fn compress(label: &str, desc: &RTCSessionDescription) -> String {
     e.write_all(&mp).unwrap();
     let compressed_bytes = e.finish().unwrap();
 
-    format!(r#"{{"{}":"{}"}}"#, label, z85::encode(compressed_bytes))
+    format!(
+        r#"<{}>{}</{}>"#,
+        label,
+        BASE64_STANDARD_NO_PAD.encode(compressed_bytes),
+        label,
+    )
 }
 
 fn decompress(desc: &str) -> Result<RTCSessionDescription> {
-    let compressed_bytes = z85::decode(
-        Regex::new(r#".*"(.+?)""#)
+    let compressed_bytes = BASE64_STANDARD_NO_PAD.decode(
+        Regex::new(r#"<.+?>(.+?)</.+?>"#)
             .unwrap()
             .captures(&desc.replace('\n', ""))
             .and_then(|c| c.get(1))
@@ -254,7 +260,7 @@ impl PeerConnection for PeerConnectionImpl {
             .local_description()
             .await
             .ok_or_else(|| anyhow!("Failed to get local description"))?;
-        Ok(CompressedSessionDesc(compress("o", &local_desc)))
+        Ok(CompressedSessionDesc(compress("offer", &local_desc)))
     }
 
     async fn start_as_guest(
@@ -276,7 +282,7 @@ impl PeerConnection for PeerConnectionImpl {
             .await
             .ok_or_else(|| anyhow!("Failed to get local description"))?;
 
-        Ok(CompressedSessionDesc(compress("a", &local_desc)))
+        Ok(CompressedSessionDesc(compress("answer", &local_desc)))
     }
 
     async fn set_answer_desc(&self, answer_desc: CompressedSessionDesc) -> Result<()> {
