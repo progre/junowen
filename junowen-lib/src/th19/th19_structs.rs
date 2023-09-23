@@ -21,16 +21,17 @@ impl Input {
 
 #[repr(C)]
 pub struct InputDevice {
+    _unknown1: [u8; 0x010],
     pub input: Input,
     pub prev_input: Input,
-    _unknown2: [u8; 0x3cc],
+    _unknown2: [u8; 0x3bc],
 }
 
 #[repr(C)]
 pub struct DevicesInput {
-    pub _unknown1: [u8; 0x30],
+    _unknown1: [u8; 0x20],
     pub input_device_array: [InputDevice; 3 + 9],
-    _unknown2: u32,
+    _unknown2: [u8; 0x14],
     pub p1_input_idx: u32,
     pub p2_input_idx: u32,
     // unknown continues...

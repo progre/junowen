@@ -24,8 +24,9 @@ pub fn select_cursor(input: &mut DevicesInput, current: &mut u32, target: u32) {
     if *current != target {
         *current = target;
     }
-    input.set_p1_input(shot_repeatedly(input.p1_prev_input()));
+    // P2 writes first because the same device may be shared
     input.set_p2_input(Input(Input::NULL));
+    input.set_p1_input(shot_repeatedly(input.p1_prev_input()));
 }
 
 pub fn move_to_local_versus_difficulty_select(

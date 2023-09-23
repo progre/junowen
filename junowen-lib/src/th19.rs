@@ -77,8 +77,8 @@ impl Th19 {
     ptr_opt!(0x_1ae464, battle, Battle);
     u16_prop!(0x200850, p1_input);
     u16_prop!(0x200b10, p2_input);
-    value!(0x___207910, battle_p1, battle_p1_mut, BattlePlayer);
-    value!(0x___2079d0, battle_p2, battle_p2_mut, BattlePlayer);
+    value!(0x207910, battle_p1, battle_p1_mut, BattlePlayer);
+    value!(0x2079d0, battle_p2, battle_p2_mut, BattlePlayer);
 
     pub fn difficulty(&self) -> Result<Difficulty> {
         self.memory_accessor.read_u32(0x207a90)?.try_into()
