@@ -1,6 +1,6 @@
 use std::{io::Write, sync::Arc, time::Duration};
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
 use base64::{prelude::BASE64_STANDARD_NO_PAD, Engine};
 use bytes::Bytes;
@@ -20,8 +20,10 @@ use webrtc::{
     ice_transport::ice_server::RTCIceServer,
     interceptor::registry::Registry,
     peer_connection::{
-        configuration::RTCConfiguration, peer_connection_state::RTCPeerConnectionState,
-        sdp::session_description::RTCSessionDescription, RTCPeerConnection,
+        configuration::RTCConfiguration,
+        peer_connection_state::RTCPeerConnectionState,
+        sdp::{sdp_type::RTCSdpType, session_description::RTCSessionDescription},
+        RTCPeerConnection,
     },
 };
 
@@ -29,34 +31,42 @@ use crate::signaling::CompressedSessionDesc;
 
 use super::PeerConnection;
 
-fn compress(label: &str, desc: &RTCSessionDescription) -> String {
-    let mp = rmp_serde::to_vec(&desc).unwrap();
-
+fn compress(desc: &RTCSessionDescription) -> String {
     let mut e = DeflateEncoder::new(Vec::new(), Compression::best());
-    e.write_all(&mp).unwrap();
+    e.write_all(desc.sdp.as_bytes()).unwrap();
     let compressed_bytes = e.finish().unwrap();
 
     format!(
         r#"<{}>{}</{}>"#,
-        label,
+        desc.sdp_type,
         BASE64_STANDARD_NO_PAD.encode(compressed_bytes),
-        label,
+        desc.sdp_type,
     )
 }
 
 fn decompress(desc: &str) -> Result<RTCSessionDescription> {
-    let compressed_bytes = BASE64_STANDARD_NO_PAD.decode(
-        Regex::new(r#"<.+?>(.+?)</.+?>"#)
-            .unwrap()
-            .captures(&desc.replace('\n', ""))
-            .and_then(|c| c.get(1))
-            .ok_or_else(|| anyhow!("Failed to parse json from {:?}", desc))?
-            .as_str(),
-    )?;
+    let captures = Regex::new(r#"<(.+?)>(.+?)</(.+?)>"#)
+        .unwrap()
+        .captures(desc)
+        .ok_or_else(|| anyhow!("Failed to parse"))?;
+    let sdp_type = &captures[1];
+    let sdp_type_end = &captures[3];
+    if sdp_type != sdp_type_end {
+        bail!("unmatched tag: <{}></{}>", sdp_type, sdp_type_end);
+    }
+    let compressed_bytes = BASE64_STANDARD_NO_PAD.decode(captures[2].replace(['\n', ' '], ""))?;
+
     let mut d = DeflateDecoder::new(Vec::new());
     d.write_all(&compressed_bytes)?;
-    let json_bytes = d.finish()?;
-    Ok(rmp_serde::from_slice(&json_bytes)?)
+    let sdp = String::from_utf8_lossy(&d.finish()?).to_string();
+    Ok(match RTCSdpType::from(sdp_type) {
+        RTCSdpType::Offer => RTCSessionDescription::offer(sdp),
+        RTCSdpType::Pranswer => RTCSessionDescription::pranswer(sdp),
+        RTCSdpType::Answer => RTCSessionDescription::answer(sdp),
+        RTCSdpType::Unspecified | RTCSdpType::Rollback => {
+            bail!("Failed to parse from {:?}", desc)
+        }
+    }?)
 }
 
 fn create_default_config() -> RTCConfiguration {
@@ -269,7 +279,7 @@ impl PeerConnection for PeerConnectionImpl {
             .local_description()
             .await
             .ok_or_else(|| anyhow!("Failed to get local description"))?;
-        Ok(CompressedSessionDesc(compress("offer", &local_desc)))
+        Ok(CompressedSessionDesc(compress(&local_desc)))
     }
 
     async fn start_as_guest(
@@ -291,7 +301,7 @@ impl PeerConnection for PeerConnectionImpl {
             .await
             .ok_or_else(|| anyhow!("Failed to get local description"))?;
 
-        Ok(CompressedSessionDesc(compress("answer", &local_desc)))
+        Ok(CompressedSessionDesc(compress(&local_desc)))
     }
 
     async fn set_answer_desc(&self, answer_desc: CompressedSessionDesc) -> Result<()> {
