@@ -10,9 +10,8 @@ use anyhow::Result;
 use bytes::{Buf, BytesMut};
 use interprocess::os::windows::named_pipe::{ByteReaderPipeStream, PipeListenerOptions, PipeMode};
 use junowen_lib::{
-    move_to_local_versus_difficulty_select, select_cursor, shot_repeatedly, Battle, DevicesInput,
-    FnFrom0aba30_00fb, GameMode, InitialBattleInformation, Input, Menu, PlayerMatchup, ScreenId,
-    Th19,
+    move_to_local_versus_difficulty_select, select_cursor, shot_repeatedly, Battle, CustomCallback,
+    DevicesInput, GameMode, InitialBattleInformation, Input, Menu, PlayerMatchup, ScreenId, Th19,
 };
 use th19replayplayer::{FileInputList, ReplayFile};
 use windows::Win32::{
@@ -25,7 +24,8 @@ static mut PROPS: Option<Props> = None;
 static mut STATE: Option<State> = None;
 
 struct Props {
-    original_fn_from_0aba30_00fb: Option<FnFrom0aba30_00fb>,
+    original_on_input_menu: Option<CustomCallback>,
+    original_on_input_players: Option<CustomCallback>,
     rx: mpsc::Receiver<ReplayFile>,
 }
 
@@ -97,9 +97,6 @@ fn props() -> &'static Props {
     unsafe { PROPS.as_ref().unwrap() }
 }
 
-fn state() -> &'static State {
-    unsafe { STATE.as_ref().unwrap() }
-}
 fn state_mut() -> &'static mut State {
     unsafe { STATE.as_mut().unwrap() }
 }
@@ -182,7 +179,11 @@ fn tick_battle(
     true
 }
 
-fn move_to_battle(th19: &mut Th19, menu: &mut Menu, inits: &InitialBattleInformation) -> bool {
+fn move_to_battle_menu_input(
+    th19: &mut Th19,
+    menu: &mut Menu,
+    inits: &InitialBattleInformation,
+) -> bool {
     match (
         menu.screen_id,
         th19.game_mode().unwrap(),
@@ -199,11 +200,46 @@ fn move_to_battle(th19: &mut Th19, menu: &mut Menu, inits: &InitialBattleInforma
             GameMode::Versus,
             PlayerMatchup::HumanVsHuman | PlayerMatchup::HumanVsCpu | PlayerMatchup::CpuVsCpu,
         ) => {
-            select_cursor(th19.input_mut(), &mut menu.cursor, inits.difficulty as u32);
+            select_cursor(
+                th19.menu_input_mut(),
+                *th19.prev_menu_input(),
+                &mut menu.cursor,
+                inits.difficulty as u32,
+            );
             false
         }
         (ScreenId::CharacterSelect, GameMode::Versus, _) => {
-            let input = th19.input_mut();
+            *th19.menu_input_mut() = Input(Input::NULL);
+            false
+        }
+        (ScreenId::BattleLoading, GameMode::Versus, _) => true,
+        _ => {
+            eprintln!("unknown screen {}", menu.screen_id as u32);
+            false
+        }
+    }
+}
+
+fn move_to_battle_player_inputs(
+    th19: &mut Th19,
+    menu: &mut Menu,
+    inits: &InitialBattleInformation,
+) -> bool {
+    let input = th19.input_mut();
+    match (
+        menu.screen_id,
+        th19.game_mode().unwrap(),
+        th19.player_matchup().unwrap(),
+    ) {
+        (ScreenId::Loading, _, _)
+        | (ScreenId::Title, _, _)
+        | (ScreenId::PlayerMatchupSelect, _, _)
+        | (ScreenId::DifficultySelect, _, _) => {
+            input.set_p1_input(Input(Input::NULL));
+            input.set_p2_input(Input(Input::NULL));
+            false
+        }
+        (ScreenId::CharacterSelect, GameMode::Versus, _) => {
             menu.p1_cursor.cursor = inits.p1_character as u32;
             th19.battle_p1_mut().set_card(inits.p1_card as u32);
             menu.p2_cursor.cursor = inits.p2_character as u32;
@@ -222,7 +258,7 @@ fn move_to_battle(th19: &mut Th19, menu: &mut Menu, inits: &InitialBattleInforma
     }
 }
 
-fn on_input() {
+fn on_input_players_internal() {
     let state = state_mut();
     match state.replay_player_state() {
         ReplayPlayerState::Standby => {
@@ -230,13 +266,13 @@ fn on_input() {
                 return;
             };
             state.change_to_prepare(ok);
-            on_input();
+            on_input_players_internal();
         }
         ReplayPlayerState::Prepare { th19, replay_file } => {
             let Some(menu) = th19.game().game_mains.find_menu_mut() else {
                 return;
             };
-            if move_to_battle(
+            if move_to_battle_player_inputs(
                 th19,
                 menu,
                 &InitialBattleInformation {
@@ -264,14 +300,45 @@ fn on_input() {
     }
 }
 
-extern "fastcall" fn from_0aba30_00fb() -> u32 {
-    on_input();
+extern "fastcall" fn on_input_players() {
+    on_input_players_internal();
 
     let props = props();
-    if let Some(func) = props.original_fn_from_0aba30_00fb {
+    if let Some(func) = props.original_on_input_players {
         func()
-    } else {
-        state().th19.input().p1_input().0 // p1 の入力を返す
+    }
+}
+
+extern "fastcall" fn on_input_menu() {
+    let state = state_mut();
+    match state.replay_player_state() {
+        ReplayPlayerState::Standby => {
+            return;
+        }
+        ReplayPlayerState::Prepare { th19, replay_file } => {
+            let Some(menu) = th19.game().game_mains.find_menu_mut() else {
+                return;
+            };
+            move_to_battle_menu_input(
+                th19,
+                menu,
+                &InitialBattleInformation {
+                    difficulty: replay_file.difficulty,
+                    player_matchup: replay_file.player_matchup,
+                    battle_settings: &replay_file.battle_settings,
+                    p1_character: replay_file.p1_character,
+                    p1_card: replay_file.p1_card,
+                    p2_character: replay_file.p2_character,
+                    p2_card: replay_file.p2_card,
+                },
+            );
+        }
+        ReplayPlayerState::InGame { .. } => {}
+    }
+
+    let props = props();
+    if let Some(func) = props.original_on_input_menu {
+        func()
     }
 }
 
@@ -287,10 +354,12 @@ pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32
         init_interprecess(tx);
 
         let mut th19 = Th19::new_hooked_process("th19.exe").unwrap();
-        let original_fn_from_0aba30_00fb = th19.hook_0aba30_00fb(from_0aba30_00fb).unwrap();
+        let original_on_input_menu = th19.hook_on_input_menu(on_input_menu).unwrap();
+        let original_on_input_players = th19.hook_on_input_players(on_input_players).unwrap();
         unsafe {
             PROPS = Some(Props {
-                original_fn_from_0aba30_00fb,
+                original_on_input_menu,
+                original_on_input_players,
                 rx,
             });
             STATE = Some(State {

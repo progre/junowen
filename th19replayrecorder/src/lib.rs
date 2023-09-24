@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use junowen_lib::{DevicesInput, FnFrom0aba30_00fb, ScreenId, Th19};
+use junowen_lib::{CustomCallback, DevicesInput, ScreenId, Th19};
 use th19replayplayer::{FileInputList, ReplayFile};
 use windows::{
     core::PCWSTR,
@@ -24,12 +24,12 @@ static mut STATE: Option<State> = None;
 
 struct Props {
     th19: Th19,
-    original_fn_from_0aba30_00fb: Option<FnFrom0aba30_00fb>,
+    original_fn_from_0aba30_00fb: Option<CustomCallback>,
     replay_dir_path: String,
 }
 
 impl Props {
-    fn new(th19: Th19, original_fn_from_0aba30_00fb: Option<FnFrom0aba30_00fb>) -> Self {
+    fn new(th19: Th19, original_fn_from_0aba30_00fb: Option<CustomCallback>) -> Self {
         let dll_path = {
             let mut buf = [0u16; MAX_PATH as usize];
             if unsafe { GetModuleFileNameW(MODULE, &mut buf) } == 0 {
@@ -155,14 +155,12 @@ fn on_input() {
     }
 }
 
-extern "fastcall" fn from_0aba30_00fb() -> u32 {
+extern "fastcall" fn from_0aba30_00fb() {
     on_input();
 
     let props = props();
     if let Some(func) = props.original_fn_from_0aba30_00fb {
         func()
-    } else {
-        props.th19.input().p1_input().0 // p1 の入力を返す
     }
 }
 
@@ -170,7 +168,7 @@ extern "fastcall" fn from_0aba30_00fb() -> u32 {
 #[no_mangle]
 pub extern "C" fn Initialize(_direct_3d: *const IDirect3D9) -> bool {
     let mut th19 = Th19::new_hooked_process("th19.exe").unwrap();
-    let original_fn_from_0aba30_00fb = th19.hook_0aba30_00fb(from_0aba30_00fb).unwrap();
+    let original_fn_from_0aba30_00fb = th19.hook_on_input_players(from_0aba30_00fb).unwrap();
     unsafe {
         PROPS = Some(Props::new(th19, original_fn_from_0aba30_00fb));
         STATE = Some(Default::default());

@@ -1,7 +1,7 @@
 mod th19_helpers;
 mod th19_structs;
 
-use std::{ffi::c_void, mem::transmute};
+use std::{arch::asm, ffi::c_void, mem::transmute};
 
 use anyhow::{anyhow, Result};
 use windows::{
@@ -20,7 +20,58 @@ pub type Fn002530 = extern "thiscall" fn(this: *const c_void);
 pub type Fn009fa0 = extern "thiscall" fn(this: *const c_void, arg1: u32) -> u32;
 pub type Fn012480 = extern "thiscall" fn(this: *const c_void, arg1: u32) -> u32;
 pub type Fn0a9000 = extern "fastcall" fn(arg1: i32);
-pub type FnFrom0aba30_00fb = extern "fastcall" fn() -> u32;
+pub type CustomCallback = extern "fastcall" fn();
+
+extern "fastcall" fn dummy_from_0aba30_00fb() {
+    unsafe {
+        asm! {
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+        }
+    }
+}
+
+extern "fastcall" fn dummy_from_0aba30_0143() {
+    unsafe {
+        asm! {
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+        }
+    }
+}
 
 pub struct Th19 {
     memory_accessor: MemoryAccessor,
@@ -43,18 +94,58 @@ impl Th19 {
         Ok(unsafe { transmute(self.hook_call(0x0a9540 + 0x0175, target as _)?) })
     }
 
-    pub fn hook_0aba30_00fb(
+    pub fn hook_on_input_players(
         &mut self,
-        target: FnFrom0aba30_00fb,
-    ) -> Result<Option<FnFrom0aba30_00fb>> {
-        let addr = 0x0aba30 + 0x00fb;
+        target: CustomCallback,
+    ) -> Result<Option<CustomCallback>> {
+        const ADDR: usize = 0x0aba30 + 0x00fb;
+        const CAPACITY: usize = 10;
         let MemoryAccessor::HookedProcess(memory_accessor) = &mut self.memory_accessor else {
             panic!("Th19::hook_0abb2b is only available for HookedProcess");
         };
-        let old = memory_accessor.virtual_protect(addr, 14, PAGE_EXECUTE_WRITECOPY)?;
-        let old_addr = memory_accessor.hook_assembly(addr, 14, target as _);
-        memory_accessor.virtual_protect(addr, 14, old)?;
-        Ok(old_addr.map(|old_addr| unsafe { transmute(old_addr) }))
+        let parent_old = memory_accessor.virtual_protect(ADDR, CAPACITY, PAGE_EXECUTE_WRITECOPY)?;
+        let my_old = memory_accessor.virtual_protect_global(
+            dummy_from_0aba30_00fb as _,
+            CAPACITY + 5 + 6,
+            PAGE_EXECUTE_WRITECOPY,
+        )?;
+
+        let old_addr =
+            memory_accessor.hook_assembly(ADDR, CAPACITY, dummy_from_0aba30_00fb, target as _);
+
+        memory_accessor.virtual_protect_global(
+            dummy_from_0aba30_00fb as _,
+            CAPACITY + 5 + 6,
+            my_old,
+        )?;
+        memory_accessor.virtual_protect(ADDR, CAPACITY, parent_old)?;
+        Ok(old_addr)
+    }
+
+    pub fn hook_on_input_menu(&mut self, target: CustomCallback) -> Result<Option<CustomCallback>> {
+        const ADDR: usize = 0x0aba30 + 0x018e;
+        const CAPACITY: usize = 5;
+        let MemoryAccessor::HookedProcess(memory_accessor) = &mut self.memory_accessor else {
+            panic!("Th19::hook_0abb2b is only available for HookedProcess");
+        };
+
+        let parent_old = memory_accessor.virtual_protect(ADDR, CAPACITY, PAGE_EXECUTE_WRITECOPY)?;
+        let my_old = memory_accessor.virtual_protect_global(
+            dummy_from_0aba30_0143 as _,
+            CAPACITY + 5 + 6,
+            PAGE_EXECUTE_WRITECOPY,
+        )?;
+
+        let old_addr =
+            memory_accessor.hook_assembly(ADDR, CAPACITY, dummy_from_0aba30_0143, target as _);
+
+        memory_accessor.virtual_protect_global(
+            dummy_from_0aba30_0143 as _,
+            CAPACITY + 5 + 6,
+            my_old,
+        )?;
+        memory_accessor.virtual_protect(ADDR, CAPACITY, parent_old)?;
+        Ok(old_addr)
     }
 
     pub fn hook_107540_0046(&mut self, target: Fn012480) -> Result<Fn012480> {
@@ -77,6 +168,8 @@ impl Th19 {
     ptr_opt!(0x_1ae464, battle, Battle);
     u16_prop!(0x200850, p1_input);
     u16_prop!(0x200b10, p2_input);
+    value!(0x200dd0, menu_input, menu_input_mut, Input);
+    value!(0x200dd4, prev_menu_input, Input);
     value!(0x207910, battle_p1, battle_p1_mut, BattlePlayer);
     value!(0x2079d0, battle_p2, battle_p2_mut, BattlePlayer);
 

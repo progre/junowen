@@ -1,6 +1,4 @@
-use crate::{
-    BattleSettings, DevicesInput, Difficulty, GameMode, Input, Menu, PlayerMatchup, ScreenId, Th19,
-};
+use crate::{BattleSettings, Difficulty, GameMode, Input, Menu, PlayerMatchup, ScreenId, Th19};
 
 pub struct InitialBattleInformation<'a> {
     pub difficulty: Difficulty,
@@ -20,42 +18,50 @@ pub fn shot_repeatedly(prev: Input) -> Input {
     }
 }
 
-pub fn select_cursor(input: &mut DevicesInput, current: &mut u32, target: u32) {
-    if *current != target {
-        *current = target;
+pub fn select_cursor(
+    current_input: &mut Input,
+    prev_input: Input,
+    current_cursor: &mut u32,
+    target: u32,
+) {
+    if *current_cursor != target {
+        *current_cursor = target;
     }
-    // P2 writes first because the same device may be shared
-    input.set_p2_input(Input(Input::NULL));
-    input.set_p1_input(shot_repeatedly(input.p1_prev_input()));
+    *current_input = shot_repeatedly(prev_input);
 }
 
 pub fn move_to_local_versus_difficulty_select(
     th19: &mut Th19,
     menu: &mut Menu,
-    player_matchup: PlayerMatchup,
+    target_player_matchup: PlayerMatchup,
 ) -> bool {
     match (
         menu.screen_id,
         th19.game_mode().unwrap(),
         th19.player_matchup().unwrap(),
     ) {
-        (ScreenId::Loading, _, _) => {
-            let input = th19.input_mut();
-            input.set_p1_input(Input(Input::NULL));
-            input.set_p2_input(Input(Input::NULL));
-            false
-        }
+        (ScreenId::Loading, _, _) => false,
         (ScreenId::Title, _, _) => {
-            select_cursor(th19.input_mut(), &mut menu.cursor, 1);
+            select_cursor(
+                th19.menu_input_mut(),
+                *th19.prev_menu_input(),
+                &mut menu.cursor,
+                1,
+            );
             false
         }
         (ScreenId::PlayerMatchupSelect, _, _) => {
-            let target = if player_matchup == PlayerMatchup::HumanVsCpu {
+            let target = if target_player_matchup == PlayerMatchup::HumanVsCpu {
                 1
             } else {
                 0
             };
-            select_cursor(th19.input_mut(), &mut menu.cursor, target);
+            select_cursor(
+                th19.menu_input_mut(),
+                *th19.prev_menu_input(),
+                &mut menu.cursor,
+                target,
+            );
             false
         }
         (
