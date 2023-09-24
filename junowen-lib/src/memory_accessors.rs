@@ -4,6 +4,7 @@ mod hooked_process;
 use anyhow::Result;
 
 pub use external_process::ExternalProcess;
+pub use hooked_process::FnOfHookAssembly;
 pub use hooked_process::HookedProcess;
 
 pub enum MemoryAccessor {

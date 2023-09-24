@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use junowen_lib::{CustomCallback, DevicesInput, ScreenId, Th19};
+use junowen_lib::{DevicesInput, FnOfHookAssembly, ScreenId, Th19};
 use th19replayplayer::{FileInputList, ReplayFile};
 use windows::{
     core::PCWSTR,
@@ -24,12 +24,12 @@ static mut STATE: Option<State> = None;
 
 struct Props {
     th19: Th19,
-    original_fn_from_0aba30_00fb: Option<CustomCallback>,
+    original_fn_from_0aba30_00fb: Option<FnOfHookAssembly>,
     replay_dir_path: String,
 }
 
 impl Props {
-    fn new(th19: Th19, original_fn_from_0aba30_00fb: Option<CustomCallback>) -> Self {
+    fn new(th19: Th19, original_fn_from_0aba30_00fb: Option<FnOfHookAssembly>) -> Self {
         let dll_path = {
             let mut buf = [0u16; MAX_PATH as usize];
             if unsafe { GetModuleFileNameW(MODULE, &mut buf) } == 0 {
@@ -168,11 +168,12 @@ extern "fastcall" fn from_0aba30_00fb() {
 #[no_mangle]
 pub extern "C" fn Initialize(_direct_3d: *const IDirect3D9) -> bool {
     let mut th19 = Th19::new_hooked_process("th19.exe").unwrap();
-    let original_fn_from_0aba30_00fb = th19.hook_on_input_players(from_0aba30_00fb).unwrap();
+    let (original_fn_from_0aba30_00fb, apply) = th19.hook_on_input_players(from_0aba30_00fb);
     unsafe {
         PROPS = Some(Props::new(th19, original_fn_from_0aba30_00fb));
         STATE = Some(Default::default());
     }
+    apply(unsafe { &mut PROPS.as_mut().unwrap().th19 });
 
     true
 }

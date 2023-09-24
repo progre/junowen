@@ -7,13 +7,13 @@ use windows::Win32::{
     System::{Console::AllocConsole, SystemServices::DLL_PROCESS_ATTACH},
 };
 
-use junowen_lib::{CustomCallback, Input, Th19};
+use junowen_lib::{FnOfHookAssembly, Input, Th19};
 
 static mut PROPS: Option<Props> = None;
 static mut STATE: Option<State> = None;
 
 struct Props {
-    original_fn_from_0aba30_00fb: Option<CustomCallback>,
+    original_fn_from_0aba30_00fb: Option<FnOfHookAssembly>,
     new_delay_receiver: mpsc::Receiver<i8>,
 }
 
@@ -108,7 +108,7 @@ pub extern "stdcall" fn DllMain(_inst_dll: HINSTANCE, reason: u32, _reserved: u3
             let _ = unsafe { AllocConsole() };
         }
         let mut th19 = Th19::new_hooked_process("th19.exe").unwrap();
-        let original_fn_from_0aba30_00fb = th19.hook_on_input_players(hook_0abb2b).unwrap();
+        let (original_fn_from_0aba30_00fb, apply) = th19.hook_on_input_players(hook_0abb2b);
         let (tx, rx) = mpsc::channel();
         init_interprecess(tx);
         unsafe {
@@ -118,6 +118,7 @@ pub extern "stdcall" fn DllMain(_inst_dll: HINSTANCE, reason: u32, _reserved: u3
             });
             STATE = Some(State::new(th19));
         }
+        apply(&mut state_mut().th19);
     }
     true
 }

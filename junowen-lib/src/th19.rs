@@ -9,6 +9,7 @@ use windows::{
     Win32::{Graphics::Direct3D9::IDirect3DDevice9, System::Memory::PAGE_EXECUTE_WRITECOPY},
 };
 
+pub use crate::memory_accessors::FnOfHookAssembly;
 use crate::{
     memory_accessors::{ExternalProcess, HookedProcess, MemoryAccessor},
     pointer, ptr_opt, u16_prop, value,
@@ -20,7 +21,6 @@ pub type Fn002530 = extern "thiscall" fn(this: *const c_void);
 pub type Fn009fa0 = extern "thiscall" fn(this: *const c_void, arg1: u32) -> u32;
 pub type Fn012480 = extern "thiscall" fn(this: *const c_void, arg1: u32) -> u32;
 pub type Fn0a9000 = extern "fastcall" fn(arg1: i32);
-pub type CustomCallback = extern "fastcall" fn();
 
 extern "fastcall" fn dummy_from_0aba30_00fb() {
     unsafe {
@@ -50,7 +50,7 @@ extern "fastcall" fn dummy_from_0aba30_00fb() {
     }
 }
 
-extern "fastcall" fn dummy_from_0aba30_0143() {
+extern "fastcall" fn dummy_from_0aba30_018e() {
     unsafe {
         asm! {
             "NOP",
@@ -73,6 +73,8 @@ extern "fastcall" fn dummy_from_0aba30_0143() {
     }
 }
 
+pub type ApplyFn = Box<dyn FnOnce(&mut Th19)>;
+
 pub struct Th19 {
     memory_accessor: MemoryAccessor,
 }
@@ -90,73 +92,41 @@ impl Th19 {
         })
     }
 
-    pub fn hook_0a9540_0175(&mut self, target: Fn0a9000) -> Result<Fn0a9000> {
-        Ok(unsafe { transmute(self.hook_call(0x0a9540 + 0x0175, target as _)?) })
+    pub fn hook_0a9540_0175(&mut self, target: Fn0a9000) -> (Fn0a9000, ApplyFn) {
+        let (old, apply) = self.hook_call(0x0a9540 + 0x0175, target as _);
+        (unsafe { transmute(old) }, apply)
     }
 
     pub fn hook_on_input_players(
         &mut self,
-        target: CustomCallback,
-    ) -> Result<Option<CustomCallback>> {
+        target: FnOfHookAssembly,
+    ) -> (Option<FnOfHookAssembly>, ApplyFn) {
         const ADDR: usize = 0x0aba30 + 0x00fb;
-        const CAPACITY: usize = 10;
-        let MemoryAccessor::HookedProcess(memory_accessor) = &mut self.memory_accessor else {
-            panic!("Th19::hook_0abb2b is only available for HookedProcess");
-        };
-        let parent_old = memory_accessor.virtual_protect(ADDR, CAPACITY, PAGE_EXECUTE_WRITECOPY)?;
-        let my_old = memory_accessor.virtual_protect_global(
-            dummy_from_0aba30_00fb as _,
-            CAPACITY + 5 + 6,
-            PAGE_EXECUTE_WRITECOPY,
-        )?;
-
-        let old_addr =
-            memory_accessor.hook_assembly(ADDR, CAPACITY, dummy_from_0aba30_00fb, target as _);
-
-        memory_accessor.virtual_protect_global(
-            dummy_from_0aba30_00fb as _,
-            CAPACITY + 5 + 6,
-            my_old,
-        )?;
-        memory_accessor.virtual_protect(ADDR, CAPACITY, parent_old)?;
-        Ok(old_addr)
+        const SIZE: usize = 10;
+        self.hook_assembly(ADDR, SIZE, dummy_from_0aba30_00fb, target)
     }
 
-    pub fn hook_on_input_menu(&mut self, target: CustomCallback) -> Result<Option<CustomCallback>> {
+    pub fn hook_on_input_menu(
+        &mut self,
+        target: FnOfHookAssembly,
+    ) -> (Option<FnOfHookAssembly>, ApplyFn) {
         const ADDR: usize = 0x0aba30 + 0x018e;
-        const CAPACITY: usize = 5;
-        let MemoryAccessor::HookedProcess(memory_accessor) = &mut self.memory_accessor else {
-            panic!("Th19::hook_0abb2b is only available for HookedProcess");
-        };
-
-        let parent_old = memory_accessor.virtual_protect(ADDR, CAPACITY, PAGE_EXECUTE_WRITECOPY)?;
-        let my_old = memory_accessor.virtual_protect_global(
-            dummy_from_0aba30_0143 as _,
-            CAPACITY + 5 + 6,
-            PAGE_EXECUTE_WRITECOPY,
-        )?;
-
-        let old_addr =
-            memory_accessor.hook_assembly(ADDR, CAPACITY, dummy_from_0aba30_0143, target as _);
-
-        memory_accessor.virtual_protect_global(
-            dummy_from_0aba30_0143 as _,
-            CAPACITY + 5 + 6,
-            my_old,
-        )?;
-        memory_accessor.virtual_protect(ADDR, CAPACITY, parent_old)?;
-        Ok(old_addr)
+        const SIZE: usize = 5;
+        self.hook_assembly(ADDR, SIZE, dummy_from_0aba30_018e, target)
     }
 
-    pub fn hook_107540_0046(&mut self, target: Fn012480) -> Result<Fn012480> {
-        Ok(unsafe { transmute(self.hook_call(0x107540 + 0x0046, target as _)?) })
+    pub fn hook_107540_0046(&mut self, target: Fn012480) -> (Fn012480, ApplyFn) {
+        let (old, apply) = self.hook_call(0x107540 + 0x0046, target as _);
+        (unsafe { transmute(old) }, apply)
     }
-    pub fn hook_107540_0937(&mut self, target: Fn002530) -> Result<Fn002530> {
-        Ok(unsafe { transmute(self.hook_call(0x107540 + 0x0937, target as _)?) })
+    pub fn hook_107540_0937(&mut self, target: Fn002530) -> (Fn002530, ApplyFn) {
+        let (old, apply) = self.hook_call(0x107540 + 0x0937, target as _);
+        (unsafe { transmute(old) }, apply)
     }
 
-    pub fn hook_13f9d0_0446(&mut self, target: Fn009fa0) -> Result<Fn009fa0> {
-        Ok(unsafe { transmute(self.hook_call(0x13f9d0 + 0x0446, target as _)?) })
+    pub fn hook_13f9d0_0446(&mut self, target: Fn009fa0) -> (Fn009fa0, ApplyFn) {
+        let (old, apply) = self.hook_call(0x13f9d0 + 0x0446, target as _);
+        (unsafe { transmute(old) }, apply)
     }
 
     // -------------------------------------------------------------------------
@@ -239,12 +209,55 @@ impl Th19 {
         unsafe { (*p_p_obj).as_mut() }
     }
 
-    fn hook_call(&mut self, addr: usize, target: usize) -> Result<usize> {
+    fn hook_call(&mut self, addr: usize, target: usize) -> (usize, ApplyFn) {
         let memory_accessor = self.hooked_process_memory_accessor_mut();
-        let old = memory_accessor.virtual_protect(addr, 5, PAGE_EXECUTE_WRITECOPY)?;
-        let original = memory_accessor.hook_call(addr, target);
-        memory_accessor.virtual_protect(addr, 5, old)?;
-        Ok(original)
+        let old_target = memory_accessor.current_callback_of_hook_call(addr);
+        (
+            old_target,
+            Box::new(move |zelf: &mut Th19| {
+                let memory_accessor = zelf.hooked_process_memory_accessor_mut();
+                let old_flag = memory_accessor
+                    .virtual_protect(addr, 5, PAGE_EXECUTE_WRITECOPY)
+                    .unwrap();
+                let old = memory_accessor.hook_call(addr, target);
+                assert!(old == old_target);
+                memory_accessor.virtual_protect(addr, 5, old_flag).unwrap();
+            }),
+        )
+    }
+
+    fn hook_assembly(
+        &mut self,
+        addr: usize,
+        size: usize,
+        dummy_func: extern "fastcall" fn(),
+        target: FnOfHookAssembly,
+    ) -> (Option<FnOfHookAssembly>, ApplyFn) {
+        let memory_accessor = self.hooked_process_memory_accessor();
+        let old_target = memory_accessor.current_callback_of_hook_assembly(addr);
+        (
+            old_target,
+            Box::new(move |zelf: &mut Th19| {
+                let memory_accessor = zelf.hooked_process_memory_accessor_mut();
+
+                let parent_old = memory_accessor
+                    .virtual_protect(addr, size, PAGE_EXECUTE_WRITECOPY)
+                    .unwrap();
+                let my_old = memory_accessor
+                    .virtual_protect_global(dummy_func as _, size + 5 + 6, PAGE_EXECUTE_WRITECOPY)
+                    .unwrap();
+
+                let old = memory_accessor.hook_assembly(addr, size, dummy_func, target as _);
+                assert!(old == old_target);
+
+                memory_accessor
+                    .virtual_protect_global(dummy_func as _, size + 5 + 6, my_old)
+                    .unwrap();
+                memory_accessor
+                    .virtual_protect(addr, size, parent_old)
+                    .unwrap();
+            }),
+        )
     }
 
     fn battle_settings_from(&self, addr: usize) -> Result<BattleSettings> {

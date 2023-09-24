@@ -152,9 +152,10 @@ pub extern "stdcall" fn DllMain(_inst_dll: HINSTANCE, reason: u32, _reserved: u3
             let _ = unsafe { AllocConsole() };
         }
         let mut th19 = Th19::new_hooked_process("th19.exe").unwrap();
-        let original_fn_0a9000 = th19.hook_0a9540_0175(hook_0a9000).unwrap();
+        let (original_fn_0a9000, apply) = th19.hook_0a9540_0175(hook_0a9000);
         unsafe { TH19 = Some(th19) };
         unsafe { STATE = Some(State::new(original_fn_0a9000)) };
+        apply(unsafe { TH19.as_mut().unwrap() });
     }
     true
 }

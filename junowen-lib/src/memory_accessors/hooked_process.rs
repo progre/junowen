@@ -15,6 +15,10 @@ use windows::{
     },
 };
 
+pub type FnOfHookAssembly = extern "fastcall" fn();
+
+const MAX_HOOK_ASSEMBLY_CAPACITY: usize = 16;
+
 fn module_base_addr(module_name: &str) -> Result<usize> {
     let module = unsafe { GetModuleHandleW(&HSTRING::from(module_name)) }?;
     let mut module_info: MODULEINFO = Default::default();
@@ -60,6 +64,21 @@ fn jmp_target(addr: *const u8) -> usize {
     let p_jump_target = addr.wrapping_add(1) as *const i32;
     let value = unsafe { *p_jump_target };
     (jump_base_addr + value as i64) as usize
+}
+
+macro_rules! p_call_at_jmp_dst_impl {
+    ($addr:ident) => {
+        (0..MAX_HOOK_ASSEMBLY_CAPACITY)
+            .map(|i| $addr.wrapping_add(i))
+            .find(|&a| (unsafe { *a }) == 0xe8)
+            .unwrap()
+    };
+}
+fn p_call_at_jmp_dst(addr: *const u8) -> *const u8 {
+    p_call_at_jmp_dst_impl!(addr)
+}
+fn p_call_at_jmp_dst_mut(addr: *mut u8) -> *mut u8 {
+    p_call_at_jmp_dst_impl!(addr)
 }
 
 pub struct HookedProcess {
@@ -111,6 +130,13 @@ impl HookedProcess {
         unsafe { assemble_jmp_target((self.base_addr + addr) as *mut u8, target) }
     }
 
+    pub fn current_callback_of_hook_call(&self, addr: usize) -> usize {
+        jmp_target((self.base_addr + addr) as *const u8)
+    }
+
+    /// Create a call to a dummy function where there is no call,
+    /// copy the original instruction to the dummy function,
+    /// and call the target function from the dummy function.
     pub fn hook_assembly(
         &mut self,
         addr: usize,
@@ -118,11 +144,10 @@ impl HookedProcess {
         dummy_func: extern "fastcall" fn(),
         target_func: extern "fastcall" fn(),
     ) -> Option<extern "fastcall" fn()> {
-        const MAX_CAPACITY: usize = 16;
         debug_assert!(
-            (5..MAX_CAPACITY).contains(&capacity),
+            (5..MAX_HOOK_ASSEMBLY_CAPACITY).contains(&capacity),
             "capacity must be 9..{}",
-            MAX_CAPACITY
+            MAX_HOOK_ASSEMBLY_CAPACITY
         );
         let mut addr = (self.base_addr + addr) as *mut u8;
         assert!(
@@ -137,10 +162,7 @@ impl HookedProcess {
         if already_hooked {
             let p_dummy_func = jmp_target(addr) as *mut u8;
 
-            let p_call = (0..MAX_CAPACITY)
-                .map(|i| p_dummy_func.wrapping_add(i))
-                .find(|&addr| (unsafe { *addr }) == 0xe8)
-                .unwrap();
+            let p_call = p_call_at_jmp_dst_mut(p_dummy_func);
             return Some(unsafe { transmute(assemble_jmp_target(p_call, target_func as usize)) });
         }
 
@@ -169,5 +191,17 @@ impl HookedProcess {
         }
 
         None
+    }
+
+    pub fn current_callback_of_hook_assembly(&self, addr: usize) -> Option<FnOfHookAssembly> {
+        let addr = (self.base_addr + addr) as *const u8;
+        let already_hooked = unsafe { *addr.wrapping_add(2) } == 0xe8;
+        if !already_hooked {
+            return None;
+        }
+        let p_dummy_func = jmp_target(addr) as *const u8;
+
+        let p_call = p_call_at_jmp_dst(p_dummy_func);
+        Some(unsafe { transmute(jmp_target(p_call)) })
     }
 }

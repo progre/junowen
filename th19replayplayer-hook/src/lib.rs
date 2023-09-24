@@ -10,8 +10,9 @@ use anyhow::Result;
 use bytes::{Buf, BytesMut};
 use interprocess::os::windows::named_pipe::{ByteReaderPipeStream, PipeListenerOptions, PipeMode};
 use junowen_lib::{
-    move_to_local_versus_difficulty_select, select_cursor, shot_repeatedly, Battle, CustomCallback,
-    DevicesInput, GameMode, InitialBattleInformation, Input, Menu, PlayerMatchup, ScreenId, Th19,
+    move_to_local_versus_difficulty_select, select_cursor, shot_repeatedly, Battle, DevicesInput,
+    FnOfHookAssembly, GameMode, InitialBattleInformation, Input, Menu, PlayerMatchup, ScreenId,
+    Th19,
 };
 use th19replayplayer::{FileInputList, ReplayFile};
 use windows::Win32::{
@@ -24,8 +25,8 @@ static mut PROPS: Option<Props> = None;
 static mut STATE: Option<State> = None;
 
 struct Props {
-    original_on_input_menu: Option<CustomCallback>,
-    original_on_input_players: Option<CustomCallback>,
+    original_on_input_menu: Option<FnOfHookAssembly>,
+    original_on_input_players: Option<FnOfHookAssembly>,
     rx: mpsc::Receiver<ReplayFile>,
 }
 
@@ -354,8 +355,10 @@ pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32
         init_interprecess(tx);
 
         let mut th19 = Th19::new_hooked_process("th19.exe").unwrap();
-        let original_on_input_menu = th19.hook_on_input_menu(on_input_menu).unwrap();
-        let original_on_input_players = th19.hook_on_input_players(on_input_players).unwrap();
+        let (original_on_input_menu, apply_hook_on_input_menu) =
+            th19.hook_on_input_menu(on_input_menu);
+        let (original_on_input_players, apply_hook_on_input_players) =
+            th19.hook_on_input_players(on_input_players);
         unsafe {
             PROPS = Some(Props {
                 original_on_input_menu,
@@ -368,6 +371,9 @@ pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32
                 replay_file: None,
             });
         }
+        let th19 = &mut state_mut().th19;
+        apply_hook_on_input_players(th19);
+        apply_hook_on_input_menu(th19);
     }
     true
 }
