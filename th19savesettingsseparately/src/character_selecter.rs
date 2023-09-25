@@ -15,9 +15,9 @@ pub extern "thiscall" fn post_read_battle_settings_from_menu_to_game(
 
     // ファイルから読み込んだ設定を適用
     let battle_settings = read_from_file(&prop.settings_path)
-        .or_else(|_| th19.battle_settings_in_menu())
+        .or_else(|_| th19.game_settings_in_menu())
         .unwrap();
-    th19.put_battle_settings_in_game(&battle_settings).unwrap();
+    th19.put_game_settings_in_game(&battle_settings).unwrap();
 
     func(this, arg1)
 }

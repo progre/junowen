@@ -18,11 +18,11 @@ pub extern "thiscall" fn on_open_settings_editor(this: *const c_void, arg1: u32)
     }
 
     // ファイルから読み込んだ設定を適用
-    state_mut().tmp_battle_settings = th19.battle_settings_in_menu().unwrap();
+    state_mut().tmp_battle_settings = th19.game_settings_in_menu().unwrap();
     let settings_of_file = read_from_file(&props.settings_path)
-        .or_else(|_| th19.battle_settings_in_menu())
+        .or_else(|_| th19.game_settings_in_menu())
         .unwrap();
-    th19.put_battle_settings_in_menu(&settings_of_file).unwrap();
+    th19.put_game_settings_in_menu(&settings_of_file).unwrap();
 
     func(this, arg1)
 }
@@ -36,9 +36,9 @@ pub extern "thiscall" fn on_close_settings_editor(this: *const c_void) {
     }
 
     // ファイルに書き出し
-    let current = th19.battle_settings_in_menu().unwrap();
+    let current = th19.game_settings_in_menu().unwrap();
     write_to_file(&props.settings_path, &current).unwrap();
-    th19.put_battle_settings_in_menu(&state().tmp_battle_settings)
+    th19.put_game_settings_in_menu(&state().tmp_battle_settings)
         .unwrap();
 
     func(this)

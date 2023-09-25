@@ -1,9 +1,9 @@
-use crate::{BattleSettings, Difficulty, GameMode, Input, Menu, PlayerMatchup, ScreenId, Th19};
+use crate::{Difficulty, GameMode, GameSettings, Input, Menu, PlayerMatchup, ScreenId, Th19};
 
 pub struct InitialBattleInformation<'a> {
     pub difficulty: Difficulty,
     pub player_matchup: PlayerMatchup,
-    pub battle_settings: &'a BattleSettings,
+    pub battle_settings: &'a GameSettings,
     pub p1_character: u8,
     pub p1_card: u8,
     pub p2_character: u8,
@@ -40,7 +40,7 @@ pub fn move_to_local_versus_difficulty_select(
         th19.game_mode().unwrap(),
         th19.player_matchup().unwrap(),
     ) {
-        (ScreenId::Loading, _, _) => false,
+        (ScreenId::TitleLoading, _, _) => false,
         (ScreenId::Title, _, _) => {
             select_cursor(
                 th19.menu_input_mut(),
@@ -70,7 +70,7 @@ pub fn move_to_local_versus_difficulty_select(
             PlayerMatchup::HumanVsHuman | PlayerMatchup::HumanVsCpu | PlayerMatchup::CpuVsCpu,
         ) => true,
         (ScreenId::CharacterSelect, GameMode::Versus, _) => false,
-        (ScreenId::BattleLoading, GameMode::Versus, _) => false,
+        (ScreenId::GameLoading, GameMode::Versus, _) => false,
         _ => {
             eprintln!("unknown screen {}", menu.screen_id as u32);
             false

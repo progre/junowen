@@ -2,7 +2,7 @@ use std::io::{BufRead, Write};
 
 use anyhow::Result;
 use bytes::{Buf, BufMut, BytesMut};
-use junowen_lib::{BattleSettings, Difficulty, PlayerMatchup, Th19};
+use junowen_lib::{Difficulty, GameSettings, PlayerMatchup, Th19};
 
 pub enum FileInputList {
     HumanVsHuman(Vec<(u16, u16)>),
@@ -21,7 +21,7 @@ pub struct ReplayFile {
     pub rand_seed2: u16,
     pub difficulty: Difficulty,
     pub player_matchup: PlayerMatchup,
-    pub battle_settings: BattleSettings,
+    pub battle_settings: GameSettings,
     pub p1_character: u8,
     pub p1_card: u8,
     pub p2_character: u8,
@@ -37,11 +37,11 @@ impl ReplayFile {
             rand_seed2: th19.rand_seed2()?,
             difficulty: th19.difficulty()?,
             player_matchup,
-            battle_settings: th19.battle_settings_in_game()?,
-            p1_character: th19.battle_p1().character() as u8,
-            p1_card: th19.battle_p1().card() as u8,
-            p2_character: th19.battle_p2().character() as u8,
-            p2_card: th19.battle_p2().card() as u8,
+            battle_settings: th19.game_settings_in_game()?,
+            p1_character: th19.game_p1().character() as u8,
+            p1_card: th19.game_p1().card() as u8,
+            p2_character: th19.game_p2().character() as u8,
+            p2_card: th19.game_p2().card() as u8,
             inputs: if player_matchup == PlayerMatchup::HumanVsHuman
                 || player_matchup == PlayerMatchup::YoukaiVsYoukai
             {
@@ -60,7 +60,7 @@ impl ReplayFile {
         let rand_seed2 = buf.get_u16_le();
         let difficulty = Difficulty::try_from(buf.get_u8() as u32)?;
         let player_matchup = PlayerMatchup::try_from(buf.get_u8() as u32)?;
-        let battle_settings = BattleSettings {
+        let battle_settings = GameSettings {
             common: buf.get_u8() as u32,
             p1: buf.get_u8() as u32,
             p2: buf.get_u8() as u32,

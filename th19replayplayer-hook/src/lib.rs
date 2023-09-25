@@ -10,9 +10,9 @@ use anyhow::Result;
 use bytes::{Buf, BytesMut};
 use interprocess::os::windows::named_pipe::{ByteReaderPipeStream, PipeListenerOptions, PipeMode};
 use junowen_lib::{
-    move_to_local_versus_difficulty_select, select_cursor, shot_repeatedly, Battle, DevicesInput,
-    FnOfHookAssembly, GameMode, InitialBattleInformation, Input, Menu, PlayerMatchup, ScreenId,
-    Th19,
+    move_to_local_versus_difficulty_select, select_cursor, shot_repeatedly, DevicesInput,
+    FnOfHookAssembly, Game, GameMode, InitialBattleInformation, Input, Menu, PlayerMatchup,
+    ScreenId, Th19,
 };
 use th19replayplayer::{FileInputList, ReplayFile};
 use windows::Win32::{
@@ -155,11 +155,7 @@ fn init_battle(th19: &mut Th19, replay_file: &ReplayFile) {
     th19.set_rand_seed2(replay_file.rand_seed2).unwrap();
 }
 
-fn tick_battle(
-    devices_input: &mut DevicesInput,
-    battle: &Battle,
-    replay_file: &ReplayFile,
-) -> bool {
+fn tick_battle(devices_input: &mut DevicesInput, battle: &Game, replay_file: &ReplayFile) -> bool {
     match &replay_file.inputs {
         FileInputList::HumanVsHuman(vec) => {
             if battle.frame as usize >= vec.len() {
@@ -190,7 +186,7 @@ fn move_to_battle_menu_input(
         th19.game_mode().unwrap(),
         th19.player_matchup().unwrap(),
     ) {
-        (ScreenId::Loading, _, _)
+        (ScreenId::TitleLoading, _, _)
         | (ScreenId::Title, _, _)
         | (ScreenId::PlayerMatchupSelect, _, _) => {
             move_to_local_versus_difficulty_select(th19, menu, inits.player_matchup);
@@ -210,10 +206,10 @@ fn move_to_battle_menu_input(
             false
         }
         (ScreenId::CharacterSelect, GameMode::Versus, _) => {
-            *th19.menu_input_mut() = Input(Input::NULL);
+            *th19.menu_input_mut() = Input::NULL.into();
             false
         }
-        (ScreenId::BattleLoading, GameMode::Versus, _) => true,
+        (ScreenId::GameLoading, GameMode::Versus, _) => true,
         _ => {
             eprintln!("unknown screen {}", menu.screen_id as u32);
             false
@@ -232,26 +228,26 @@ fn move_to_battle_player_inputs(
         th19.game_mode().unwrap(),
         th19.player_matchup().unwrap(),
     ) {
-        (ScreenId::Loading, _, _)
+        (ScreenId::TitleLoading, _, _)
         | (ScreenId::Title, _, _)
         | (ScreenId::PlayerMatchupSelect, _, _)
         | (ScreenId::DifficultySelect, _, _) => {
-            input.set_p1_input(Input(Input::NULL));
-            input.set_p2_input(Input(Input::NULL));
+            input.set_p1_input(Input::NULL.into());
+            input.set_p2_input(Input::NULL.into());
             false
         }
         (ScreenId::CharacterSelect, GameMode::Versus, _) => {
             menu.p1_cursor.cursor = inits.p1_character as u32;
-            th19.battle_p1_mut().set_card(inits.p1_card as u32);
+            th19.game_p1_mut().set_card(inits.p1_card as u32);
             menu.p2_cursor.cursor = inits.p2_character as u32;
-            th19.battle_p2_mut().set_card(inits.p2_card as u32);
-            th19.put_battle_settings_in_game(inits.battle_settings)
+            th19.game_p2_mut().set_card(inits.p2_card as u32);
+            th19.put_game_settings_in_game(inits.battle_settings)
                 .unwrap();
             input.set_p1_input(shot_repeatedly(input.p1_prev_input()));
             input.set_p2_input(shot_repeatedly(input.p2_prev_input()));
             false
         }
-        (ScreenId::BattleLoading, GameMode::Versus, _) => true,
+        (ScreenId::GameLoading, GameMode::Versus, _) => true,
         _ => {
             eprintln!("unknown screen {}", menu.screen_id as u32);
             false
@@ -270,7 +266,7 @@ fn on_input_players_internal() {
             on_input_players_internal();
         }
         ReplayPlayerState::Prepare { th19, replay_file } => {
-            let Some(menu) = th19.game().game_mains.find_menu_mut() else {
+            let Some(menu) = th19.app().main_loop_tasks.find_menu_mut() else {
                 return;
             };
             if move_to_battle_player_inputs(
@@ -291,7 +287,7 @@ fn on_input_players_internal() {
             }
         }
         ReplayPlayerState::InGame { th19, replay_file } => {
-            if let Some(battle) = th19.battle() {
+            if let Some(battle) = th19.game() {
                 if tick_battle(th19.input_mut(), battle, replay_file) {
                     return;
                 }
@@ -317,7 +313,7 @@ extern "fastcall" fn on_input_menu() {
             return;
         }
         ReplayPlayerState::Prepare { th19, replay_file } => {
-            let Some(menu) = th19.game().game_mains.find_menu_mut() else {
+            let Some(menu) = th19.app().main_loop_tasks.find_menu_mut() else {
                 return;
             };
             move_to_battle_menu_input(

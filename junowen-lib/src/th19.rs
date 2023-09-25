@@ -133,15 +133,15 @@ impl Th19 {
 
     pointer!(0x_1ae3a0, input, input_mut, DevicesInput);
     u16_prop!(0x1ae410, rand_seed1, set_rand_seed1);
-    pointer!(0x_1ae41c, game, Game);
+    pointer!(0x_1ae41c, app, App);
     u16_prop!(0x1ae430, rand_seed2, set_rand_seed2);
-    ptr_opt!(0x_1ae464, battle, Battle);
+    ptr_opt!(0x_1ae464, game, Game);
     u16_prop!(0x200850, p1_input);
     u16_prop!(0x200b10, p2_input);
     value!(0x200dd0, menu_input, menu_input_mut, Input);
     value!(0x200dd4, prev_menu_input, Input);
-    value!(0x207910, battle_p1, battle_p1_mut, BattlePlayer);
-    value!(0x2079d0, battle_p2, battle_p2_mut, BattlePlayer);
+    value!(0x207910, game_p1, game_p1_mut, GamePlayer);
+    value!(0x2079d0, game_p2, game_p2_mut, GamePlayer);
 
     pub fn difficulty(&self) -> Result<Difficulty> {
         self.memory_accessor.read_u32(0x207a90)?.try_into()
@@ -154,11 +154,11 @@ impl Th19 {
     }
 
     // 0x208260 Game
-    pub fn battle_settings_in_game(&self) -> Result<BattleSettings> {
-        self.battle_settings_from(0x208350)
+    pub fn game_settings_in_game(&self) -> Result<GameSettings> {
+        self.game_settings_from(0x208350)
     }
-    pub fn put_battle_settings_in_game(&mut self, battle_settings: &BattleSettings) -> Result<()> {
-        self.put_battle_settings_to(0x208350, battle_settings)
+    pub fn put_game_settings_in_game(&mut self, game_settings: &GameSettings) -> Result<()> {
+        self.put_game_settings_to(0x208350, game_settings)
     }
 
     pub fn direct_3d_device(&self) -> Result<&'static IDirect3DDevice9> {
@@ -168,11 +168,11 @@ impl Th19 {
             .ok_or_else(|| anyhow!("IDirect3DDevice9::from_raw_borrowed failed"))
     }
 
-    pub fn battle_settings_in_menu(&self) -> Result<BattleSettings> {
-        self.battle_settings_from(0x208644)
+    pub fn game_settings_in_menu(&self) -> Result<GameSettings> {
+        self.game_settings_from(0x208644)
     }
-    pub fn put_battle_settings_in_menu(&mut self, battle_settings: &BattleSettings) -> Result<()> {
-        self.put_battle_settings_to(0x208644, battle_settings)
+    pub fn put_game_settings_in_menu(&mut self, game_settings: &GameSettings) -> Result<()> {
+        self.put_game_settings_to(0x208644, game_settings)
     }
 
     // -------------------------------------------------------------------------
@@ -182,8 +182,8 @@ impl Th19 {
             return false;
         }
         // VS Mode 最初の階層では player_matchup がまだセットされないので、オンライン用メイン関数がセットされているかどうかで判断する
-        self.game()
-            .game_mains
+        self.app()
+            .main_loop_tasks
             .to_vec()
             .iter()
             .any(|item| item.id == 3 || item.id == 4)
@@ -260,17 +260,13 @@ impl Th19 {
         )
     }
 
-    fn battle_settings_from(&self, addr: usize) -> Result<BattleSettings> {
+    fn game_settings_from(&self, addr: usize) -> Result<GameSettings> {
         let mut buffer = [0u8; 12];
         self.memory_accessor.read(addr, &mut buffer)?;
         Ok(unsafe { transmute(buffer) })
     }
-    fn put_battle_settings_to(
-        &mut self,
-        addr: usize,
-        battle_settings: &BattleSettings,
-    ) -> Result<()> {
-        let buffer: &[u8; 12] = unsafe { transmute(battle_settings) };
+    fn put_game_settings_to(&mut self, addr: usize, game_settings: &GameSettings) -> Result<()> {
+        let buffer: &[u8; 12] = unsafe { transmute(game_settings) };
         self.memory_accessor.write(addr, buffer)
     }
 

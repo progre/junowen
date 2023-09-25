@@ -2,6 +2,7 @@ use std::mem::transmute;
 
 use anyhow::{bail, Result};
 use getset::{CopyGetters, Setters};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, PartialEq)]
 pub struct Input(pub u32);
@@ -65,9 +66,9 @@ impl DevicesInput {
     }
 }
 
-#[derive(Default)]
+#[derive(Clone, Default, Deserialize, Serialize)]
 #[repr(C)]
-pub struct BattleSettings {
+pub struct GameSettings {
     pub common: u32,
     pub p1: u32,
     pub p2: u32,
@@ -76,12 +77,12 @@ pub struct BattleSettings {
 #[repr(C)]
 pub struct Settings {
     _unknown1: [u8; 0xf0],
-    battle_settings: BattleSettings,
+    game_settings: GameSettings,
 }
 
 #[derive(Debug)]
 #[repr(C)]
-pub struct GameMainsLinkedListItem {
+pub struct MainLoopTasksLinkedListItem {
     pub id: usize,
     _unknown1: usize,
     func: usize,
@@ -90,16 +91,16 @@ pub struct GameMainsLinkedListItem {
 }
 
 #[repr(C)]
-pub struct GameMainsLinkedList {
-    item: *const GameMainsLinkedListItem,
-    next: *const GameMainsLinkedList,
+pub struct MainLoopTasksLinkedList {
+    item: *const MainLoopTasksLinkedListItem,
+    next: *const MainLoopTasksLinkedList,
 }
 
-impl GameMainsLinkedList {
+impl MainLoopTasksLinkedList {
     #[must_use]
     pub fn len(&self) -> usize {
         let mut len = 0;
-        let mut p = self as *const GameMainsLinkedList;
+        let mut p = self as *const MainLoopTasksLinkedList;
         loop {
             len += 1;
             p = unsafe { (*p).next };
@@ -123,7 +124,7 @@ impl GameMainsLinkedList {
         unsafe { arg.as_mut() }
     }
 
-    pub fn to_vec(&self) -> Vec<&GameMainsLinkedListItem> {
+    pub fn to_vec(&self) -> Vec<&MainLoopTasksLinkedListItem> {
         let mut vec = Vec::new();
         let mut list = self as *const Self;
         loop {
@@ -137,13 +138,13 @@ impl GameMainsLinkedList {
 }
 
 #[repr(C)]
-pub struct Game {
+pub struct App {
     _unknown1: [u8; 0x18],
-    pub game_mains: &'static GameMainsLinkedList,
+    pub main_loop_tasks: &'static MainLoopTasksLinkedList,
 }
 
 #[repr(C)]
-pub struct Battle {
+pub struct Game {
     _unknown: [u8; 0x10],
     pub pre_frame: u32,
     pub frame: u32,
@@ -151,7 +152,7 @@ pub struct Battle {
 
 #[derive(CopyGetters, Setters)]
 #[repr(C)]
-pub struct BattlePlayer {
+pub struct GamePlayer {
     _unknown1: [u8; 0x0c],
     #[get_copy = "pub"]
     character: u32,
@@ -231,12 +232,12 @@ impl TryFrom<u32> for PlayerMatchup {
 #[derive(Clone, Copy, PartialEq)]
 #[repr(u32)]
 pub enum ScreenId {
-    Loading,
+    TitleLoading,
     Title,
-    BattleLoading,
+    GameLoading,
     Option,
     ControllerSettings,
-    BattleSettings,
+    GameSettings,
     Unknown2,
     DifficultySelect,
     PlayerMatchupSelect,

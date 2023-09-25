@@ -4,7 +4,7 @@ mod settings_editor;
 
 use std::path::Path;
 
-use junowen_lib::{BattleSettings, Fn002530, Fn009fa0, Fn012480, Th19};
+use junowen_lib::{Fn002530, Fn009fa0, Fn012480, GameSettings, Th19};
 use settings_editor::{on_close_settings_editor, on_open_settings_editor};
 use windows::{
     core::PCWSTR,
@@ -59,7 +59,7 @@ impl Props {
 
 struct State {
     th19: Th19,
-    tmp_battle_settings: BattleSettings,
+    tmp_battle_settings: GameSettings,
 }
 
 fn props() -> &'static Props {

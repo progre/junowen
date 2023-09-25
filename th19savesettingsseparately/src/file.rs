@@ -1,9 +1,9 @@
 use std::mem::transmute;
 
 use anyhow::{bail, Result};
-use junowen_lib::BattleSettings;
+use junowen_lib::GameSettings;
 
-pub fn read_from_file(settings_path: &str) -> Result<BattleSettings> {
+pub fn read_from_file(settings_path: &str) -> Result<GameSettings> {
     let vec = std::fs::read(settings_path)?;
     if vec.len() != 12 {
         bail!("Invalid file size");
@@ -13,7 +13,7 @@ pub fn read_from_file(settings_path: &str) -> Result<BattleSettings> {
     Ok(unsafe { transmute(bytes) })
 }
 
-pub fn write_to_file(settings_path: &str, battle_settings: &BattleSettings) -> Result<()> {
+pub fn write_to_file(settings_path: &str, battle_settings: &GameSettings) -> Result<()> {
     let contents: &[u8; 12] = unsafe { transmute(battle_settings) };
     Ok(std::fs::write(settings_path, contents)?)
 }
