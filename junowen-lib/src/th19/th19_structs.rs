@@ -7,16 +7,22 @@ use getset::{CopyGetters, Setters};
 pub struct Input(pub u32);
 
 impl Input {
-    pub const NULL:  /*-*/u32 = 0b00000000_00000000;
-    pub const SHOT:  /*-*/u32 = 0b00000000_00000001;
-    pub const CHARGE:/*-*/u32 = 0b00000000_00000010;
-    pub const BOMB:  /*-*/u32 = 0b00000000_00000100;
-    pub const SLOW:  /*-*/u32 = 0b00000000_00001000;
-    pub const UP:    /*-*/u32 = 0b00000000_00010000;
-    pub const DOWN:  /*-*/u32 = 0b00000000_00100000;
-    pub const LEFT:  /*-*/u32 = 0b00000000_01000000;
-    pub const RIGHT: /*-*/u32 = 0b00000000_10000000;
-    pub const START: /*-*/u32 = 0b00000001_00000000;
+    pub const NULL:  /*-*/u16 = 0b00000000_00000000;
+    pub const SHOT:  /*-*/u16 = 0b00000000_00000001;
+    pub const CHARGE:/*-*/u16 = 0b00000000_00000010;
+    pub const BOMB:  /*-*/u16 = 0b00000000_00000100;
+    pub const SLOW:  /*-*/u16 = 0b00000000_00001000;
+    pub const UP:    /*-*/u16 = 0b00000000_00010000;
+    pub const DOWN:  /*-*/u16 = 0b00000000_00100000;
+    pub const LEFT:  /*-*/u16 = 0b00000000_01000000;
+    pub const RIGHT: /*-*/u16 = 0b00000000_10000000;
+    pub const START: /*-*/u16 = 0b00000001_00000000;
+}
+
+impl From<u16> for Input {
+    fn from(value: u16) -> Self {
+        Self(value as u32)
+    }
 }
 
 #[repr(C)]

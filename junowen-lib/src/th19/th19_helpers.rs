@@ -11,10 +11,10 @@ pub struct InitialBattleInformation<'a> {
 }
 
 pub fn shot_repeatedly(prev: Input) -> Input {
-    if prev.0 == Input::SHOT {
-        Input(Input::NULL)
+    if prev.0 == Input::SHOT as u32 {
+        Input(Input::NULL as u32)
     } else {
-        Input(Input::SHOT)
+        Input(Input::SHOT as u32)
     }
 }
 
