@@ -1,14 +1,4 @@
-use crate::{Difficulty, GameMode, GameSettings, Input, Menu, PlayerMatchup, ScreenId, Th19};
-
-pub struct InitialBattleInformation<'a> {
-    pub difficulty: Difficulty,
-    pub player_matchup: PlayerMatchup,
-    pub battle_settings: &'a GameSettings,
-    pub p1_character: u8,
-    pub p1_card: u8,
-    pub p2_character: u8,
-    pub p2_card: u8,
-}
+use crate::{GameMode, Input, Menu, PlayerMatchup, ScreenId, Th19};
 
 pub fn shot_repeatedly(prev: Input) -> Input {
     if prev.0 == Input::SHOT as u32 {

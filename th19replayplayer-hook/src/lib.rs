@@ -11,7 +11,7 @@ use bytes::{Buf, BytesMut};
 use interprocess::os::windows::named_pipe::{ByteReaderPipeStream, PipeListenerOptions, PipeMode};
 use junowen_lib::{
     move_to_local_versus_difficulty_select, select_cursor, shot_repeatedly, DevicesInput,
-    FnOfHookAssembly, Game, GameMode, InitialBattleInformation, Input, Menu, PlayerMatchup,
+    Difficulty, FnOfHookAssembly, Game, GameMode, GameSettings, Input, Menu, PlayerMatchup,
     ScreenId, Th19,
 };
 use th19replayplayer::{FileInputList, ReplayFile};
@@ -100,6 +100,16 @@ fn props() -> &'static Props {
 
 fn state_mut() -> &'static mut State {
     unsafe { STATE.as_mut().unwrap() }
+}
+
+struct InitialBattleInformation<'a> {
+    pub difficulty: Difficulty,
+    pub player_matchup: PlayerMatchup,
+    pub battle_settings: &'a GameSettings,
+    pub p1_character: u8,
+    pub p1_card: u8,
+    pub p2_character: u8,
+    pub p2_card: u8,
 }
 
 fn read_file(reader: &mut impl Read) -> Result<ReplayFile> {
