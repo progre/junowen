@@ -6,6 +6,17 @@ edition = "2021"
 [dependencies]
 anyhow.workspace = true
 getset = "0.1.2"
+junowen-lib.workspace = true
+rmp-serde = "1.1.2"
+serde = { version = "1.0.188", features = ["derive"] }
+serde_json = "1.0.107"
+tokio = { version = "1.32.0", features = [
+  "rt",
+  "macros",
+  "rt-multi-thread",
+  "time"
+] }
+toml = "0.8.0"
 windows = { version = "0.51.1", features = [
   "Win32_Foundation",
   "Win32_Graphics_Direct3D9",
