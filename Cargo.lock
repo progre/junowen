@@ -977,6 +977,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "junowen-hook"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64",
+ "bytes",
+ "flate2",
+ "getset",
+ "junowen-lib",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "tokio",
+ "webrtc",
+ "windows 0.51.1",
+]
+
+[[package]]
 name = "junowen-lib"
 version = "0.1.0"
 dependencies = [

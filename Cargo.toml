@@ -6,6 +6,7 @@ members = [
   "archives/th19padlight-hook",
   "archives/th19seed",
   "junowen",
+  "junowen-hook",
   "junowen-lib",
   "th19loader",
   "th19replayplayer",
