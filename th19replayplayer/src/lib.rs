@@ -14,7 +14,7 @@ use junowen_lib::{
     Difficulty, FnOfHookAssembly, Game, GameMode, GameSettings, Input, Menu, PlayerMatchup,
     ScreenId, Th19,
 };
-use th19replayplayer::{FileInputList, ReplayFile};
+use th19replayplayer_lib::{FileInputList, ReplayFile};
 use windows::Win32::{
     Foundation::{HINSTANCE, HMODULE},
     System::{Console::AllocConsole, SystemServices::DLL_PROCESS_ATTACH},
