@@ -1,9 +1,7 @@
 [workspace]
 members = [
   "archives/th19netdelayemulate",
-  "archives/th19netdelayemulate-hook",
   "archives/th19padlight",
-  "archives/th19padlight-hook",
   "archives/th19seed",
   "junowen",
   "junowen-hook",

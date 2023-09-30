@@ -3,7 +3,13 @@ name = "th19netdelayemulate"
 version.workspace = true
 edition = "2021"
 
+[lib]
+name = "th19netdelayemulate_hook"
+crate-type = ['cdylib']
+
 [dependencies]
 anyhow.workspace = true
+bytes = "1.5.0"
 interprocess = "1.2.1"
 junowen-lib.workspace = true
+windows = "0.51.1"

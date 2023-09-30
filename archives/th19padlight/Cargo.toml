@@ -3,6 +3,10 @@ name = "th19padlight"
 version.workspace = true
 edition = "2021"
 
+[lib]
+name = "th19padlight_hook"
+crate-type = ['cdylib']
+
 [dependencies]
 anyhow.workspace = true
 junowen-lib.workspace = true

@@ -1865,15 +1865,6 @@ name = "th19netdelayemulate"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "interprocess",
- "junowen-lib",
-]
-
-[[package]]
-name = "th19netdelayemulate-hook"
-version = "0.1.0"
-dependencies = [
- "anyhow",
  "bytes",
  "interprocess",
  "junowen-lib",
@@ -1882,15 +1873,6 @@ dependencies = [
 
 [[package]]
 name = "th19padlight"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "junowen-lib",
- "windows 0.51.1",
-]
-
-[[package]]
-name = "th19padlight-hook"
 version = "0.1.0"
 dependencies = [
  "anyhow",
