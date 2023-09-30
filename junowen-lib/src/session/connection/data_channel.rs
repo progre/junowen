@@ -4,7 +4,7 @@ use anyhow::Result;
 use bytes::Bytes;
 use tokio::{
     spawn,
-    sync::{mpsc, oneshot},
+    sync::{broadcast, mpsc, oneshot},
 };
 use webrtc::data_channel::RTCDataChannel;
 
@@ -12,18 +12,21 @@ pub struct DataChannel {
     rtc: Arc<RTCDataChannel>,
     open_rx: Option<oneshot::Receiver<()>>,
     close_rx: mpsc::Receiver<()>,
-    pc_disconnected_rx: mpsc::Receiver<()>,
+    pub pc_disconnected_rx: broadcast::Receiver<()>,
     pub message_sender: mpsc::Sender<Bytes>,
     incoming_message_rx: mpsc::Receiver<Bytes>,
 }
 
 impl DataChannel {
-    pub async fn new(rtc: Arc<RTCDataChannel>, pc_disconnected_rx: mpsc::Receiver<()>) -> Self {
+    pub async fn new(
+        rtc: Arc<RTCDataChannel>,
+        pc_disconnected_rx: broadcast::Receiver<()>,
+    ) -> Self {
         let (open_tx, open_rx) = oneshot::channel();
         let mut open_tx = Some(open_tx);
         let (message_sender, mut outgoing_message_receiver) = mpsc::channel(1);
         let (incoming_message_tx, incoming_message_rx) = mpsc::channel(1);
-        let (close_sender, close_receiver) = mpsc::channel(1);
+        let (close_sender, close_rx) = mpsc::channel(1);
         rtc.on_open(Box::new(move || {
             let open_sender = open_tx.take().unwrap();
             Box::pin(async move { open_sender.send(()).unwrap() })
@@ -65,10 +68,10 @@ impl DataChannel {
         Self {
             rtc,
             open_rx: Some(open_rx),
+            close_rx,
+            pc_disconnected_rx,
             message_sender,
             incoming_message_rx,
-            close_rx: close_receiver,
-            pc_disconnected_rx,
         }
     }
 

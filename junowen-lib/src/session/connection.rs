@@ -4,7 +4,7 @@ pub mod signaling;
 
 use anyhow::Result;
 use bytes::Bytes;
-use tokio::sync::mpsc;
+use tokio::sync::{broadcast, mpsc};
 
 use self::data_channel::DataChannel;
 
@@ -24,6 +24,10 @@ impl Connection {
 
     pub async fn recv(&mut self) -> Option<Bytes> {
         self.data_channel.recv().await
+    }
+
+    pub fn subscribe_disconnected_receiver(&self) -> broadcast::Receiver<()> {
+        self.data_channel.pc_disconnected_rx.resubscribe()
     }
 
     pub async fn close(self) -> Result<()> {

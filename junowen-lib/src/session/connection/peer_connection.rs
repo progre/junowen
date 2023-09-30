@@ -9,7 +9,7 @@ use flate2::{
 use regex::Regex;
 use tokio::{
     select,
-    sync::{mpsc, oneshot},
+    sync::{broadcast, oneshot},
 };
 use webrtc::{
     api::media_engine::MediaEngine,
@@ -85,7 +85,7 @@ async fn create_default_peer_connection() -> Result<RTCPeerConnection> {
 
 pub struct PeerConnection {
     rtc: RTCPeerConnection,
-    peer_connection_state_disconnected_rx: Option<mpsc::Receiver<()>>,
+    peer_connection_state_disconnected_rx: Option<broadcast::Receiver<()>>,
     peer_connection_state_failed_rx: Option<oneshot::Receiver<()>>,
     data_channel_rx: Option<oneshot::Receiver<DataChannel>>,
 }
@@ -101,7 +101,7 @@ impl PeerConnection {
         let mut peer_connection_state_failed_tx = Some(peer_connection_state_failed_tx);
 
         let (peer_connection_state_disconnected_tx, peer_connection_state_disconnected_rx) =
-            mpsc::channel(1);
+            broadcast::channel(1);
         let mut peer_connection_state_disconnected_tx = Some(peer_connection_state_disconnected_tx);
 
         // All events (useful for debugging)
@@ -115,12 +115,13 @@ impl PeerConnection {
             match state {
                 RTCPeerConnectionState::Failed => {
                     let tx = peer_connection_state_failed_tx.take().unwrap();
-                    tx.send(()).unwrap();
+                    let _ = tx.send(());
                     Box::pin(async move {})
                 }
                 RTCPeerConnectionState::Disconnected => {
                     let tx = peer_connection_state_disconnected_tx.take().unwrap();
-                    Box::pin(async move { tx.send(()).await.unwrap() })
+                    let _ = tx.send(()).unwrap();
+                    Box::pin(async move {})
                 }
                 _ => Box::pin(async move {}),
             }

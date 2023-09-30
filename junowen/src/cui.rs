@@ -5,7 +5,7 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use junowen_lib::session::connection::signaling::stdio_signaling_interface::connect_as_answerer;
 use junowen_lib::session::connection::signaling::stdio_signaling_interface::connect_as_offerer;
 use junowen_lib::{inject_dll::inject_dll, lang::Lang};
@@ -42,7 +42,8 @@ async fn create_pipe(lang: &Lang) -> Result<NamedPipeClient> {
     };
     let mut buf = [0u8; 4 * 1024];
     let len = pipe.read(&mut buf).await?;
-    let msg: IpcMessageToCui = rmp_serde::from_slice(&buf[..len])?;
+    let msg: IpcMessageToCui = rmp_serde::from_slice(&buf[..len])
+        .map_err(|err| anyhow!("parse failed (len={}): {}", len, err))?;
     let IpcMessageToCui::Version(version) = msg else {
         bail!("Unexpected message");
     };
@@ -71,7 +72,7 @@ fn read_line() -> String {
     buf.trim().to_owned()
 }
 
-async fn host(pipe: &mut NamedPipeClient, lang: &Lang) -> Result<(), io::Error> {
+async fn host(pipe: &mut NamedPipeClient, lang: &Lang) -> Result<()> {
     connect_as_offerer(pipe, lang).await?;
 
     let delay = loop {
@@ -92,13 +93,12 @@ async fn host(pipe: &mut NamedPipeClient, lang: &Lang) -> Result<(), io::Error> 
     loop {
         let mut buf = [0u8; 4 * 1024];
         let len = pipe.read(&mut buf).await?;
-        let msg: IpcMessageToCui = rmp_serde::from_slice(&buf[..len]).unwrap();
+        let msg: IpcMessageToCui = rmp_serde::from_slice(&buf[..len])
+            .map_err(|err| anyhow!("parse failed (len={}): {}", len, err))?;
         match msg {
             IpcMessageToCui::Version(_) => panic!(),
             IpcMessageToCui::Connected => {
                 lang.println("Connected with guest.");
-                // TODO: disconnect の検知
-                return Ok(());
             }
             IpcMessageToCui::Disconnected => {
                 lang.println("Guest disconnected.");
@@ -108,19 +108,18 @@ async fn host(pipe: &mut NamedPipeClient, lang: &Lang) -> Result<(), io::Error> 
     }
 }
 
-async fn guest(pipe: &mut NamedPipeClient, lang: &Lang) -> Result<(), io::Error> {
+async fn guest(pipe: &mut NamedPipeClient, lang: &Lang) -> Result<()> {
     connect_as_answerer(pipe, lang).await?;
 
     loop {
         let mut buf = [0u8; 4 * 1024];
         let len = pipe.read(&mut buf).await?;
-        let msg: IpcMessageToCui = rmp_serde::from_slice(&buf[..len]).unwrap();
+        let msg: IpcMessageToCui = rmp_serde::from_slice(&buf[..len])
+            .map_err(|err| anyhow!("parse failed (len={}): {}", len, err))?;
         match msg {
             IpcMessageToCui::Version(_) => panic!(),
             IpcMessageToCui::Connected => {
                 lang.println("Connected with host.");
-                // TODO: disconnect の検知
-                return Ok(());
             }
             IpcMessageToCui::Disconnected => {
                 lang.println("Host disconnected.");

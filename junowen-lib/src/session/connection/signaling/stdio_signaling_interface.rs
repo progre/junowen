@@ -31,7 +31,6 @@ fn read_line_loop(lang: &Lang, msg: &str) -> String {
 }
 
 fn offer_desc(lang: &Lang) -> CompressedSessionDesc {
-    println!();
     CompressedSessionDesc(read_line_loop(lang, "Input host's signaling code:"))
 }
 

@@ -5,6 +5,7 @@ use junowen_lib::session::connection::signaling::socket::{AsyncReadWriteSocket, 
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::windows::named_pipe,
+    spawn,
 };
 
 use crate::cui::{IpcMessageToCui, IpcMessageToHook};
@@ -21,13 +22,13 @@ async fn ipc(session_sender: &mpsc::Sender<()>) -> Result<()> {
     )
     .await?;
 
-    let (anserer, _conn) = AsyncReadWriteSocket::new(&mut pipe)
+    let (anserer, conn) = AsyncReadWriteSocket::new(&mut pipe)
         .receive_signaling()
         .await?;
     let host = !anserer;
+    let mut disconnected = conn.subscribe_disconnected_receiver();
     pipe.write_all(&rmp_serde::to_vec(&IpcMessageToCui::Connected).unwrap())
         .await?;
-
     let _delay = if host {
         let mut buf = [0u8; 4096];
         let len = pipe.read(&mut buf).await?;
@@ -37,6 +38,12 @@ async fn ipc(session_sender: &mpsc::Sender<()>) -> Result<()> {
     } else {
         None
     };
+    spawn(async move {
+        disconnected.recv().await.unwrap();
+        pipe.write_all(&rmp_serde::to_vec(&IpcMessageToCui::Disconnected).unwrap())
+            .await
+            .unwrap();
+    });
     session_sender.send(())?;
     Ok(())
 }
