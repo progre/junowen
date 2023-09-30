@@ -38,7 +38,6 @@ async fn main() -> Result<()> {
         .await?;
     let msg = conn.recv().await;
     println!("msg: {:?}", msg);
-    conn.close().await?;
 
     Ok(())
 }

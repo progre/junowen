@@ -39,6 +39,5 @@ async fn main() -> Result<()> {
     conn.message_sender
         .send(Bytes::from_iter(b"bye".iter().copied()))
         .await?;
-    conn.close().await?;
     Ok(())
 }

@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use anyhow::Result;
 use bytes::Bytes;
 use tokio::{
     spawn,
@@ -9,10 +8,9 @@ use tokio::{
 use webrtc::data_channel::RTCDataChannel;
 
 pub struct DataChannel {
-    rtc: Arc<RTCDataChannel>,
     open_rx: Option<oneshot::Receiver<()>>,
     close_rx: mpsc::Receiver<()>,
-    pub pc_disconnected_rx: broadcast::Receiver<()>,
+    pc_disconnected_rx: broadcast::Receiver<()>,
     pub message_sender: mpsc::Sender<Bytes>,
     incoming_message_rx: mpsc::Receiver<Bytes>,
 }
@@ -33,7 +31,9 @@ impl DataChannel {
         }));
         rtc.on_message(Box::new(move |msg| {
             let incoming_message_tx = incoming_message_tx.clone();
-            Box::pin(async move { incoming_message_tx.send(msg.data).await.unwrap() })
+            Box::pin(async move {
+                let _ = incoming_message_tx.send(msg.data).await;
+            })
         }));
         rtc.on_error(Box::new(|err| {
             eprintln!("{}", err);
@@ -55,18 +55,18 @@ impl DataChannel {
             let rtc = rtc.clone();
             spawn(async move {
                 while let Some(data) = outgoing_message_receiver.recv().await {
-                    let result = rtc.send(&data).await;
-                    if let Err(webrtc::Error::ErrClosedPipe) = result {
-                        return;
-                    } else if let Err(err) = result {
-                        eprintln!("{}", err);
+                    match rtc.send(&data).await {
+                        Ok(_) => {}
+                        Err(webrtc::Error::ErrClosedPipe) => return,
+                        Err(err) => {
+                            eprintln!("outgoing_message_receiver.recv() failed: {}", err);
+                        }
                     }
                 }
             });
         }
 
         Self {
-            rtc,
             open_rx: Some(open_rx),
             close_rx,
             pc_disconnected_rx,
@@ -87,9 +87,5 @@ impl DataChannel {
             _ = self.close_rx.recv() => None,
             _ = self.pc_disconnected_rx.recv() => None,
         }
-    }
-
-    pub async fn close(self) -> Result<()> {
-        Ok(self.rtc.close().await?)
     }
 }
