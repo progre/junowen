@@ -9,18 +9,14 @@ use super::{super::CompressedSessionDesc, OfferResponse, SignalingSocket};
 
 #[derive(Deserialize, Serialize)]
 pub enum SignalingServerMessage {
-    RequestOwner,
     RequestAnswer(CompressedSessionDesc),
     SetAnswerDesc(CompressedSessionDesc),
-    Delay(u8),
 }
 
 #[derive(Deserialize, Serialize)]
 pub enum SignalingClientMessage {
     OfferDesc(CompressedSessionDesc),
     AnswerDesc(CompressedSessionDesc),
-    Connected,
-    Disconnected,
 }
 
 pub struct AsyncReadWriteSocket<T>
@@ -67,7 +63,6 @@ where
                 OfferResponse::Answer(answer_desc)
             }
             SignalingServerMessage::RequestAnswer(offer_desc) => OfferResponse::Offer(offer_desc),
-            _ => panic!("unexpected message"),
         })
     }
 

@@ -3,7 +3,7 @@ pub mod inject_dll;
 pub mod lang;
 mod macros;
 mod memory_accessors;
-pub mod signaling;
+pub mod session;
 mod th19;
 mod win_api_wrappers;
 

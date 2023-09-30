@@ -3,7 +3,9 @@ pub mod async_read_write_socket;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 
-use super::{peer_connection::PeerConnection, CompressedSessionDesc};
+use crate::session::connection::peer_connection::PeerConnection;
+
+use super::CompressedSessionDesc;
 
 pub use async_read_write_socket::AsyncReadWriteSocket;
 

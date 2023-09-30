@@ -6,7 +6,7 @@ use tokio::{net::windows::named_pipe, spawn};
 
 use junowen_lib::{
     lang::Lang,
-    signaling::{
+    session::connection::signaling::{
         socket::{AsyncReadWriteSocket, SignalingSocket},
         stdio_signaling_interface::connect_as_answerer,
     },

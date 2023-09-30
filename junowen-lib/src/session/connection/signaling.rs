@@ -1,4 +1,3 @@
-pub mod peer_connection;
 pub mod socket;
 pub mod stdio_signaling_interface;
 

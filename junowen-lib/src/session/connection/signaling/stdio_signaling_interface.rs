@@ -7,9 +7,12 @@ use tokio::{
     net::windows::named_pipe::NamedPipeClient,
 };
 
-use crate::{lang::Lang, signaling::CompressedSessionDesc};
+use crate::lang::Lang;
 
-use super::socket::async_read_write_socket::{SignalingClientMessage, SignalingServerMessage};
+use super::{
+    socket::async_read_write_socket::{SignalingClientMessage, SignalingServerMessage},
+    CompressedSessionDesc,
+};
 
 fn read_line() -> String {
     let mut buf = String::new();
