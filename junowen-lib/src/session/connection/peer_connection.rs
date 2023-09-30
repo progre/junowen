@@ -1,4 +1,4 @@
-use std::{io::Write, sync::Arc, time::Duration};
+use std::io::Write;
 
 use anyhow::{anyhow, bail, Result};
 use base64::{prelude::BASE64_STANDARD_NO_PAD, Engine};
@@ -8,12 +8,12 @@ use flate2::{
 };
 use regex::Regex;
 use tokio::{
-    sync::{mpsc, watch},
-    time::sleep,
+    select,
+    sync::{mpsc, oneshot},
 };
 use webrtc::{
     api::media_engine::MediaEngine,
-    data_channel::{data_channel_init::RTCDataChannelInit, RTCDataChannel},
+    data_channel::data_channel_init::RTCDataChannelInit,
     ice_transport::ice_server::RTCIceServer,
     interceptor::registry::Registry,
     peer_connection::{
@@ -85,9 +85,9 @@ async fn create_default_peer_connection() -> Result<RTCPeerConnection> {
 
 pub struct PeerConnection {
     rtc: RTCPeerConnection,
-    disconnected_rx: watch::Receiver<()>,
-    data_channel_tx: mpsc::Sender<DataChannel>,
-    data_channel_rx: mpsc::Receiver<DataChannel>,
+    peer_connection_state_disconnected_rx: Option<mpsc::Receiver<()>>,
+    peer_connection_state_failed_rx: Option<oneshot::Receiver<()>>,
+    data_channel_rx: Option<oneshot::Receiver<DataChannel>>,
 }
 
 unsafe impl Send for PeerConnection {}
@@ -97,23 +97,14 @@ impl PeerConnection {
     pub async fn new() -> Result<Self> {
         let rtc = create_default_peer_connection().await?;
 
-        let (data_channel_tx, data_channel_rx) = mpsc::channel(1);
-        let (disconnected_tx, disconnected_rx) = watch::channel(());
+        let (peer_connection_state_failed_tx, peer_connection_state_failed_rx) = oneshot::channel();
+        let mut peer_connection_state_failed_tx = Some(peer_connection_state_failed_tx);
+
+        let (peer_connection_state_disconnected_tx, peer_connection_state_disconnected_rx) =
+            mpsc::channel(1);
+        let mut peer_connection_state_disconnected_tx = Some(peer_connection_state_disconnected_tx);
 
         // All events (useful for debugging)
-        {
-            let data_channel_tx = data_channel_tx.clone();
-            let disconnected_rx = disconnected_rx.clone();
-            rtc.on_data_channel(Box::new(move |rtc_data_channel| {
-                let data_channel_tx = data_channel_tx.clone();
-                let disconnected_rx = disconnected_rx.clone();
-                Box::pin(async move {
-                    Self::send_data_channel(&data_channel_tx, rtc_data_channel, disconnected_rx)
-                        .await
-                        .unwrap();
-                })
-            }));
-        }
         // rtc.on_ice_candidate(Box::new(|_candidate| Box::pin(async {})));
         // rtc.on_ice_connection_state_change(Box::new(|_state| Box::pin(async {})));
         // rtc.on_ice_gathering_state_change(Box::new(|_state| Box::pin(async {})));
@@ -121,10 +112,18 @@ impl PeerConnection {
         rtc.on_peer_connection_state_change(Box::new(move |state| {
             // NOTE: RTCDataChannel cannot detect the disconnection
             //       of RTCPeerConnection, so it is transmitted by channel.
-            if let RTCPeerConnectionState::Disconnected = state {
-                disconnected_tx.send(()).unwrap();
+            match state {
+                RTCPeerConnectionState::Failed => {
+                    let tx = peer_connection_state_failed_tx.take().unwrap();
+                    tx.send(()).unwrap();
+                    Box::pin(async move {})
+                }
+                RTCPeerConnectionState::Disconnected => {
+                    let tx = peer_connection_state_disconnected_tx.take().unwrap();
+                    Box::pin(async move { tx.send(()).await.unwrap() })
+                }
+                _ => Box::pin(async move {}),
             }
-            Box::pin(async {})
         }));
         // rtc.on_signaling_state_change(Box::new(|_state| Box::pin(async {})));
         // rtc.on_track(Box::new(|_track, _receiver, _transceiver| {
@@ -133,32 +132,10 @@ impl PeerConnection {
 
         Ok(Self {
             rtc,
-            disconnected_rx,
-            data_channel_tx,
-            data_channel_rx,
+            peer_connection_state_failed_rx: Some(peer_connection_state_failed_rx),
+            peer_connection_state_disconnected_rx: Some(peer_connection_state_disconnected_rx),
+            data_channel_rx: None,
         })
-    }
-
-    async fn send_data_channel(
-        data_channel_sender: &mpsc::Sender<DataChannel>,
-        rtc_data_channel: Arc<RTCDataChannel>,
-        disconnected_receiver: watch::Receiver<()>,
-    ) -> Result<()> {
-        let data_channel = DataChannel::new(rtc_data_channel, disconnected_receiver).await;
-        data_channel_sender.send(data_channel).await?;
-        Ok(())
-    }
-
-    pub async fn wait_for_open_data_channel(&mut self, duration: Duration) -> Option<DataChannel> {
-        let task = async {
-            let mut data_channel = self.data_channel_rx.recv().await.unwrap();
-            data_channel.open_rx.recv().await.unwrap();
-            Some(data_channel)
-        };
-        tokio::select! {
-            _ = sleep(duration) => None,
-            some = task => some,
-        }
     }
 
     pub async fn start_as_offerer(&mut self) -> Result<CompressedSessionDesc> {
@@ -172,12 +149,10 @@ impl PeerConnection {
                 }),
             )
             .await?;
-        Self::send_data_channel(
-            &self.data_channel_tx,
-            rtc_data_channel,
-            self.disconnected_rx.clone(),
-        )
-        .await?;
+        let disconnected_rx = self.peer_connection_state_disconnected_rx.take().unwrap();
+        let (data_channel_tx, data_channel_rx) = oneshot::channel();
+        self.data_channel_rx = Some(data_channel_rx);
+        let _ = data_channel_tx.send(DataChannel::new(rtc_data_channel, disconnected_rx).await);
 
         let offer = self.rtc.create_offer(None).await?;
 
@@ -197,9 +172,20 @@ impl PeerConnection {
         &mut self,
         offer_desc: CompressedSessionDesc,
     ) -> Result<CompressedSessionDesc> {
-        self.rtc
-            .set_remote_description(decompress(&offer_desc.0)?)
-            .await?;
+        let (data_channel_tx, data_channel_rx) = oneshot::channel();
+        self.data_channel_rx = Some(data_channel_rx);
+        let mut data_channel_tx = Some(data_channel_tx);
+        let mut disconnected_rx = Some(self.peer_connection_state_disconnected_rx.take().unwrap());
+        self.rtc.on_data_channel(Box::new(move |rtc_data_channel| {
+            let data_channel_tx = data_channel_tx.take().unwrap();
+            let disconnected_rx = disconnected_rx.take().unwrap();
+            Box::pin(async move {
+                let _ =
+                    data_channel_tx.send(DataChannel::new(rtc_data_channel, disconnected_rx).await);
+            })
+        }));
+        let offer_desc = decompress(&offer_desc.0)?;
+        self.rtc.set_remote_description(offer_desc).await?;
         let offer = self.rtc.create_answer(None).await?;
 
         let mut gather_complete = self.rtc.gathering_complete_promise().await;
@@ -220,5 +206,18 @@ impl PeerConnection {
             .set_remote_description(decompress(&answer_desc.0)?)
             .await?;
         Ok(())
+    }
+
+    pub async fn wait_for_open_data_channel(mut self) -> Result<DataChannel> {
+        let data_channel_task = async {
+            let mut data_channel = self.data_channel_rx.take().unwrap().await.unwrap();
+            data_channel.wait_for_open_data_channel().await;
+            Ok(data_channel)
+        };
+        let failed_task = self.peer_connection_state_failed_rx.take().unwrap();
+        select! {
+            result = data_channel_task => result,
+            _ = failed_task => bail!("RTCPeerConnection failed"),
+        }
     }
 }

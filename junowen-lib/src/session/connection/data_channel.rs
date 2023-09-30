@@ -4,31 +4,29 @@ use anyhow::Result;
 use bytes::Bytes;
 use tokio::{
     spawn,
-    sync::{mpsc, watch},
+    sync::{mpsc, oneshot},
 };
 use webrtc::data_channel::RTCDataChannel;
 
 pub struct DataChannel {
     rtc: Arc<RTCDataChannel>,
-    pub open_rx: mpsc::Receiver<()>,
+    open_rx: Option<oneshot::Receiver<()>>,
+    close_rx: mpsc::Receiver<()>,
+    pc_disconnected_rx: mpsc::Receiver<()>,
     pub message_sender: mpsc::Sender<Bytes>,
     incoming_message_rx: mpsc::Receiver<Bytes>,
-    close_rx: mpsc::Receiver<()>,
-    pc_disconnected_rx: watch::Receiver<()>,
 }
 
 impl DataChannel {
-    pub async fn new(
-        rtc: Arc<RTCDataChannel>,
-        pc_disconnected_receiver: watch::Receiver<()>,
-    ) -> Self {
-        let (open_tx, open_rx) = mpsc::channel(1);
+    pub async fn new(rtc: Arc<RTCDataChannel>, pc_disconnected_rx: mpsc::Receiver<()>) -> Self {
+        let (open_tx, open_rx) = oneshot::channel();
+        let mut open_tx = Some(open_tx);
         let (message_sender, mut outgoing_message_receiver) = mpsc::channel(1);
         let (incoming_message_tx, incoming_message_rx) = mpsc::channel(1);
         let (close_sender, close_receiver) = mpsc::channel(1);
         rtc.on_open(Box::new(move || {
-            let open_sender = open_tx.clone();
-            Box::pin(async move { open_sender.send(()).await.unwrap() })
+            let open_sender = open_tx.take().unwrap();
+            Box::pin(async move { open_sender.send(()).unwrap() })
         }));
         rtc.on_message(Box::new(move |msg| {
             let incoming_message_tx = incoming_message_tx.clone();
@@ -66,12 +64,16 @@ impl DataChannel {
 
         Self {
             rtc,
-            open_rx,
+            open_rx: Some(open_rx),
             message_sender,
             incoming_message_rx,
             close_rx: close_receiver,
-            pc_disconnected_rx: pc_disconnected_receiver,
+            pc_disconnected_rx,
         }
+    }
+
+    pub async fn wait_for_open_data_channel(&mut self) {
+        self.open_rx.take().unwrap().await.unwrap()
     }
 
     /// This method returns `None` if either `incoming_message_rx`,
@@ -80,11 +82,11 @@ impl DataChannel {
         tokio::select! {
             result = self.incoming_message_rx.recv() => result,
             _ = self.close_rx.recv() => None,
-            _ = self.pc_disconnected_rx.changed() => None,
+            _ = self.pc_disconnected_rx.recv() => None,
         }
     }
 
-    pub async fn close(&self) -> Result<()> {
+    pub async fn close(self) -> Result<()> {
         Ok(self.rtc.close().await?)
     }
 }

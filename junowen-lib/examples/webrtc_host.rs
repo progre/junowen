@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use anyhow::Result;
 use bytes::Bytes;
 use tokio::{net::windows::named_pipe, spawn};
@@ -21,26 +19,26 @@ async fn main() -> Result<()> {
 
     let task = spawn(async move {
         let mut socket = AsyncReadWriteSocket::new(server_pipe);
-        let mut conn = socket.receive_signaling().await.unwrap();
-        let dc = conn
-            .wait_for_open_data_channel(Duration::from_secs(10))
-            .await
-            .unwrap();
-        (conn, dc)
+        socket.receive_signaling().await.unwrap()
     });
     connect_as_offerer(&mut client_pipe, &Lang::new("ja"))
         .await
         .unwrap();
-    let (_conn, mut dc) = task.await.unwrap();
+    let mut conn = task.await.unwrap();
 
-    dc.message_sender
+    conn.message_sender
         .send(Bytes::from_iter(b"ping".iter().copied()))
         .await?;
-    let msg = dc.recv().await.unwrap();
+    let msg = conn.recv().await.unwrap();
     println!("msg: {:?}", msg);
-    dc.message_sender
+    conn.message_sender
+        .send(Bytes::from_iter(b"ping".iter().copied()))
+        .await?;
+    let msg = conn.recv().await.unwrap();
+    println!("msg: {:?}", msg);
+    conn.message_sender
         .send(Bytes::from_iter(b"bye".iter().copied()))
         .await?;
-    dc.close().await?;
+    conn.close().await?;
     Ok(())
 }
