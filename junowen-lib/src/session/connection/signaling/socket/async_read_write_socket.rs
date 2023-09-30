@@ -1,6 +1,6 @@
 use std::io;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
@@ -34,16 +34,17 @@ where
         Self { read_write }
     }
 
-    async fn send(&mut self, msg: SignalingClientMessage) -> anyhow::Result<(), io::Error> {
+    async fn send(&mut self, msg: SignalingClientMessage) -> Result<(), io::Error> {
         self.read_write
             .write_all(&rmp_serde::to_vec(&msg).unwrap())
             .await
     }
 
-    async fn recv(&mut self) -> anyhow::Result<SignalingServerMessage, io::Error> {
+    async fn recv(&mut self) -> Result<SignalingServerMessage> {
         let mut buf = [0u8; 4 * 1024];
         let len = self.read_write.read(&mut buf).await?;
-        Ok(rmp_serde::from_slice(&buf[..len]).unwrap())
+        rmp_serde::from_slice(&buf[..len])
+            .map_err(|err| anyhow!("parse failed (len={}): {}", len, err))
     }
 
     pub fn into_inner(self) -> T {

@@ -1,3 +1,4 @@
+mod cui;
 mod interprocess;
 
 use std::sync::mpsc;

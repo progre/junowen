@@ -6,15 +6,21 @@ use std::{
 };
 
 use anyhow::{bail, Result};
+use junowen_lib::session::connection::signaling::stdio_signaling_interface::connect_as_answerer;
+use junowen_lib::session::connection::signaling::stdio_signaling_interface::connect_as_offerer;
 use junowen_lib::{inject_dll::inject_dll, lang::Lang};
-use tokio::net::windows::named_pipe;
+use serde::{Deserialize, Serialize};
+use tokio::{
+    io::{stdout, AsyncReadExt, AsyncWriteExt},
+    net::windows::named_pipe,
+};
 use tokio::{net::windows::named_pipe::NamedPipeClient, time::sleep};
 
 async fn create_pipe(lang: &Lang) -> Result<NamedPipeClient> {
     let name = r"\\.\pipe\junowen";
     let named_pipe_client_option = named_pipe::ClientOptions::new();
 
-    let pipe = if let Ok(pipe) = named_pipe_client_option.open(name) {
+    let mut pipe = if let Ok(pipe) = named_pipe_client_option.open(name) {
         pipe
     } else {
         let dll_path = current_exe()
@@ -28,12 +34,34 @@ async fn create_pipe(lang: &Lang) -> Result<NamedPipeClient> {
         loop {
             if let Ok(ok) = named_pipe_client_option.open(name) {
                 lang.println("Module loaded by th19.");
+                println!();
                 break ok;
             };
             sleep(Duration::from_secs(1)).await;
         }
     };
+    let mut buf = [0u8; 4 * 1024];
+    let len = pipe.read(&mut buf).await?;
+    let msg: IpcMessageToCui = rmp_serde::from_slice(&buf[..len])?;
+    let IpcMessageToCui::Version(version) = msg else {
+        bail!("Unexpected message");
+    };
+    if version != env!("CARGO_PKG_VERSION") {
+        bail!("Version mismatch");
+    }
     Ok(pipe)
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub enum IpcMessageToHook {
+    Delay(u8),
+}
+
+#[derive(Deserialize, Serialize)]
+pub enum IpcMessageToCui {
+    Version(String),
+    Connected,
+    Disconnected,
 }
 
 fn read_line() -> String {
@@ -43,14 +71,66 @@ fn read_line() -> String {
     buf.trim().to_owned()
 }
 
-async fn host(_pipe: &mut NamedPipeClient, _lang: &Lang) -> Result<()> {
-    bail!("Not implemented")
+async fn host(pipe: &mut NamedPipeClient, lang: &Lang) -> Result<(), io::Error> {
+    connect_as_offerer(pipe, lang).await?;
+
+    let delay = loop {
+        lang.print("Input network delay (0-9): ");
+        stdout().flush().await.unwrap();
+        let buf = read_line();
+        let Ok(delay) = buf.trim().parse::<u8>() else {
+            continue;
+        };
+        if !(0..=9).contains(&delay) {
+            continue;
+        }
+        break delay;
+    };
+    pipe.write_all(&rmp_serde::to_vec(&IpcMessageToHook::Delay(delay)).unwrap())
+        .await?;
+
+    loop {
+        let mut buf = [0u8; 4 * 1024];
+        let len = pipe.read(&mut buf).await?;
+        let msg: IpcMessageToCui = rmp_serde::from_slice(&buf[..len]).unwrap();
+        match msg {
+            IpcMessageToCui::Version(_) => panic!(),
+            IpcMessageToCui::Connected => {
+                lang.println("Connected with guest.");
+                // TODO: disconnect の検知
+                return Ok(());
+            }
+            IpcMessageToCui::Disconnected => {
+                lang.println("Guest disconnected.");
+                return Ok(());
+            }
+        }
+    }
 }
 
-async fn guest(_pipe: &mut NamedPipeClient, _lang: &Lang) -> Result<()> {
-    bail!("Not implemented")
+async fn guest(pipe: &mut NamedPipeClient, lang: &Lang) -> Result<(), io::Error> {
+    connect_as_answerer(pipe, lang).await?;
+
+    loop {
+        let mut buf = [0u8; 4 * 1024];
+        let len = pipe.read(&mut buf).await?;
+        let msg: IpcMessageToCui = rmp_serde::from_slice(&buf[..len]).unwrap();
+        match msg {
+            IpcMessageToCui::Version(_) => panic!(),
+            IpcMessageToCui::Connected => {
+                lang.println("Connected with host.");
+                // TODO: disconnect の検知
+                return Ok(());
+            }
+            IpcMessageToCui::Disconnected => {
+                lang.println("Host disconnected.");
+                return Ok(());
+            }
+        }
+    }
 }
 
+#[allow(unused)]
 pub async fn main_menu(lang: &Lang) -> Result<()> {
     loop {
         println!();
