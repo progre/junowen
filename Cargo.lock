@@ -1888,18 +1888,18 @@ dependencies = [
  "bytes",
  "interprocess",
  "junowen-lib",
+ "th19replayplayer-lib",
  "windows 0.51.1",
 ]
 
 [[package]]
-name = "th19replayplayer-hook"
+name = "th19replayplayer-lib"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "bytes",
  "interprocess",
  "junowen-lib",
- "th19replayplayer",
  "windows 0.51.1",
 ]
 
@@ -1911,7 +1911,7 @@ dependencies = [
  "bytes",
  "chrono",
  "junowen-lib",
- "th19replayplayer",
+ "th19replayplayer-lib",
  "windows 0.51.1",
 ]
 

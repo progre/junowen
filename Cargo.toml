@@ -8,7 +8,7 @@ members = [
   "junowen-lib",
   "th19loader",
   "th19replayplayer",
-  "th19replayplayer-hook",
+  "th19replayplayer-lib",
   "th19replayrecorder",
   "th19savesettingsseparately",
 ]

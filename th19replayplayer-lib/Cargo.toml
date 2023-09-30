@@ -1,5 +1,5 @@
 [package]
-name = "th19replayplayer"
+name = "th19replayplayer-lib"
 version.workspace = true
 edition = "2021"
 
@@ -8,5 +8,4 @@ anyhow.workspace = true
 bytes = "1.5.0"
 interprocess = "1.2.1"
 junowen-lib = { path = "../junowen-lib" }
-th19replayplayer-lib = { path = "../th19replayplayer-lib" }
 windows = "0.51.1"

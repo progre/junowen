@@ -5,7 +5,7 @@ use std::{
 };
 
 use junowen_lib::{DevicesInput, FnOfHookAssembly, ScreenId, Th19};
-use th19replayplayer::{FileInputList, ReplayFile};
+use th19replayplayer_lib::{FileInputList, ReplayFile};
 use windows::{
     core::PCWSTR,
     Win32::{
