@@ -7,9 +7,8 @@ use tokio::{net::windows::named_pipe, spawn};
 use junowen_lib::{
     lang::Lang,
     signaling::{
-        client::{receive_signaling, PeerConnection},
-        socket::AsyncReadWriteSocket,
-        stdio_signaling_interface::signaling_as_offerer,
+        socket::{AsyncReadWriteSocket, SignalingSocket},
+        stdio_signaling_interface::connect_as_offerer,
     },
 };
 
@@ -22,15 +21,14 @@ async fn main() -> Result<()> {
 
     let task = spawn(async move {
         let mut socket = AsyncReadWriteSocket::new(server_pipe);
-        let mut conn = PeerConnection::new().await.unwrap();
-        receive_signaling(&mut socket, &mut conn).await.unwrap();
+        let mut conn = socket.receive_signaling().await.unwrap();
         let dc = conn
             .wait_for_open_data_channel(Duration::from_secs(10))
             .await
             .unwrap();
         (conn, dc)
     });
-    signaling_as_offerer(&mut client_pipe, &Lang::new("ja"))
+    connect_as_offerer(&mut client_pipe, &Lang::new("ja"))
         .await
         .unwrap();
     let (_conn, mut dc) = task.await.unwrap();

@@ -244,7 +244,7 @@ impl PeerConnection {
         }
     }
 
-    pub async fn start_as_host(&mut self) -> Result<CompressedSessionDesc> {
+    pub async fn start_as_offerer(&mut self) -> Result<CompressedSessionDesc> {
         let rtc_data_channel = self
             .rtc
             .create_data_channel(
@@ -276,7 +276,7 @@ impl PeerConnection {
         Ok(CompressedSessionDesc(compress(&local_desc)))
     }
 
-    pub async fn start_as_guest(
+    pub async fn start_as_answerer(
         &mut self,
         offer_desc: CompressedSessionDesc,
     ) -> Result<CompressedSessionDesc> {

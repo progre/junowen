@@ -1,43 +1,45 @@
+pub mod async_read_write_socket;
+
+use anyhow::{Context, Result};
 use async_trait::async_trait;
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
-use crate::signaling::{SignalingClientMessage, SignalingServer, SignalingServerMessage};
+use super::{peer_connection::PeerConnection, CompressedSessionDesc};
 
-pub struct AsyncReadWriteSocket<T>
-where
-    T: AsyncRead + AsyncWrite + Unpin + Send + Sync,
-{
-    read_write: T,
-}
+pub use async_read_write_socket::AsyncReadWriteSocket;
 
-impl<T> AsyncReadWriteSocket<T>
-where
-    T: AsyncRead + AsyncWrite + Unpin + Send + Sync,
-{
-    pub fn new(read_write: T) -> Self {
-        Self { read_write }
-    }
-
-    pub fn into_inner(self) -> T {
-        self.read_write
-    }
+pub enum OfferResponse {
+    Offer(CompressedSessionDesc),
+    Answer(CompressedSessionDesc),
 }
 
 #[async_trait]
-impl<T> SignalingServer for AsyncReadWriteSocket<T>
-where
-    T: AsyncRead + AsyncWrite + Unpin + Send + Sync,
-{
-    async fn send(&mut self, msg: SignalingClientMessage) -> anyhow::Result<()> {
-        Ok(self
-            .read_write
-            .write_all(&rmp_serde::to_vec(&msg).unwrap())
-            .await?)
-    }
+pub trait SignalingSocket {
+    async fn offer(&mut self, desc: CompressedSessionDesc) -> Result<OfferResponse>;
+    async fn answer(&mut self, desc: CompressedSessionDesc) -> Result<()>;
 
-    async fn recv(&mut self) -> anyhow::Result<SignalingServerMessage> {
-        let mut buf = [0u8; 4 * 1024];
-        let len = self.read_write.read(&mut buf).await?;
-        Ok(rmp_serde::from_slice(&buf[..len])?)
+    async fn receive_signaling(&mut self) -> Result<PeerConnection> {
+        let mut conn = PeerConnection::new().await?;
+        let offer_desc = conn
+            .start_as_offerer()
+            .await
+            .context("Failed to start as host")?;
+        let answer_desc = self.offer(offer_desc).await?;
+        match answer_desc {
+            OfferResponse::Answer(answer_desc) => {
+                conn.set_answer_desc(answer_desc)
+                    .await
+                    .context("Failed to set answer desc")?;
+                Ok(conn)
+            }
+            OfferResponse::Offer(offer_desc) => {
+                let mut conn = PeerConnection::new().await?;
+                let answer_desc = conn
+                    .start_as_answerer(offer_desc)
+                    .await
+                    .context("Failed to start as guest")?;
+                self.answer(answer_desc).await?;
+                Ok(conn)
+            }
+        }
     }
 }

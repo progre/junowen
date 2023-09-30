@@ -9,7 +9,7 @@ use tokio::{
 
 use crate::{lang::Lang, signaling::CompressedSessionDesc};
 
-use super::{SignalingClientMessage, SignalingServerMessage};
+use super::socket::async_read_write_socket::{SignalingClientMessage, SignalingServerMessage};
 
 fn read_line() -> String {
     let mut buf = String::new();
@@ -69,11 +69,10 @@ async fn recv(pipe: &mut NamedPipeClient) -> Result<SignalingClientMessage, io::
     Ok(rmp_serde::from_slice(&buf[..len]).unwrap())
 }
 
-pub async fn signaling_as_offerer(
+pub async fn connect_as_offerer(
     client_pipe: &mut NamedPipeClient,
     lang: &Lang,
 ) -> Result<(), io::Error> {
-    send(client_pipe, SignalingServerMessage::RequestOwner).await?;
     let SignalingClientMessage::OfferDesc(offer_desc) = recv(client_pipe).await? else {
         panic!("unexpected message");
     };
@@ -87,7 +86,13 @@ pub async fn signaling_as_offerer(
     Ok(())
 }
 
-pub async fn signaling_as_answerer(client_pipe: &mut NamedPipeClient, lang: &Lang) -> Result<()> {
+pub async fn connect_as_answerer(
+    client_pipe: &mut NamedPipeClient,
+    lang: &Lang,
+) -> Result<(), io::Error> {
+    let SignalingClientMessage::OfferDesc(_) = recv(client_pipe).await? else {
+        panic!("unexpected message");
+    };
     let offer_desc = offer_desc(lang);
     send(
         client_pipe,
