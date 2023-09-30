@@ -3,6 +3,10 @@ name = "junowen"
 version.workspace = true
 edition = "2021"
 
+[lib]
+name = "junowen_hook"
+crate-type = ['cdylib']
+
 [dependencies]
 anyhow.workspace = true
 getset = "0.1.2"
