@@ -39,7 +39,6 @@ fn print_offer_desc_and_get_answer_desc(
     lang: &Lang,
     offer_desc: CompressedSessionDesc,
 ) -> CompressedSessionDesc {
-    println!();
     lang.println("Your signaling code:");
     println!();
     println!("{}", offer_desc.0);
@@ -52,7 +51,6 @@ fn print_offer_desc_and_get_answer_desc(
 }
 
 fn print_answer_desc(lang: &Lang, answer_desc: CompressedSessionDesc) {
-    println!();
     lang.println("Your signaling code:");
     println!();
     println!("{}", answer_desc.0);

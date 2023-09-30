@@ -24,7 +24,7 @@ async fn main() -> Result<()> {
     connect_as_answerer(&mut client_pipe, &Lang::new("ja"))
         .await
         .unwrap();
-    let mut conn = task.await.unwrap();
+    let (_, mut conn) = task.await.unwrap();
 
     let msg = conn.recv().await.unwrap();
     println!("msg: {:?}", msg);
