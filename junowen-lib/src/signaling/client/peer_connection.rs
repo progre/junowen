@@ -1,7 +1,6 @@
 use std::{io::Write, sync::Arc, time::Duration};
 
 use anyhow::{anyhow, bail, Result};
-use async_trait::async_trait;
 use base64::{prelude::BASE64_STANDARD_NO_PAD, Engine};
 use bytes::Bytes;
 use flate2::{
@@ -28,8 +27,6 @@ use webrtc::{
 };
 
 use crate::signaling::CompressedSessionDesc;
-
-use super::PeerConnection;
 
 fn compress(desc: &RTCSessionDescription) -> String {
     let mut e = DeflateEncoder::new(Vec::new(), Compression::best());
@@ -169,17 +166,17 @@ impl DataChannel {
     }
 }
 
-pub struct PeerConnectionImpl {
+pub struct PeerConnection {
     rtc: RTCPeerConnection,
     disconnected_rx: watch::Receiver<()>,
     data_channel_tx: mpsc::Sender<DataChannel>,
     data_channel_rx: mpsc::Receiver<DataChannel>,
 }
 
-unsafe impl Send for PeerConnectionImpl {}
-unsafe impl Sync for PeerConnectionImpl {}
+unsafe impl Send for PeerConnection {}
+unsafe impl Sync for PeerConnection {}
 
-impl PeerConnectionImpl {
+impl PeerConnection {
     pub async fn new() -> Result<Self> {
         let rtc = create_default_peer_connection().await?;
 
@@ -246,11 +243,8 @@ impl PeerConnectionImpl {
             some = task => some,
         }
     }
-}
 
-#[async_trait]
-impl PeerConnection for PeerConnectionImpl {
-    async fn start_as_host(&mut self) -> Result<CompressedSessionDesc> {
+    pub async fn start_as_host(&mut self) -> Result<CompressedSessionDesc> {
         let rtc_data_channel = self
             .rtc
             .create_data_channel(
@@ -282,7 +276,7 @@ impl PeerConnection for PeerConnectionImpl {
         Ok(CompressedSessionDesc(compress(&local_desc)))
     }
 
-    async fn start_as_guest(
+    pub async fn start_as_guest(
         &mut self,
         offer_desc: CompressedSessionDesc,
     ) -> Result<CompressedSessionDesc> {
@@ -304,7 +298,7 @@ impl PeerConnection for PeerConnectionImpl {
         Ok(CompressedSessionDesc(compress(&local_desc)))
     }
 
-    async fn set_answer_desc(&self, answer_desc: CompressedSessionDesc) -> Result<()> {
+    pub async fn set_answer_desc(&self, answer_desc: CompressedSessionDesc) -> Result<()> {
         self.rtc
             .set_remote_description(decompress(&answer_desc.0)?)
             .await?;

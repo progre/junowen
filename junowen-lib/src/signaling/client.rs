@@ -1,31 +1,14 @@
 mod peer_connection;
-mod stdio_mock_connection;
 
 use anyhow::{Context, Result};
-use async_trait::async_trait;
 
-pub use self::{
-    peer_connection::DataChannel, peer_connection::PeerConnectionImpl,
-    stdio_mock_connection::StdioMockConnection,
-};
+pub use self::{peer_connection::DataChannel, peer_connection::PeerConnection};
 
-use super::{
-    CompressedSessionDesc, SignalingClientMessage, SignalingServer, SignalingServerMessage,
-};
-
-#[async_trait]
-pub trait PeerConnection {
-    async fn start_as_host(&mut self) -> Result<CompressedSessionDesc>;
-    async fn start_as_guest(
-        &mut self,
-        offer_desc: CompressedSessionDesc,
-    ) -> Result<CompressedSessionDesc>;
-    async fn set_answer_desc(&self, answer_desc: CompressedSessionDesc) -> Result<()>;
-}
+use super::{SignalingClientMessage, SignalingServer, SignalingServerMessage};
 
 pub async fn receive_signaling(
     server: &mut impl SignalingServer,
-    conn: &mut impl PeerConnection,
+    conn: &mut PeerConnection,
 ) -> Result<()> {
     let msg = server.recv().await?;
     match msg {

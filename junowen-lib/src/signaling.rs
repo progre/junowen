@@ -1,6 +1,6 @@
 pub mod client;
-pub mod server;
-pub mod transfer;
+pub mod socket;
+pub mod stdio_signaling_interface;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -21,12 +21,6 @@ pub enum SignalingServerMessage {
 pub trait SignalingServer {
     async fn send(&mut self, msg: SignalingClientMessage) -> Result<()>;
     async fn recv(&mut self) -> Result<SignalingServerMessage>;
-}
-
-#[async_trait]
-pub trait SignalingClient {
-    async fn send(&mut self, msg: SignalingServerMessage) -> Result<()>;
-    async fn recv(&mut self) -> Result<SignalingClientMessage>;
 }
 
 #[derive(Deserialize, Serialize)]
