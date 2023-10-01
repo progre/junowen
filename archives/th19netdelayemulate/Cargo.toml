@@ -1,7 +1,9 @@
 [package]
 name = "th19netdelayemulate"
-version.workspace = true
 edition = "2021"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
 
 [lib]
 name = "th19netdelayemulate_hook"

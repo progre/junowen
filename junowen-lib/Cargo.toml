@@ -1,7 +1,9 @@
 [package]
 name = "junowen-lib"
-version.workspace = true
 edition = "2021"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
 
 [dependencies]
 anyhow.workspace = true

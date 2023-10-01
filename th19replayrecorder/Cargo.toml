@@ -1,7 +1,9 @@
 [package]
 name = "th19replayrecorder"
-version.workspace = true
 edition = "2021"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
 
 [lib]
 crate-type = ['cdylib']
