@@ -1,7 +1,7 @@
 use std::sync::mpsc;
 
 use anyhow::Result;
-use junowen_lib::session::connection::signaling::socket::{AsyncReadWriteSocket, SignalingSocket};
+use junowen_lib::connection::signaling::socket::{AsyncReadWriteSocket, SignalingSocket};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::windows::named_pipe,

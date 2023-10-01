@@ -5,7 +5,7 @@ use std::sync::mpsc::{self, RecvTimeoutError};
 use anyhow::Result;
 use bytes::Bytes;
 use getset::CopyGetters;
-use junowen_lib::{session::connection::Connection, GameSettings};
+use junowen_lib::{connection::Connection, GameSettings};
 use serde::{Deserialize, Serialize};
 use tokio::{spawn, sync::broadcast};
 

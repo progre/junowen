@@ -3,11 +3,11 @@ use bytes::Bytes;
 use tokio::{net::windows::named_pipe, spawn};
 
 use junowen_lib::{
-    lang::Lang,
-    session::connection::signaling::{
+    connection::signaling::{
         socket::{AsyncReadWriteSocket, SignalingSocket},
         stdio_signaling_interface::connect_as_offerer,
     },
+    lang::Lang,
 };
 
 #[tokio::main]
