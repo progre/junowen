@@ -47,7 +47,7 @@ jobs:
       - uses: actions/download-artifact@v2
         name: artifact
       - run: |
-          zip --junk-paths release ./artifact/**/*
+          zip --junk-paths release ./artifact/junowen.exe ./artifact/junowen_hook.dll
       - id: create_release
         uses: actions/create-release@v1
         env:
