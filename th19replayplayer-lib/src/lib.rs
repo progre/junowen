@@ -38,10 +38,10 @@ impl ReplayFile {
             difficulty: th19.difficulty()?,
             player_matchup,
             battle_settings: th19.game_settings_in_game()?,
-            p1_character: th19.game_p1().character() as u8,
-            p1_card: th19.game_p1().card() as u8,
-            p2_character: th19.game_p2().character() as u8,
-            p2_card: th19.game_p2().card() as u8,
+            p1_character: th19.p1().character as u8,
+            p1_card: th19.p1().card as u8,
+            p2_character: th19.p2().character as u8,
+            p2_card: th19.p2().card as u8,
             inputs: if player_matchup == PlayerMatchup::HumanVsHuman
                 || player_matchup == PlayerMatchup::YoukaiVsYoukai
             {

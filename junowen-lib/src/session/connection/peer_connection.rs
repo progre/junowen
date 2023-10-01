@@ -93,6 +93,8 @@ pub struct PeerConnection {
 unsafe impl Send for PeerConnection {}
 unsafe impl Sync for PeerConnection {}
 
+const PROTOCOL: &str = "JUNOWEN/0.0";
+
 impl PeerConnection {
     pub async fn new() -> Result<Self> {
         let rtc = create_default_peer_connection().await?;
@@ -112,6 +114,7 @@ impl PeerConnection {
         rtc.on_peer_connection_state_change(Box::new(move |state| {
             // NOTE: RTCDataChannel cannot detect the disconnection
             //       of RTCPeerConnection, so it is transmitted by channel.
+            println!("on_peer_connection_state_change {}", state);
             match state {
                 RTCPeerConnectionState::Failed => {
                     let tx = peer_connection_state_failed_tx.take().unwrap();
@@ -120,7 +123,7 @@ impl PeerConnection {
                 }
                 RTCPeerConnectionState::Disconnected => {
                     let tx = peer_connection_state_disconnected_tx.take().unwrap();
-                    let _ = tx.send(()).unwrap();
+                    let _ = tx.send(());
                     Box::pin(async move {})
                 }
                 _ => Box::pin(async move {}),
@@ -145,7 +148,7 @@ impl PeerConnection {
             .create_data_channel(
                 "data",
                 Some(RTCDataChannelInit {
-                    protocol: Some("JUNOWEN/1.0".to_owned()),
+                    protocol: Some(PROTOCOL.to_owned()),
                     ..Default::default()
                 }),
             )
@@ -213,6 +216,10 @@ impl PeerConnection {
         let data_channel_task = async {
             let mut data_channel = self.data_channel_rx.take().unwrap().await.unwrap();
             data_channel.wait_for_open_data_channel().await;
+            if data_channel.protocol() != PROTOCOL {
+                // TODO: ここでエラーを返すとコネクションがリークするかも
+                bail!("unexpected protocol: {}", data_channel.protocol());
+            }
             Ok(data_channel)
         };
         let failed_task = self.peer_connection_state_failed_rx.take().unwrap();

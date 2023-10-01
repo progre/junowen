@@ -11,8 +11,9 @@ use windows::{
 
 pub use crate::memory_accessors::FnOfHookAssembly;
 use crate::{
+    hook,
     memory_accessors::{ExternalProcess, HookedProcess, MemoryAccessor},
-    pointer, ptr_opt, u16_prop, value,
+    pointer, ptr_opt, u16_prop, u32_prop, value,
 };
 pub use th19_helpers::*;
 pub use th19_structs::*;
@@ -21,6 +22,8 @@ pub type Fn002530 = extern "thiscall" fn(this: *const c_void);
 pub type Fn009fa0 = extern "thiscall" fn(this: *const c_void, arg1: u32) -> u32;
 pub type Fn012480 = extern "thiscall" fn(this: *const c_void, arg1: u32) -> u32;
 pub type Fn0a9000 = extern "fastcall" fn(arg1: i32);
+pub type Fn102ff0 = extern "fastcall" fn(arg1: *const c_void);
+pub type Fn1049e0 = extern "fastcall" fn();
 
 extern "fastcall" fn dummy_from_0aba30_00fb() {
     unsafe {
@@ -92,10 +95,7 @@ impl Th19 {
         })
     }
 
-    pub fn hook_0a9540_0175(&mut self, target: Fn0a9000) -> (Fn0a9000, ApplyFn) {
-        let (old, apply) = self.hook_call(0x0a9540 + 0x0175, target as _);
-        (unsafe { transmute(old) }, apply)
-    }
+    hook!(0x0a9540 + 0x0175, hook_0a9540_0175, Fn0a9000);
 
     pub fn hook_on_input_players(
         &mut self,
@@ -115,33 +115,37 @@ impl Th19 {
         self.hook_assembly(ADDR, SIZE, dummy_from_0aba30_018e, target)
     }
 
-    pub fn hook_107540_0046(&mut self, target: Fn012480) -> (Fn012480, ApplyFn) {
-        let (old, apply) = self.hook_call(0x107540 + 0x0046, target as _);
-        (unsafe { transmute(old) }, apply)
-    }
-    pub fn hook_107540_0937(&mut self, target: Fn002530) -> (Fn002530, ApplyFn) {
-        let (old, apply) = self.hook_call(0x107540 + 0x0937, target as _);
-        (unsafe { transmute(old) }, apply)
-    }
+    hook!(0x107540 + 0x0046, hook_107540_0046, Fn012480);
+    hook!(0x107540 + 0x0937, hook_107540_0937, Fn002530);
 
-    pub fn hook_13f9d0_0446(&mut self, target: Fn009fa0) -> (Fn009fa0, ApplyFn) {
-        let (old, apply) = self.hook_call(0x13f9d0 + 0x0446, target as _);
-        (unsafe { transmute(old) }, apply)
-    }
+    hook!(0x11f870 + 0x034c, hook_11f870_034c, Fn1049e0);
+
+    hook!(0x130ed0 + 0x03ec, hook_130ed0_03ec, Fn102ff0);
+
+    hook!(0x13f9d0 + 0x0446, hook_13f9d0_0446, Fn009fa0);
 
     // -------------------------------------------------------------------------
 
+    u32_prop!(0x1a2478, difficulty_cursor, set_difficulty_cursor);
+
     pointer!(0x_1ae3a0, input, input_mut, DevicesInput);
-    u16_prop!(0x1ae410, rand_seed1, set_rand_seed1);
+    u16_prop!(0x1ae410, rand_seed1, set_rand_seed1); // 同一フレームでも変わる可能性あり ここを起点にdesyncする？
+    u32_prop!(0x1ae414, rand_seed5, set_rand_seed5); // 公式にsyncしてない 遅いほうだけ書き換わる？0,0 時に複数回書き換わるが、その後は変わらない?
+                                                     // 0x1ae418: unknown
     pointer!(0x_1ae41c, app, App);
-    u16_prop!(0x1ae430, rand_seed2, set_rand_seed2);
+    u16_prop!(0x1ae420, rand_seed4, set_rand_seed4); // frame 依存?
+    u32_prop!(0x1ae424, rand_seed6, set_rand_seed6); // 公式にsyncしてない 書き換えが稀
+    u16_prop!(0x1ae428, rand_seed3, set_rand_seed3); // frame 依存 0x1ae410 のコピー？
+    u32_prop!(0x1ae42c, rand_seed7, set_rand_seed7); // frame 依存 インクリメント
+    u16_prop!(0x1ae430, rand_seed2, set_rand_seed2); // frame 依存 0x1ae420 のコピー？
+    u32_prop!(0x1ae434, rand_seed8, set_rand_seed8); // frame 依存 インクリメント
     ptr_opt!(0x_1ae464, game, Game);
     u16_prop!(0x200850, p1_input);
     u16_prop!(0x200b10, p2_input);
     value!(0x200dd0, menu_input, menu_input_mut, Input);
     value!(0x200dd4, prev_menu_input, Input);
-    value!(0x207910, game_p1, game_p1_mut, GamePlayer);
-    value!(0x2079d0, game_p2, game_p2_mut, GamePlayer);
+    value!(0x207910, p1, p1_mut, Player);
+    value!(0x2079d0, p2, p2_mut, Player);
 
     pub fn difficulty(&self) -> Result<Difficulty> {
         self.memory_accessor.read_u32(0x207a90)?.try_into()

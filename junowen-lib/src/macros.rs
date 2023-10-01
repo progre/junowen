@@ -1,4 +1,13 @@
 #[macro_export]
+macro_rules! hook {
+    ($addr:expr, $hook:ident, $type:ty) => {
+        pub fn $hook(&mut self, target: $type) -> ($type, ApplyFn) {
+            unsafe { transmute(self.hook_call($addr, target as _)) }
+        }
+    };
+}
+
+#[macro_export]
 macro_rules! u16_prop {
     ($addr:expr, $getter:ident) => {
         pub fn $getter(&self) -> Result<u16> {
@@ -7,9 +16,25 @@ macro_rules! u16_prop {
     };
 
     ($addr:expr, $getter:ident, $setter:ident) => {
-        u16_prop!($addr, $getter);
+        $crate::u16_prop!($addr, $getter);
         pub fn $setter(&mut self, value: u16) -> Result<()> {
             self.memory_accessor.write_u16($addr, value)
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! u32_prop {
+    ($addr:expr, $getter:ident) => {
+        pub fn $getter(&self) -> Result<u32> {
+            self.memory_accessor.read_u32($addr)
+        }
+    };
+
+    ($addr:expr, $getter:ident, $setter:ident) => {
+        $crate::u32_prop!($addr, $getter);
+        pub fn $setter(&mut self, value: u32) -> Result<()> {
+            self.memory_accessor.write_u32($addr, value)
         }
     };
 }

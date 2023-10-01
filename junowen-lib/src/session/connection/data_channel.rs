@@ -8,6 +8,7 @@ use tokio::{
 use webrtc::data_channel::RTCDataChannel;
 
 pub struct DataChannel {
+    rtc: Arc<RTCDataChannel>,
     open_rx: Option<oneshot::Receiver<()>>,
     close_rx: mpsc::Receiver<()>,
     pc_disconnected_rx: broadcast::Receiver<()>,
@@ -67,12 +68,17 @@ impl DataChannel {
         }
 
         Self {
+            rtc,
             open_rx: Some(open_rx),
             close_rx,
             pc_disconnected_rx,
             message_sender,
             incoming_message_rx,
         }
+    }
+
+    pub fn protocol(&self) -> &str {
+        self.rtc.protocol()
     }
 
     pub async fn wait_for_open_data_channel(&mut self) {

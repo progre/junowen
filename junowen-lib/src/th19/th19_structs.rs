@@ -1,7 +1,6 @@
 use std::mem::transmute;
 
 use anyhow::{bail, Result};
-use getset::{CopyGetters, Setters};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, PartialEq)]
@@ -66,7 +65,7 @@ impl DevicesInput {
     }
 }
 
-#[derive(Clone, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[repr(C)]
 pub struct GameSettings {
     pub common: u32,
@@ -81,13 +80,19 @@ pub struct Settings {
 }
 
 #[derive(Debug)]
+enum MainLoopTaskId {
+    PlayerSelect = 0x09,
+    Menu = 0x0a,
+}
+
+#[derive(Debug)]
 #[repr(C)]
 pub struct MainLoopTasksLinkedListItem {
-    pub id: usize,
-    _unknown1: usize,
-    func: usize,
+    pub id: u32,
+    _unknown1: u32,
+    func: u32,
     _unknown2: [u8; 0x18],
-    arg: usize,
+    arg: u32,
 }
 
 #[repr(C)]
@@ -115,12 +120,35 @@ impl MainLoopTasksLinkedList {
         self.len() == 0
     }
 
+    pub fn player_selects(&self) -> Vec<&'static PlayerSelect> {
+        self.to_vec()
+            .iter()
+            .filter(|item| item.id == MainLoopTaskId::PlayerSelect as u32)
+            .map(|item| unsafe { (item.arg as *const PlayerSelect).as_ref() }.unwrap())
+            .collect()
+    }
+    pub fn player_selects_mut(&self) -> Vec<&'static mut PlayerSelect> {
+        self.to_vec()
+            .iter()
+            .filter(|item| item.id == MainLoopTaskId::PlayerSelect as u32)
+            .map(|item| unsafe { (item.arg as *mut PlayerSelect).as_mut() }.unwrap())
+            .collect()
+    }
+
     pub fn find_menu(&self) -> Option<&'static Menu> {
-        let arg = self.to_vec().iter().find(|item| item.id == 0x0a)?.arg as *const Menu;
+        let arg = self
+            .to_vec()
+            .iter()
+            .find(|item| item.id == MainLoopTaskId::Menu as u32)?
+            .arg as *const Menu;
         unsafe { arg.as_ref() }
     }
     pub fn find_menu_mut(&self) -> Option<&'static mut Menu> {
-        let arg = self.to_vec().iter().find(|item| item.id == 0x0a)?.arg as *mut Menu;
+        let arg = self
+            .to_vec()
+            .iter()
+            .find(|item| item.id == MainLoopTaskId::Menu as u32)?
+            .arg as *mut Menu;
         unsafe { arg.as_mut() }
     }
 
@@ -143,6 +171,7 @@ pub struct App {
     pub main_loop_tasks: &'static MainLoopTasksLinkedList,
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct Game {
     _unknown: [u8; 0x10],
@@ -150,15 +179,20 @@ pub struct Game {
     pub frame: u32,
 }
 
-#[derive(CopyGetters, Setters)]
+impl Game {
+    pub fn is_first_frame(&self) -> bool {
+        self.pre_frame == 0xffffffff && self.frame == 0
+    }
+}
+
 #[repr(C)]
-pub struct GamePlayer {
+pub struct Player {
     _unknown1: [u8; 0x0c],
-    #[get_copy = "pub"]
-    character: u32,
+    /// NOT available on player select screen
+    pub character: u32,
     _unknown2: [u8; 0x80],
-    #[getset(get_copy = "pub", set = "pub")]
-    card: u32,
+    /// Available on player select screen
+    pub card: u32,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -276,4 +310,16 @@ pub struct Menu {
     _unknown5: [u8; 0xcc],
     pub p1_cursor: CharacterCursor,
     pub p2_cursor: CharacterCursor,
+}
+
+#[repr(C)]
+pub struct PlayerSelect {
+    _unknown1: [u8; 0x08],
+    pub player: &'static mut PlayerSelectPlayer,
+}
+
+#[repr(C)]
+pub struct PlayerSelectPlayer {
+    _unknown1: [u8; 0x01c0],
+    pub card: u32,
 }
