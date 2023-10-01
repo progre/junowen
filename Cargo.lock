@@ -963,7 +963,7 @@ dependencies = [
 
 [[package]]
 name = "junowen"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bytes",
@@ -979,7 +979,7 @@ dependencies = [
 
 [[package]]
 name = "junowen-lib"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1836,7 +1836,7 @@ dependencies = [
 
 [[package]]
 name = "th19loader"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "sha3",
@@ -1845,7 +1845,7 @@ dependencies = [
 
 [[package]]
 name = "th19netdelayemulate"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bytes",
@@ -1856,7 +1856,7 @@ dependencies = [
 
 [[package]]
 name = "th19onlinevsfix"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "junowen-lib",
@@ -1865,7 +1865,7 @@ dependencies = [
 
 [[package]]
 name = "th19padlight"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "junowen-lib",
@@ -1874,7 +1874,7 @@ dependencies = [
 
 [[package]]
 name = "th19replayplayer"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bytes",
@@ -1886,7 +1886,7 @@ dependencies = [
 
 [[package]]
 name = "th19replayplayer-lib"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bytes",
@@ -1897,7 +1897,7 @@ dependencies = [
 
 [[package]]
 name = "th19replayrecorder"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bytes",
@@ -1909,7 +1909,7 @@ dependencies = [
 
 [[package]]
 name = "th19savesettingsseparately"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "junowen-lib",
@@ -1918,7 +1918,7 @@ dependencies = [
 
 [[package]]
 name = "th19seed"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "junowen-lib",
