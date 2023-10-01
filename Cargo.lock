@@ -1855,6 +1855,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "th19onlinevsfix"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "junowen-lib",
+ "windows 0.51.1",
+]
+
+[[package]]
 name = "th19padlight"
 version = "0.1.0"
 dependencies = [

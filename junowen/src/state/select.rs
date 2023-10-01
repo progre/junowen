@@ -1,5 +1,5 @@
 use anyhow::Result;
-use junowen_lib::{Input, Menu, ScreenId, Th19};
+use junowen_lib::{reset_online_vs_cursors, Input, Menu, ScreenId, Th19};
 
 use crate::session::{MatchInitial, RandomNumberInitial, Session};
 
@@ -11,12 +11,7 @@ pub fn on_input_players(
     match_initial: &mut Option<MatchInitial>,
 ) -> Result<()> {
     if first_time {
-        th19.set_difficulty_cursor(1).unwrap();
-        th19.p1_mut().character = 0;
-        th19.p2_mut().character = 1;
-        for player_select in th19.app().main_loop_tasks.player_selects_mut() {
-            player_select.player.card = 0;
-        }
+        reset_online_vs_cursors(th19);
 
         if session.host() {
             if match_initial.is_none() {

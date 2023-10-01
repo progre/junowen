@@ -6,6 +6,7 @@ members = [
   "junowen",
   "junowen-lib",
   "th19loader",
+  "th19onlinevsfix",
   "th19replayplayer",
   "th19replayplayer-lib",
   "th19replayrecorder",

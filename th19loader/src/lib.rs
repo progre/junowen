@@ -82,43 +82,37 @@ fn hook(direct_3d: *const IDirect3D9) {
                 && path.extension().unwrap().to_ascii_uppercase() == "DLL"
         })
         .for_each(|path| {
-            let module =
-                unsafe { LoadLibraryW(&HSTRING::from(path.to_string_lossy().as_ref())) }.unwrap();
+            let path = path.to_string_lossy();
+            let module = unsafe { LoadLibraryW(&HSTRING::from(path.as_ref())) }.unwrap();
             if module.is_invalid() {
-                show_warn_dialog(&format!("Failed to load {}", path.to_string_lossy()));
+                show_warn_dialog(&format!("Failed to load {}", path));
                 return;
             }
 
             let Some(check_version) = (unsafe { GetProcAddress(module, s!("CheckVersion")) })
             else {
-                show_warn_dialog(&format!(
-                    "Failed to get CheckHash from {}",
-                    path.to_string_lossy()
-                ));
+                show_warn_dialog(&format!("Failed to get CheckVersion from {}", path));
                 unsafe { FreeLibrary(module) }.unwrap();
                 return;
             };
             let check_version: extern "C" fn(hash: *const u8, length: usize) -> bool =
                 unsafe { transmute(check_version) };
             if !check_version(hash.as_ptr(), hash.len()) {
-                show_warn_dialog(&format!("Hash mismatch: {}", path.to_string_lossy()));
+                show_warn_dialog(&format!("Hash mismatch: {}", path));
                 unsafe { FreeLibrary(module) }.unwrap();
                 return;
             }
 
             let Some(initialize_addr) = (unsafe { GetProcAddress(module, s!("Initialize")) })
             else {
-                show_warn_dialog(&format!(
-                    "Failed to get Initialize from {}",
-                    path.to_string_lossy()
-                ));
+                show_warn_dialog(&format!("Failed to get Initialize from {}", path));
                 unsafe { FreeLibrary(module) }.unwrap();
                 return;
             };
             let initialize: extern "C" fn(direct_3d: *const IDirect3D9) -> bool =
                 unsafe { transmute(initialize_addr) };
             if !initialize(direct_3d) {
-                show_warn_dialog(&format!("Failed to initialize {}", path.to_string_lossy()));
+                show_warn_dialog(&format!("Failed to initialize {}", path));
                 unsafe { FreeLibrary(module) }.unwrap();
             }
         });

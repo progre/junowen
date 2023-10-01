@@ -25,6 +25,32 @@ pub type Fn0a9000 = extern "fastcall" fn(arg1: i32);
 pub type Fn102ff0 = extern "fastcall" fn(arg1: *const c_void);
 pub type Fn1049e0 = extern "fastcall" fn();
 
+extern "fastcall" fn dummy_from_02d1f0_007c() {
+    unsafe {
+        asm! {
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            //
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+            "NOP",
+        }
+    }
+}
+
 extern "fastcall" fn dummy_from_0aba30_00fb() {
     unsafe {
         asm! {
@@ -38,6 +64,7 @@ extern "fastcall" fn dummy_from_0aba30_00fb() {
             "NOP",
             "NOP",
             "NOP",
+            //
             "NOP",
             "NOP",
             "NOP",
@@ -61,6 +88,7 @@ extern "fastcall" fn dummy_from_0aba30_018e() {
             "NOP",
             "NOP",
             "NOP",
+            //
             "NOP",
             "NOP",
             "NOP",
@@ -93,6 +121,15 @@ impl Th19 {
         Ok(Self {
             memory_accessor: MemoryAccessor::HookedProcess(HookedProcess::new(exe_file)?),
         })
+    }
+
+    pub fn hook_on_waiting_online_vs_connection(
+        &mut self,
+        target: FnOfHookAssembly,
+    ) -> (Option<FnOfHookAssembly>, ApplyFn) {
+        const ADDR: usize = 0x02d1f0 + 0x007c;
+        const SIZE: usize = 7;
+        self.hook_assembly(ADDR, SIZE, dummy_from_02d1f0_007c, target)
     }
 
     hook!(0x0a9540 + 0x0175, hook_0a9540_0175, Fn0a9000);

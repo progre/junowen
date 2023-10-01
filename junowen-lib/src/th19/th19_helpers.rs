@@ -1,5 +1,14 @@
 use crate::{GameMode, Input, Menu, PlayerMatchup, ScreenId, Th19};
 
+pub fn reset_online_vs_cursors(th19: &mut Th19) {
+    th19.set_difficulty_cursor(1).unwrap();
+    th19.p1_mut().character = 0;
+    th19.p2_mut().character = 1;
+    for player_select in th19.app().main_loop_tasks.player_selects_mut() {
+        player_select.player.card = 0;
+    }
+}
+
 pub fn shot_repeatedly(prev: Input) -> Input {
     if prev.0 == Input::SHOT as u32 {
         Input(Input::NULL as u32)
