@@ -15,14 +15,18 @@ use tokio::{
     net::windows::named_pipe,
 };
 use tokio::{net::windows::named_pipe::NamedPipeClient, time::sleep};
+use tracing::trace;
 
 async fn create_pipe(lang: &Lang) -> Result<NamedPipeClient> {
     let name = r"\\.\pipe\junowen";
     let named_pipe_client_option = named_pipe::ClientOptions::new();
 
+    trace!("named pipe opening...");
     let mut pipe = if let Ok(pipe) = named_pipe_client_option.open(name) {
+        trace!("named pipe opened");
         pipe
     } else {
+        trace!("named pipe opening failed");
         let dll_path = current_exe()
             .unwrap()
             .as_path()
@@ -37,6 +41,7 @@ async fn create_pipe(lang: &Lang) -> Result<NamedPipeClient> {
                 println!();
                 break ok;
             };
+            trace!("waiting for inject...");
             sleep(Duration::from_secs(1)).await;
         }
     };

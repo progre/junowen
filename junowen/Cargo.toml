@@ -16,6 +16,7 @@ getset = "0.1.2"
 junowen-lib.workspace = true
 rmp-serde = "1.1.2"
 serde = { version = "1.0.188", features = ["derive"] }
+time = { version = "0.3.29", features = [] }
 tokio = { version = "1.32.0", features = [
   "rt",
   "macros",
@@ -23,6 +24,9 @@ tokio = { version = "1.32.0", features = [
   "time"
 ] }
 toml = "0.8.0"
+tracing = "0.1.37"
+tracing-appender = "0.2.2"
+tracing-subscriber = { version = "0.3.17", features = ["local-time"] }
 windows = { version = "0.51.1", features = [
   "Win32_Foundation",
   "Win32_Graphics_Direct3D9",

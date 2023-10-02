@@ -2,15 +2,22 @@ mod cui;
 mod interprocess;
 mod session;
 mod state;
+mod tracing_helper;
 
-use std::{ffi::c_void, sync::mpsc};
+use std::{ffi::c_void, path::PathBuf, sync::mpsc};
 
 use junowen_lib::{Fn009fa0, Fn1049e0, FnOfHookAssembly, Th19};
 use session::Session;
 use state::State;
-use windows::Win32::{
-    Foundation::HINSTANCE,
-    System::{Console::AllocConsole, SystemServices::DLL_PROCESS_ATTACH},
+use windows::{
+    core::PCWSTR,
+    Win32::{
+        Foundation::{HINSTANCE, MAX_PATH},
+        System::{
+            Console::AllocConsole, LibraryLoader::GetModuleFileNameW,
+            SystemServices::DLL_PROCESS_ATTACH,
+        },
+    },
 };
 
 use crate::interprocess::init_interprocess;
@@ -65,12 +72,25 @@ extern "thiscall" fn on_loaded_game_settings(this: *const c_void, arg1: u32) -> 
 }
 
 #[no_mangle]
-pub extern "stdcall" fn DllMain(_inst_dll: HINSTANCE, reason: u32, _reserved: u32) -> bool {
+pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32) -> bool {
     if reason == DLL_PROCESS_ATTACH {
         if cfg!(debug_assertions) {
             let _ = unsafe { AllocConsole() };
             std::env::set_var("RUST_BACKTRACE", "1");
         }
+        let dll_path = {
+            let mut buf = [0u16; MAX_PATH as usize];
+            if unsafe { GetModuleFileNameW(inst_dll, &mut buf) } == 0 {
+                panic!();
+            }
+            unsafe { PCWSTR::from_raw(buf.as_ptr()).to_string() }.unwrap()
+        };
+        let dll_path = PathBuf::from(dll_path);
+        tracing_helper::init_tracing(
+            dll_path.parent().unwrap().to_string_lossy().as_ref(),
+            &format!("{}.log", dll_path.file_stem().unwrap().to_string_lossy()),
+            false,
+        );
         let mut th19 = Th19::new_hooked_process("th19.exe").unwrap();
 
         let (old_on_input_players, apply_hook_on_input_players) =
