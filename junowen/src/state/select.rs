@@ -1,5 +1,6 @@
 use anyhow::Result;
 use junowen_lib::{reset_online_vs_cursors, Input, Menu, ScreenId, Th19};
+use tracing::debug;
 
 use crate::session::{MatchInitial, RandomNumberInitial, Session};
 
@@ -36,7 +37,7 @@ pub fn on_input_players(
                 *match_initial = Some(session.recv_init_match().unwrap());
             }
             let (init, delay_remainings) = session.recv_init_round().unwrap();
-            println!("delay_remainings: {}", delay_remainings);
+            debug!("delay_remainings: {}", delay_remainings);
             th19.set_rand_seed1(init.seed1).unwrap();
             th19.set_rand_seed2(init.seed2).unwrap();
             th19.set_rand_seed3(init.seed3).unwrap();

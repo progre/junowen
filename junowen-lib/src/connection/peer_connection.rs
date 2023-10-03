@@ -213,7 +213,7 @@ impl PeerConnection {
         Ok(())
     }
 
-    pub async fn wait_for_open_data_channel(mut self) -> Result<DataChannel> {
+    pub async fn wait_for_open_data_channel(mut self) -> Result<(RTCPeerConnection, DataChannel)> {
         let data_channel_task = async {
             let mut data_channel = self.data_channel_rx.take().unwrap().await.unwrap();
             data_channel.wait_for_open_data_channel().await;
@@ -225,7 +225,7 @@ impl PeerConnection {
         };
         let failed_task = self.peer_connection_state_failed_rx.take().unwrap();
         select! {
-            result = data_channel_task => result,
+            result = data_channel_task => result.map(|data_channel| (self.rtc, data_channel)),
             _ = failed_task => bail!("RTCPeerConnection failed"),
         }
     }

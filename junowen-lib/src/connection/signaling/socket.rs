@@ -43,7 +43,7 @@ pub trait SignalingSocket {
                 (true, conn)
             }
         };
-        let data_channel = conn.wait_for_open_data_channel().await?;
-        Ok((answerer, Connection::new(data_channel)))
+        let (rtc_peer_connection, data_channel) = conn.wait_for_open_data_channel().await?;
+        Ok((answerer, Connection::new(rtc_peer_connection, data_channel)))
     }
 }
