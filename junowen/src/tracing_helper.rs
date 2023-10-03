@@ -1,7 +1,7 @@
-use std::num::NonZeroU8;
+use std::{num::NonZeroU8, panic};
 
 use time::format_description::well_known::{iso8601, Iso8601};
-use tracing::Level;
+use tracing::{error, Level};
 use tracing_subscriber::{
     fmt::{time::LocalTime, writer::MakeWriterExt},
     prelude::__tracing_subscriber_SubscriberExt,
@@ -39,4 +39,6 @@ pub fn init_tracing(dir: &str, file_name: &str, ansi: bool) {
         tracing::subscriber::set_global_default(tracing_subscriber::registry().with(layer))
             .unwrap();
     }
+
+    panic::set_hook(Box::new(|panic| error!("{}", panic)));
 }
