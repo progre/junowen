@@ -5,6 +5,7 @@ use std::{
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use tracing::warn;
 
 use super::{MatchInitial, RandomNumberInitial};
 
@@ -121,7 +122,7 @@ impl DelayedInputs {
                 }
                 InternalDelayedInput::Input(input) => return Ok(DelayedInput::Input(input)),
                 InternalDelayedInput::InitMatch(_) | InternalDelayedInput::InitRound(_) => {
-                    eprintln!("MAYBE DESYNC: {:?}", remote)
+                    warn!("MAYBE DESYNC: {:?}", remote)
                 }
             }
         }

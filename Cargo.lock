@@ -1007,6 +1007,7 @@ dependencies = [
  "sys-locale",
  "tokio",
  "toml",
+ "tracing",
  "webrtc",
  "windows 0.51.1",
 ]

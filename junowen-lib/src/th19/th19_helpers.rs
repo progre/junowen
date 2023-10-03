@@ -1,3 +1,5 @@
+use tracing::warn;
+
 use crate::{GameMode, Input, Menu, PlayerMatchup, ScreenId, Th19};
 
 pub fn reset_online_vs_cursors(th19: &mut Th19) {
@@ -71,7 +73,7 @@ pub fn move_to_local_versus_difficulty_select(
         (ScreenId::CharacterSelect, GameMode::Versus, _) => false,
         (ScreenId::GameLoading, GameMode::Versus, _) => false,
         _ => {
-            eprintln!("unknown screen {}", menu.screen_id as u32);
+            warn!("unknown screen {}", menu.screen_id as u32);
             false
         }
     }

@@ -11,6 +11,7 @@ use tokio::{
     select,
     sync::{broadcast, oneshot},
 };
+use tracing::debug;
 use webrtc::{
     api::media_engine::MediaEngine,
     data_channel::data_channel_init::RTCDataChannelInit,
@@ -114,7 +115,7 @@ impl PeerConnection {
         rtc.on_peer_connection_state_change(Box::new(move |state| {
             // NOTE: RTCDataChannel cannot detect the disconnection
             //       of RTCPeerConnection, so it is transmitted by channel.
-            println!("on_peer_connection_state_change {}", state);
+            debug!("on_peer_connection_state_change {}", state);
             match state {
                 RTCPeerConnectionState::Failed => {
                     let tx = peer_connection_state_failed_tx.take().unwrap();

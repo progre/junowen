@@ -5,6 +5,7 @@ mod select;
 use anyhow::Result;
 use getset::MutGetters;
 use junowen_lib::{Menu, ScreenId, Th19};
+use tracing::error;
 
 use crate::{
     session::{MatchInitial, Session},
@@ -177,7 +178,7 @@ pub(crate) fn on_input_players(state: &mut State, props: &Props) {
         return;
     };
     if let Err(err) = update_th19_on_input_players(state, changed, menu) {
-        eprintln!("session aborted: {}", err);
+        error!("session aborted: {}", err);
         state.end_session();
     }
 }
@@ -192,7 +193,7 @@ pub fn on_input_menu(state: &mut State) {
             match_initial: _,
         } => {
             if let Err(err) = select::on_input_menu(session, th19) {
-                eprintln!("session aborted: {}", err);
+                error!("session aborted: {}", err);
                 state.end_session();
             }
         }

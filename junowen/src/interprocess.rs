@@ -6,6 +6,7 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::windows::named_pipe,
 };
+use tracing::error;
 
 use crate::cui::{IpcMessageToCui, IpcMessageToHook};
 use crate::session::{create_session, Session};
@@ -55,7 +56,7 @@ pub fn init_interprocess(session_sender: mpsc::Sender<Session>) {
                     match ipc(&session_sender).await {
                         Ok(ok) => ok,
                         Err(err) => {
-                            eprintln!("session aborted: {}", err);
+                            error!("session aborted: {}", err);
                             continue;
                         }
                     };

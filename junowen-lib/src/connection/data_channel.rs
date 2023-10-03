@@ -5,6 +5,7 @@ use tokio::{
     spawn,
     sync::{broadcast, mpsc, oneshot},
 };
+use tracing::{error, warn};
 use webrtc::data_channel::RTCDataChannel;
 
 pub struct DataChannel {
@@ -37,7 +38,7 @@ impl DataChannel {
             })
         }));
         rtc.on_error(Box::new(|err| {
-            eprintln!("{}", err);
+            warn!("{}", err);
             Box::pin(async {})
         }));
         rtc.on_close(Box::new(move || {
@@ -60,7 +61,7 @@ impl DataChannel {
                         Ok(_) => {}
                         Err(webrtc::Error::ErrClosedPipe) => return,
                         Err(err) => {
-                            eprintln!("outgoing_message_receiver.recv() failed: {}", err);
+                            error!("outgoing_message_receiver.recv() failed: {}", err);
                         }
                     }
                 }

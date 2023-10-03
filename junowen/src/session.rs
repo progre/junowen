@@ -8,6 +8,7 @@ use getset::CopyGetters;
 use junowen_lib::{connection::Connection, GameSettings};
 use serde::{Deserialize, Serialize};
 use tokio::{spawn, sync::broadcast};
+use tracing::{debug, info};
 
 use self::delayed_inputs::{DelayedInput, DelayedInputs, InternalDelayedInput};
 
@@ -39,14 +40,14 @@ pub async fn create_session(mut conn: Connection, delay: Option<u8>) -> Result<S
                 tokio::task::spawn_blocking(move || (hook_outgoing_rx.recv(), hook_outgoing_rx))
                     .await
                     .unwrap();
-            hook_outgoing_rx = reusable;
             let msg = match msg {
                 Ok(ok) => ok,
                 Err(err) => {
-                    eprintln!("recv hook outgoing msg error: {}", err);
+                    debug!("recv hook outgoing msg error: {}", err);
                     return;
                 }
             };
+            hook_outgoing_rx = reusable;
             let data = Bytes::from(rmp_serde::to_vec(&msg).unwrap());
             conn_message_sender.send(data).await.unwrap();
         }
@@ -60,7 +61,7 @@ pub async fn create_session(mut conn: Connection, delay: Option<u8>) -> Result<S
             };
             let msg: InternalDelayedInput = rmp_serde::from_slice(&data).unwrap();
             if let Err(err) = hook_incoming_tx.send(msg) {
-                eprintln!("send hook incoming msg error {}", err);
+                debug!("send hook incoming msg error: {}", err);
                 return;
             }
         }
@@ -100,6 +101,7 @@ unsafe impl Sync for Session {}
 
 impl Drop for Session {
     fn drop(&mut self) {
+        info!("session closed");
         let _ = self.closed_sender.send(());
     }
 }
