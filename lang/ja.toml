@@ -1,0 +1,22 @@
+"Module loaded by th19.exe." = "th19.exe にモジュールがロードされました。"
+"Input network delay (0-9): " = "ディレイを指定してください (0-9): "
+"Connected with guest." = "ゲストと接続しました。"
+"Guest disconnected." = "ゲストとの接続が切断されました。"
+"Connected with host." = "ホストと接続しました。"
+"Host disconnected." = "ホストとの接続が切断されました。"
+#
+"1) Connect as Host" = "1) ホストとして接続"
+"2) Connect as Guest" = "2) ゲストとして接続"
+"0) Exit" = "0) 終了"
+"Select (0-2): " = "選択 (0-2): "
+#
+"Hook module not found." = "フックモジュールが見つかりません。"
+"th19 disconnected." = "th19 との接続が切断されました。"
+#
+"Your signaling code:" = "あなたのシグナリングコード:"
+"It was copied to your clipboard. Share your signaling code with your guest." = "クリップボードにコピーされました。ゲストにシグナリングコードを共有してください。"
+"Input guest's signaling code:" = "ゲストのシグナリングコードを入力してください:"
+"Waiting for guest to connect..." = "ゲストの接続を待っています..."
+"Input host's signaling code:" = "ホストのシグナリングコードを入力してください:"
+"It was copied to your clipboard. Share your signaling code with your host." = "クリップボードにコピーされました。ホストにシグナリングコードを共有してください。"
+"Waiting for host to connect..." = "ホストの接続を待っています..."

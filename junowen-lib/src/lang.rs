@@ -1,19 +1,22 @@
 use std::{collections::HashMap, fs};
 
-use anyhow::Error;
+use sys_locale::get_locales;
 
 pub struct Lang {
     lang: HashMap<String, String>,
 }
 
 impl Lang {
-    pub fn new(lang: &str) -> Self {
-        Self {
-            lang: fs::read_to_string(format!("lang.{lang}"))
-                .map_err(Error::new)
-                .and_then(|s| toml::from_str(&s).map_err(Error::new))
-                .unwrap_or_default(),
-        }
+    pub fn resolve() -> Self {
+        let lang = get_locales()
+            .flat_map(|tag| {
+                let primary_lang = tag.split('-').next().unwrap_or(&tag).to_owned();
+                [tag, primary_lang]
+            })
+            .filter_map(|tag| fs::read_to_string(format!("lang/{}.toml", tag)).ok())
+            .find_map(|file| toml::from_str(&file).ok())
+            .unwrap_or_default();
+        Self { lang }
     }
 
     pub fn print(&self, msg: &str) {

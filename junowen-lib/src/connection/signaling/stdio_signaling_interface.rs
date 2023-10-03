@@ -44,6 +44,7 @@ fn print_offer_desc_and_get_answer_desc(
     println!();
     set_clipboard_string(&offer_desc.0).unwrap();
     lang.println("It was copied to your clipboard. Share your signaling code with your guest.");
+    println!();
     let answer_desc = CompressedSessionDesc(read_line_loop(lang, "Input guest's signaling code:"));
     lang.println("Waiting for guest to connect...");
     answer_desc
@@ -56,6 +57,7 @@ fn print_answer_desc(lang: &Lang, answer_desc: CompressedSessionDesc) {
     println!();
     set_clipboard_string(&answer_desc.0).unwrap();
     lang.println("It was copied to your clipboard. Share your signaling code with your host.");
+    println!();
     lang.println("Waiting for host to connect...");
 }
 

@@ -37,7 +37,7 @@ async fn create_pipe(lang: &Lang) -> Result<NamedPipeClient> {
         inject_dll("th19.exe", &dll_path)?;
         loop {
             if let Ok(ok) = named_pipe_client_option.open(name) {
-                lang.println("Module loaded by th19.");
+                lang.println("Module loaded by th19.exe.");
                 println!();
                 break ok;
             };
@@ -165,7 +165,7 @@ pub async fn main_menu(lang: &Lang) -> Result<()> {
         let mut pipe = match create_pipe(lang).await {
             Ok(ok) => ok,
             Err(err) => {
-                lang.print("Hook module not found: ");
+                lang.print("Hook module not found.");
                 println!("{}", err);
                 println!();
                 continue;
@@ -175,14 +175,14 @@ pub async fn main_menu(lang: &Lang) -> Result<()> {
         match select {
             1 => {
                 if let Err(err) = host(&mut pipe, lang).await {
-                    lang.print("th19 disconnected: ");
+                    lang.print("th19 disconnected.");
                     println!("{}", err);
                     println!();
                 }
             }
             2 => {
                 if let Err(err) = guest(&mut pipe, lang).await {
-                    lang.print("th19 disconnected: ");
+                    lang.print("th19 disconnected.");
                     println!("{}", err);
                     println!();
                 }

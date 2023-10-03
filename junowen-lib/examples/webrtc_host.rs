@@ -21,7 +21,7 @@ async fn main() -> Result<()> {
         let mut socket = AsyncReadWriteSocket::new(server_pipe);
         socket.receive_signaling().await.unwrap()
     });
-    connect_as_offerer(&mut client_pipe, &Lang::new("ja"))
+    connect_as_offerer(&mut client_pipe, &Lang::resolve())
         .await
         .unwrap();
     let (_, mut conn) = task.await.unwrap();
