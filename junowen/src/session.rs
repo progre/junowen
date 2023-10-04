@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use tokio::{spawn, sync::broadcast};
 use tracing::{debug, info};
 
-use self::delayed_inputs::{DelayedInput, DelayedInputs, InternalDelayedInput};
+use self::delayed_inputs::{DelayedInputs, InternalDelayedInput};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct MatchInitial {
@@ -134,14 +134,11 @@ impl Session {
         self.delayed_inputs.recv_init_round()
     }
 
-    pub fn enqueue_input(&mut self, input: u8, delay: Option<u8>) {
-        self.delayed_inputs
-            .enqueue_input(DelayedInput::Input(input), delay);
-    }
-
-    pub fn dequeue_inputs(&mut self) -> Result<(u8, u8), RecvError> {
-        let (p1, p2) = self.delayed_inputs.dequeue_inputs()?;
-        let DelayedInput::Input(p1) = p1;
-        Ok((p1, p2))
+    pub fn enqueue_input_and_dequeue(
+        &mut self,
+        input: u8,
+        delay: Option<u8>,
+    ) -> Result<(u8, u8), RecvError> {
+        self.delayed_inputs.enqueue_input_and_dequeue(input, delay)
     }
 }
