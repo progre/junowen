@@ -207,8 +207,7 @@ fn move_to_battle_menu_input(
             GameMode::Versus,
             PlayerMatchup::HumanVsHuman | PlayerMatchup::HumanVsCpu | PlayerMatchup::CpuVsCpu,
         ) => {
-            select_cursor(
-                th19.menu_input_mut(),
+            *th19.menu_input_mut() = select_cursor(
                 *th19.prev_menu_input(),
                 &mut menu.cursor,
                 inits.difficulty as u32,

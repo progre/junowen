@@ -1,4 +1,4 @@
-use junowen_lib::{reset_online_vs_cursors, FnOfHookAssembly, Th19};
+use junowen_lib::{reset_cursors, FnOfHookAssembly, Th19};
 use windows::Win32::{
     Foundation::{HINSTANCE, HMODULE},
     Graphics::Direct3D9::IDirect3D9,
@@ -59,7 +59,7 @@ pub extern "C" fn CheckVersion(hash: *const u8, length: usize) -> bool {
 }
 
 extern "fastcall" fn on_waiting_online_vs_connection() {
-    reset_online_vs_cursors(&mut state_mut().th19);
+    reset_cursors(&mut state_mut().th19);
 
     if let Some(func) = props().old_on_waiting_online_vs_connection {
         func()

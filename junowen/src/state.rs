@@ -16,7 +16,9 @@ use crate::{
 
 enum NetBattleState<'a> {
     Standby,
-    Prepare,
+    Prepare {
+        passing_title: bool,
+    },
     Select {
         session: &'a mut Session,
         th19: &'a mut Th19,
@@ -52,7 +54,9 @@ impl State {
     fn net_battle_state(&mut self) -> NetBattleState {
         match self.state {
             0x00 => NetBattleState::Standby,
-            0x10 => NetBattleState::Prepare,
+            0x10 | 0x11 => NetBattleState::Prepare {
+                passing_title: self.state == 0x11,
+            },
             0x20 | 0x21 => NetBattleState::Select {
                 session: self.session.as_mut().unwrap(),
                 th19: &mut self.th19,
@@ -71,6 +75,10 @@ impl State {
     fn start_session(&mut self, session: Session) {
         self.state = 0x10;
         self.session = Some(session);
+    }
+
+    fn change_to_prepare(&mut self, passing_title: bool) {
+        self.state = if passing_title { 0x11 } else { 0x10 };
     }
 
     fn change_to_select(&mut self) {
@@ -102,10 +110,17 @@ fn update_state(state: &mut State, props: &Props) -> Option<(bool, Option<&'stat
             state.start_session(session);
             Some((true, None))
         }
-        NetBattleState::Prepare => {
+        NetBattleState::Prepare { passing_title } => {
             let Some(menu) = state.th19.app().main_loop_tasks.find_menu_mut() else {
                 return Some((false, None));
             };
+            if !passing_title {
+                if menu.screen_id != ScreenId::Title {
+                    return Some((false, Some(menu)));
+                }
+                state.change_to_prepare(true);
+                return Some((true, Some(menu)));
+            }
             if menu.screen_id != ScreenId::DifficultySelect {
                 return Some((false, Some(menu)));
             }
@@ -163,7 +178,7 @@ fn update_th19_on_input_players(
 ) -> Result<(), RecvError> {
     match state.net_battle_state() {
         NetBattleState::Standby => unreachable!(),
-        NetBattleState::Prepare => Ok(()),
+        NetBattleState::Prepare { .. } => Ok(()),
         NetBattleState::Select {
             th19,
             session,
@@ -188,7 +203,9 @@ pub(crate) fn on_input_players(state: &mut State, props: &Props) {
 pub fn on_input_menu(state: &mut State) {
     match state.net_battle_state() {
         NetBattleState::Standby => {}
-        NetBattleState::Prepare => prepare::on_input_menu(&mut state.th19),
+        NetBattleState::Prepare { passing_title } => {
+            prepare::on_input_menu(&mut state.th19, passing_title)
+        }
         NetBattleState::Select {
             th19,
             session,

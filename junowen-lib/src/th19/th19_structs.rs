@@ -81,7 +81,6 @@ pub struct Settings {
 
 #[derive(Debug)]
 enum MainLoopTaskId {
-    PlayerSelect = 0x09,
     Menu = 0x0a,
 }
 
@@ -118,21 +117,6 @@ impl MainLoopTasksLinkedList {
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
-    }
-
-    pub fn player_selects(&self) -> Vec<&'static PlayerSelect> {
-        self.to_vec()
-            .iter()
-            .filter(|item| item.id == MainLoopTaskId::PlayerSelect as u32)
-            .map(|item| unsafe { (item.arg as *const PlayerSelect).as_ref() }.unwrap())
-            .collect()
-    }
-    pub fn player_selects_mut(&self) -> Vec<&'static mut PlayerSelect> {
-        self.to_vec()
-            .iter()
-            .filter(|item| item.id == MainLoopTaskId::PlayerSelect as u32)
-            .map(|item| unsafe { (item.arg as *mut PlayerSelect).as_mut() }.unwrap())
-            .collect()
     }
 
     pub fn find_menu(&self) -> Option<&'static Menu> {
@@ -310,16 +294,4 @@ pub struct Menu {
     _unknown5: [u8; 0xcc],
     pub p1_cursor: CharacterCursor,
     pub p2_cursor: CharacterCursor,
-}
-
-#[repr(C)]
-pub struct PlayerSelect {
-    _unknown1: [u8; 0x08],
-    pub player: &'static mut PlayerSelectPlayer,
-}
-
-#[repr(C)]
-pub struct PlayerSelectPlayer {
-    _unknown1: [u8; 0x01c0],
-    pub card: u32,
 }

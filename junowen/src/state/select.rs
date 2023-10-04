@@ -1,7 +1,7 @@
 use std::sync::mpsc::RecvError;
 
 use anyhow::Result;
-use junowen_lib::{reset_online_vs_cursors, Input, Menu, ScreenId, Th19};
+use junowen_lib::{reset_cursors, Input, Menu, ScreenId, Th19};
 
 use crate::session::{MatchInitial, RoundInitial, Session};
 
@@ -13,7 +13,7 @@ pub fn on_input_players(
     match_initial: &mut Option<MatchInitial>,
 ) -> Result<(), RecvError> {
     if first_time {
-        reset_online_vs_cursors(th19);
+        reset_cursors(th19);
 
         if session.host() {
             if match_initial.is_none() {
