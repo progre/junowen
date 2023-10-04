@@ -45,7 +45,7 @@ extern "fastcall" fn hook_0abb2b() {
     let th19 = &mut state_mut().th19;
     let state = state_mut();
 
-    let input = th19.input_mut();
+    let input_devices = th19.input_devices_mut();
 
     let new_delay_receiver = &props().new_delay_receiver;
     if let Ok(delay) = new_delay_receiver.try_recv() {
@@ -70,13 +70,13 @@ extern "fastcall" fn hook_0abb2b() {
 
     if !state.p1_buffer.is_empty() {
         let old_p1 = Input(state.p1_buffer.get_u32());
-        let p1 = input.p1_input();
-        input.set_p1_input(old_p1);
+        let p1 = input_devices.p1_input();
+        input_devices.set_p1_input(old_p1);
         state.p1_buffer.put_u32(p1.0);
 
         let old_p2 = Input(state.p2_buffer.get_u32());
-        let p2 = input.p2_input();
-        input.set_p2_input(old_p2);
+        let p2 = input_devices.p2_input();
+        input_devices.set_p2_input(old_p2);
         state.p2_buffer.put_u32(p2.0);
     }
 

@@ -36,34 +36,34 @@ pub struct InputDevice {
 }
 
 #[repr(C)]
-pub struct DevicesInput {
+pub struct InputDevices {
     _unknown1: [u8; 0x20],
     pub input_device_array: [InputDevice; 3 + 9],
     _unknown2: [u8; 0x14],
-    pub p1_input_idx: u32,
-    pub p2_input_idx: u32,
+    p1_idx: u32,
+    p2_idx: u32,
     // unknown continues...
 }
 
-impl DevicesInput {
+impl InputDevices {
     pub fn p1_input(&self) -> Input {
-        self.input_device_array[self.p1_input_idx as usize].input
+        self.input_device_array[self.p1_idx as usize].input
     }
     pub fn set_p1_input(&mut self, value: Input) {
-        self.input_device_array[self.p1_input_idx as usize].input = value;
+        self.input_device_array[self.p1_idx as usize].input = value;
     }
     pub fn p1_prev_input(&self) -> Input {
-        self.input_device_array[self.p1_input_idx as usize].prev_input
+        self.input_device_array[self.p1_idx as usize].prev_input
     }
 
     pub fn p2_input(&self) -> Input {
-        self.input_device_array[self.p2_input_idx as usize].input
+        self.input_device_array[self.p2_idx as usize].input
     }
     pub fn set_p2_input(&mut self, value: Input) {
-        self.input_device_array[self.p2_input_idx as usize].input = value;
+        self.input_device_array[self.p2_idx as usize].input = value;
     }
     pub fn p2_prev_input(&self) -> Input {
-        self.input_device_array[self.p2_input_idx as usize].prev_input
+        self.input_device_array[self.p2_idx as usize].prev_input
     }
 }
 

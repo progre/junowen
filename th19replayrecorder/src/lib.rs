@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use junowen_lib::{DevicesInput, FnOfHookAssembly, ScreenId, Th19};
+use junowen_lib::{FnOfHookAssembly, InputDevices, ScreenId, Th19};
 use th19replayplayer_lib::{FileInputList, ReplayFile};
 use windows::{
     core::PCWSTR,
@@ -113,14 +113,17 @@ fn put<T>(vec: &mut Vec<T>, idx: usize, item: T) {
     }
 }
 
-fn tick_recording(inputs: &mut FileInputList, frame: u32, input: &DevicesInput) {
+fn tick_recording(inputs: &mut FileInputList, frame: u32, input_devices: &InputDevices) {
     match inputs {
         FileInputList::HumanVsHuman(vec) => {
-            let item = (input.p1_input().0 as u16, input.p2_input().0 as u16);
+            let item = (
+                input_devices.p1_input().0 as u16,
+                input_devices.p2_input().0 as u16,
+            );
             put(vec, frame as usize, item);
         }
         FileInputList::HumanVsCpu(vec) => {
-            let item = input.p1_input().0 as u16;
+            let item = input_devices.p1_input().0 as u16;
             put(vec, frame as usize, item);
         }
     };
@@ -134,7 +137,7 @@ fn end_recording(props: &Props, state: &State) {
 
 fn on_input() {
     let props = props();
-    let input = props.th19.input();
+    let input_devices = props.th19.input_devices();
 
     let state = state_mut();
     if !state.in_game {
@@ -147,7 +150,7 @@ fn on_input() {
         }
     } else {
         if let Some(battle) = props.th19.game() {
-            tick_recording(&mut state.replay_file.inputs, battle.frame, input);
+            tick_recording(&mut state.replay_file.inputs, battle.frame, input_devices);
             return;
         };
         end_recording(props, state);

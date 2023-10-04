@@ -164,7 +164,7 @@ impl Th19 {
 
     u32_prop!(0x1a2478, difficulty_cursor, set_difficulty_cursor);
 
-    pointer!(0x_1ae3a0, input, input_mut, DevicesInput);
+    pointer!(0x_1ae3a0, input_devices, input_devices_mut, InputDevices);
     u16_prop!(0x1ae410, rand_seed1, set_rand_seed1); // 同一フレームでも変わる可能性あり ここを起点にdesyncする？
     u32_prop!(0x1ae414, rand_seed5, set_rand_seed5); // 公式にsyncしてない 遅いほうだけ書き換わる？0,0 時に複数回書き換わるが、その後は変わらない?
                                                      // 0x1ae418: unknown
@@ -176,8 +176,8 @@ impl Th19 {
     u16_prop!(0x1ae430, rand_seed2, set_rand_seed2); // frame 依存 0x1ae420 のコピー？
     u32_prop!(0x1ae434, rand_seed8, set_rand_seed8); // frame 依存 インクリメント
     ptr_opt!(0x_1ae464, game, Game);
-    u16_prop!(0x200850, p1_input);
-    u16_prop!(0x200b10, p2_input);
+    value!(0x200850, p1_input, Input);
+    value!(0x200b10, p2_input, Input);
     value!(0x200dd0, menu_input, menu_input_mut, Input);
     value!(0x200dd4, prev_menu_input, Input);
     value!(0x207910, p1, p1_mut, Player);

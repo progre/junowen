@@ -111,8 +111,8 @@ extern "fastcall" fn hook_0a9000(arg1: i32) {
     (state.original_fn_0a9000)(arg1);
 
     let th19 = th19();
-    let p1 = th19.p1_input().unwrap();
-    let p2 = th19.p2_input().unwrap();
+    let p1 = th19.p1_input();
+    let p2 = th19.p2_input();
 
     let device = th19.direct_3d_device().unwrap();
 
@@ -121,12 +121,12 @@ extern "fastcall" fn hook_0a9000(arg1: i32) {
     }
     for (i, button) in state.buttons.iter().enumerate() {
         if i < 9 {
-            if ((p1 >> i) & 0x01) == 0 {
+            if ((p1.0 >> i) & 0x01) == 0 {
                 continue;
             }
         } else {
             //
-            if ((p2 >> (i - 9)) & 0x01) == 0 {
+            if ((p2.0 >> (i - 9)) & 0x01) == 0 {
                 continue;
             }
         }
