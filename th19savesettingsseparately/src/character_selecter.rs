@@ -1,5 +1,7 @@
 use std::ffi::c_void;
 
+use junowen_lib::th19_helpers::is_network_mode;
+
 use crate::{file::read_from_file, props, state_mut};
 
 pub extern "thiscall" fn post_read_battle_settings_from_menu_to_game(
@@ -9,7 +11,7 @@ pub extern "thiscall" fn post_read_battle_settings_from_menu_to_game(
     let prop = props();
     let th19 = &mut state_mut().th19;
     let func = prop.original_fn_from_13f9d0_0446;
-    if th19.is_network_mode() {
+    if is_network_mode(th19) {
         return func(this, arg1);
     }
 

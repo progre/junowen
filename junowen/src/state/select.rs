@@ -1,7 +1,7 @@
 use std::sync::mpsc::RecvError;
 
 use anyhow::Result;
-use junowen_lib::{reset_cursors, Input, Menu, ScreenId, Th19};
+use junowen_lib::{th19_helpers::reset_cursors, Input, Menu, ScreenId, Th19};
 
 use crate::session::{MatchInitial, RoundInitial, Session};
 

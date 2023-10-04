@@ -2,14 +2,6 @@ use tracing::warn;
 
 use crate::{GameMode, Input, Menu, PlayerMatchup, ScreenId, Th19};
 
-pub fn reset_cursors(th19: &mut Th19) {
-    th19.set_difficulty_cursor(1).unwrap();
-    th19.p1_mut().character = 0;
-    th19.p2_mut().character = 1;
-    // NOTE: cards does'nt reset.
-    //       it will reset in title screen, and online vs disconnected.
-}
-
 pub fn shot_repeatedly(prev: Input) -> Input {
     if prev.0 == Input::SHOT as u32 {
         Input(Input::NULL as u32)
@@ -31,6 +23,28 @@ pub fn select_cursor(prev_input: Input, current_cursor: &mut u32, target: u32) -
         *current_cursor = target;
     }
     shot_repeatedly(prev_input)
+}
+
+// -----------------------------------------------------------------------------
+
+pub fn is_network_mode(th19: &Th19) -> bool {
+    if th19.game_mode().unwrap() == GameMode::Story {
+        return false;
+    }
+    // VS Mode 最初の階層では player_matchup がまだセットされないので、オンライン用メイン関数がセットされているかどうかで判断する
+    th19.app()
+        .main_loop_tasks
+        .to_vec()
+        .iter()
+        .any(|item| item.id == 3 || item.id == 4)
+}
+
+pub fn reset_cursors(th19: &mut Th19) {
+    th19.set_difficulty_cursor(1).unwrap();
+    th19.p1_mut().character = 0;
+    th19.p2_mut().character = 1;
+    // NOTE: cards does'nt reset.
+    //       it will reset in title screen, and online vs disconnected.
 }
 
 pub fn move_to_title(th19: &mut Th19, menu: &Menu) {

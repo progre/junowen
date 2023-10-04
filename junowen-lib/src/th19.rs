@@ -1,4 +1,4 @@
-mod th19_helpers;
+pub mod th19_helpers;
 mod th19_structs;
 
 use std::{arch::asm, ffi::c_void, mem::transmute};
@@ -15,7 +15,6 @@ use crate::{
     memory_accessors::{ExternalProcess, HookedProcess, MemoryAccessor},
     pointer, ptr_opt, u16_prop, u32_prop, value,
 };
-pub use th19_helpers::*;
 pub use th19_structs::*;
 
 pub type Fn002530 = extern "thiscall" fn(this: *const c_void);
@@ -214,20 +213,6 @@ impl Th19 {
     }
     pub fn put_game_settings_in_menu(&mut self, game_settings: &GameSettings) -> Result<()> {
         self.put_game_settings_to(0x208644, game_settings)
-    }
-
-    // -------------------------------------------------------------------------
-
-    pub fn is_network_mode(&self) -> bool {
-        if self.game_mode().unwrap() == GameMode::Story {
-            return false;
-        }
-        // VS Mode 最初の階層では player_matchup がまだセットされないので、オンライン用メイン関数がセットされているかどうかで判断する
-        self.app()
-            .main_loop_tasks
-            .to_vec()
-            .iter()
-            .any(|item| item.id == 3 || item.id == 4)
     }
 
     // -------------------------------------------------------------------------

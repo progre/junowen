@@ -1,4 +1,4 @@
-use junowen_lib::{reset_cursors, FnOfHookAssembly, Th19};
+use junowen_lib::{th19_helpers::reset_cursors, FnOfHookAssembly, Th19};
 use windows::Win32::{
     Foundation::{HINSTANCE, HMODULE},
     Graphics::Direct3D9::IDirect3D9,

@@ -1,5 +1,7 @@
 use std::ffi::c_void;
 
+use junowen_lib::th19_helpers::is_network_mode;
+
 use crate::{
     file::{read_from_file, write_to_file},
     props, state, state_mut,
@@ -13,7 +15,7 @@ pub extern "thiscall" fn on_open_settings_editor(this: *const c_void, arg1: u32)
     let props = props();
     let th19 = &mut state_mut().th19;
     let func = props.original_fn_from_107540_0046;
-    if th19.is_network_mode() {
+    if is_network_mode(th19) {
         return func(this, arg1);
     }
 
@@ -31,7 +33,7 @@ pub extern "thiscall" fn on_close_settings_editor(this: *const c_void) {
     let props = props();
     let th19 = &mut state_mut().th19;
     let func = props.original_fn_from_107540_0937;
-    if th19.is_network_mode() {
+    if is_network_mode(th19) {
         return func(this);
     }
 

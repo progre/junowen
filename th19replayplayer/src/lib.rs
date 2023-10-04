@@ -10,9 +10,9 @@ use anyhow::Result;
 use bytes::{Buf, BytesMut};
 use interprocess::os::windows::named_pipe::{ByteReaderPipeStream, PipeListenerOptions, PipeMode};
 use junowen_lib::{
-    move_to_local_versus_difficulty_select, select_cursor, shot_repeatedly, DevicesInput,
-    Difficulty, FnOfHookAssembly, Game, GameMode, GameSettings, Input, Menu, PlayerMatchup,
-    ScreenId, Th19,
+    th19_helpers::{move_to_local_versus_difficulty_select, select_cursor, shot_repeatedly},
+    DevicesInput, Difficulty, FnOfHookAssembly, Game, GameMode, GameSettings, Input, Menu,
+    PlayerMatchup, ScreenId, Th19,
 };
 use th19replayplayer_lib::{FileInputList, ReplayFile};
 use windows::Win32::{
