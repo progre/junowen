@@ -2,10 +2,12 @@ mod game;
 mod prepare;
 mod select;
 
+use std::sync::mpsc::RecvError;
+
 use anyhow::Result;
 use getset::MutGetters;
 use junowen_lib::{Menu, ScreenId, Th19};
-use tracing::error;
+use tracing::debug;
 
 use crate::{
     session::{MatchInitial, Session},
@@ -158,7 +160,7 @@ fn update_th19_on_input_players(
     state: &mut State,
     changed: bool,
     menu: Option<&Menu>,
-) -> Result<()> {
+) -> Result<(), RecvError> {
     match state.net_battle_state() {
         NetBattleState::Standby => unreachable!(),
         NetBattleState::Prepare => Ok(()),
@@ -178,7 +180,7 @@ pub(crate) fn on_input_players(state: &mut State, props: &Props) {
         return;
     };
     if let Err(err) = update_th19_on_input_players(state, changed, menu) {
-        error!("session aborted: {}", err);
+        debug!("session aborted: {}", err);
         state.end_session();
     }
 }
@@ -193,7 +195,7 @@ pub fn on_input_menu(state: &mut State) {
             match_initial: _,
         } => {
             if let Err(err) = select::on_input_menu(session, th19) {
-                error!("session aborted: {}", err);
+                debug!("session aborted: {}", err);
                 state.end_session();
             }
         }
@@ -205,7 +207,10 @@ pub fn on_input_menu(state: &mut State) {
 
 pub fn on_round_over(state: &mut State) {
     if let Some(session) = &mut state.session {
-        game::on_round_over(session, &mut state.th19);
+        if let Err(err) = game::on_round_over(session, &mut state.th19) {
+            debug!("session aborted: {}", err);
+            state.end_session();
+        }
     }
 }
 

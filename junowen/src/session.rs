@@ -1,6 +1,6 @@
 mod delayed_inputs;
 
-use std::sync::mpsc::{self, RecvTimeoutError};
+use std::sync::mpsc::{self, RecvError};
 
 use anyhow::Result;
 use bytes::Bytes;
@@ -17,8 +17,8 @@ pub struct MatchInitial {
     pub game_settings: GameSettings,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct RandomNumberInitial {
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RoundInitial {
     pub seed1: u16,
     pub seed2: u16,
     pub seed3: u16,
@@ -49,7 +49,10 @@ pub async fn create_session(mut conn: Connection, delay: Option<u8>) -> Result<S
             };
             hook_outgoing_rx = reusable;
             let data = Bytes::from(rmp_serde::to_vec(&msg).unwrap());
-            conn_message_sender.send(data).await.unwrap();
+            if let Err(err) = conn_message_sender.send(data).await {
+                debug!("send hook outgoing msg error: {}", err);
+                return;
+            }
         }
     });
 
@@ -78,9 +81,8 @@ pub async fn create_session(mut conn: Connection, delay: Option<u8>) -> Result<S
     };
     let (closed_sender, closed_receiver) = broadcast::channel(1);
     Ok(Session {
-        message_sender: hook_outgoing_tx,
         host,
-        delayed_inputs: DelayedInputs::new(hook_incoming_rx, host, delay),
+        delayed_inputs: DelayedInputs::new(hook_outgoing_tx, hook_incoming_rx, host, delay),
         closed_sender,
         closed_receiver,
     })
@@ -88,7 +90,6 @@ pub async fn create_session(mut conn: Connection, delay: Option<u8>) -> Result<S
 
 #[derive(CopyGetters)]
 pub struct Session {
-    message_sender: mpsc::Sender<InternalDelayedInput>,
     #[getset(get_copy = "pub")]
     host: bool,
     delayed_inputs: DelayedInputs,
@@ -112,47 +113,29 @@ impl Session {
     }
 
     pub fn send_init_match(&mut self, init: MatchInitial) {
-        self.message_sender
-            .send(InternalDelayedInput::InitMatch(init))
-            .unwrap();
+        self.delayed_inputs
+            .send_internal_message(InternalDelayedInput::InitMatch(init));
     }
 
-    pub fn recv_init_match(&mut self) -> Result<MatchInitial> {
-        let msg = self.delayed_inputs.internal_dequeue_remote()?;
-        let InternalDelayedInput::InitMatch(init) = msg else {
-            panic!("unexpected message: {:?}", msg);
-        };
-        Ok(init)
+    pub fn recv_init_match(&mut self) -> Result<MatchInitial, RecvError> {
+        self.delayed_inputs.dequeue_init_match()
     }
 
-    pub fn send_init_random_number(&mut self, init: RandomNumberInitial) {
-        self.message_sender
-            .send(InternalDelayedInput::InitRound(init))
-            .unwrap();
-    }
-
-    pub fn recv_init_round(&mut self) -> Result<(RandomNumberInitial, u32)> {
-        for i in 0..10 {
-            let msg = self.delayed_inputs.internal_dequeue_remote()?;
-            let InternalDelayedInput::InitRound(init) = msg else {
-                continue;
-            };
-            self.delayed_inputs.reset_delay();
-
-            return Ok((init, i));
-        }
-        panic!("maybe desync");
+    pub fn init_round(
+        &mut self,
+        init: Option<RoundInitial>,
+    ) -> Result<Option<RoundInitial>, RecvError> {
+        self.delayed_inputs
+            .send_internal_message(InternalDelayedInput::InitRound(init));
+        self.delayed_inputs.dequeue_init_round()
     }
 
     pub fn enqueue_input(&mut self, input: u8) {
         self.delayed_inputs
             .enqueue_local(DelayedInput::Input(input));
-        self.message_sender
-            .send(InternalDelayedInput::Input(input))
-            .unwrap();
     }
 
-    pub fn dequeue_inputs(&mut self) -> Result<(u8, u8), RecvTimeoutError> {
+    pub fn dequeue_inputs(&mut self) -> Result<(u8, u8), RecvError> {
         let (p1, p2) = self.delayed_inputs.dequeue_inputs()?;
         let DelayedInput::Input(p1) = p1;
         Ok((p1, p2))

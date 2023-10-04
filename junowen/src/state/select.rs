@@ -1,8 +1,9 @@
+use std::sync::mpsc::RecvError;
+
 use anyhow::Result;
 use junowen_lib::{reset_online_vs_cursors, Input, Menu, ScreenId, Th19};
-use tracing::debug;
 
-use crate::session::{MatchInitial, RandomNumberInitial, Session};
+use crate::session::{MatchInitial, RoundInitial, Session};
 
 pub fn on_input_players(
     first_time: bool,
@@ -10,7 +11,7 @@ pub fn on_input_players(
     menu: &Menu,
     th19: &mut Th19,
     match_initial: &mut Option<MatchInitial>,
-) -> Result<()> {
+) -> Result<(), RecvError> {
     if first_time {
         reset_online_vs_cursors(th19);
 
@@ -22,7 +23,7 @@ pub fn on_input_players(
                 session.send_init_match(init.clone());
                 *match_initial = Some(init);
             }
-            session.send_init_random_number(RandomNumberInitial {
+            let init = session.init_round(Some(RoundInitial {
                 seed1: th19.rand_seed1().unwrap(),
                 seed2: th19.rand_seed2().unwrap(),
                 seed3: th19.rand_seed3().unwrap(),
@@ -31,13 +32,13 @@ pub fn on_input_players(
                 seed6: th19.rand_seed6().unwrap(),
                 seed7: th19.rand_seed7().unwrap(),
                 seed8: th19.rand_seed8().unwrap(),
-            });
+            }))?;
+            assert!(init.is_none());
         } else {
             if match_initial.is_none() {
                 *match_initial = Some(session.recv_init_match().unwrap());
             }
-            let (init, delay_remainings) = session.recv_init_round().unwrap();
-            debug!("delay_remainings: {}", delay_remainings);
+            let init = session.init_round(None)?.unwrap();
             th19.set_rand_seed1(init.seed1).unwrap();
             th19.set_rand_seed2(init.seed2).unwrap();
             th19.set_rand_seed3(init.seed3).unwrap();
@@ -62,7 +63,7 @@ pub fn on_input_players(
     Ok(())
 }
 
-pub fn on_input_menu(session: &mut Session, th19: &mut Th19) -> Result<()> {
+pub fn on_input_menu(session: &mut Session, th19: &mut Th19) -> Result<(), RecvError> {
     let menu = th19.app().main_loop_tasks.find_menu_mut().unwrap();
     if menu.screen_id != ScreenId::DifficultySelect {
         return Ok(());
