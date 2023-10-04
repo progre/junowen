@@ -112,22 +112,26 @@ impl Session {
         self.closed_receiver.resubscribe()
     }
 
-    pub fn send_init_match(&mut self, init: MatchInitial) {
-        self.delayed_inputs
-            .send_internal_message(InternalDelayedInput::InitMatch(init));
-    }
-
-    pub fn recv_init_match(&mut self) -> Result<MatchInitial, RecvError> {
-        self.delayed_inputs.dequeue_init_match()
+    pub fn init_match(
+        &mut self,
+        init: Option<MatchInitial>,
+    ) -> Result<Option<MatchInitial>, RecvError> {
+        debug_assert!(self.host == init.is_some());
+        if let Some(init) = init {
+            self.delayed_inputs.send_init_match(init);
+            Ok(None)
+        } else {
+            Ok(Some(self.delayed_inputs.recv_init_match()?))
+        }
     }
 
     pub fn init_round(
         &mut self,
         init: Option<RoundInitial>,
     ) -> Result<Option<RoundInitial>, RecvError> {
-        self.delayed_inputs
-            .send_internal_message(InternalDelayedInput::InitRound(init));
-        self.delayed_inputs.dequeue_init_round()
+        debug_assert!(self.host == init.is_some());
+        self.delayed_inputs.send_init_round(init);
+        self.delayed_inputs.recv_init_round()
     }
 
     pub fn enqueue_input(&mut self, input: u8) {

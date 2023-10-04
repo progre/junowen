@@ -59,12 +59,56 @@ impl DelayedInputs {
         }
     }
 
-    pub fn _enqueue_delay(&mut self, delay: u8) {
-        self.local.push_back(InternalDelayedInput::Delay(delay));
+    pub fn send_init_match(&mut self, init: MatchInitial) {
+        let _ = self
+            .remote_sender
+            .send(InternalDelayedInput::InitMatch(init));
     }
 
-    pub fn send_internal_message(&mut self, msg: InternalDelayedInput) {
-        let _ = self.remote_sender.send(msg);
+    pub fn recv_init_match(&mut self) -> Result<MatchInitial, RecvError> {
+        let msg = self.remote_receiver.recv()?;
+        let InternalDelayedInput::InitMatch(init) = msg else {
+            panic!("unexpected message: {:?}", msg);
+        };
+        Ok(init)
+    }
+
+    pub fn send_init_round(&mut self, init: Option<RoundInitial>) {
+        let _ = self
+            .remote_sender
+            .send(InternalDelayedInput::InitRound(init));
+    }
+
+    pub fn recv_init_round(&mut self) -> Result<Option<RoundInitial>, RecvError> {
+        while self.dequeue_local().is_some() {
+            trace!("local input skipped");
+        }
+        if let Some(round_initial) = self.remote_round_initial.take() {
+            return Ok(round_initial);
+        }
+        for _ in 0..10 {
+            let msg = self.remote_receiver.recv()?;
+            match msg {
+                InternalDelayedInput::Delay(delay) => {
+                    self.update_delay(delay);
+                    continue;
+                }
+                InternalDelayedInput::Input(_) => {
+                    trace!("remote input skipped");
+                    continue;
+                }
+                InternalDelayedInput::InitMatch(_) => panic!("unexpected message: {:?}", msg),
+                InternalDelayedInput::InitRound(round_initial) => {
+                    self.delay_gap = -(self.delay as i8);
+                    return Ok(round_initial);
+                }
+            }
+        }
+        panic!("desync");
+    }
+
+    pub fn _enqueue_delay(&mut self, delay: u8) {
+        self.local.push_back(InternalDelayedInput::Delay(delay));
     }
 
     pub fn enqueue_local(&mut self, input: DelayedInput) {
@@ -97,10 +141,6 @@ impl DelayedInputs {
             }
             return Ok((p1, p2));
         }
-    }
-
-    fn reset_delay(&mut self) {
-        self.delay_gap = -(self.delay as i8);
     }
 
     fn update_delay(&mut self, delay: u8) {
@@ -151,41 +191,5 @@ impl DelayedInputs {
                 }
             }
         }
-    }
-
-    pub fn dequeue_init_match(&mut self) -> Result<MatchInitial, RecvError> {
-        let msg = self.remote_receiver.recv()?;
-        let InternalDelayedInput::InitMatch(init) = msg else {
-            panic!("unexpected message: {:?}", msg);
-        };
-        Ok(init)
-    }
-
-    pub fn dequeue_init_round(&mut self) -> Result<Option<RoundInitial>, RecvError> {
-        while self.dequeue_local().is_some() {
-            trace!("local input skipped");
-        }
-        if let Some(round_initial) = self.remote_round_initial.take() {
-            return Ok(round_initial);
-        }
-        for _ in 0..10 {
-            let msg = self.remote_receiver.recv()?;
-            match msg {
-                InternalDelayedInput::Delay(delay) => {
-                    self.update_delay(delay);
-                    continue;
-                }
-                InternalDelayedInput::Input(_) => {
-                    trace!("remote input skipped");
-                    continue;
-                }
-                InternalDelayedInput::InitMatch(_) => panic!("unexpected message: {:?}", msg),
-                InternalDelayedInput::InitRound(round_initial) => {
-                    self.reset_delay();
-                    return Ok(round_initial);
-                }
-            }
-        }
-        panic!("desync");
     }
 }

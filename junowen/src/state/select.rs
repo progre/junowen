@@ -20,10 +20,11 @@ pub fn on_input_players(
                 let init = MatchInitial {
                     game_settings: th19.game_settings_in_menu().unwrap(),
                 };
-                session.send_init_match(init.clone());
+                let opt = session.init_match(Some(init.clone()))?;
+                debug_assert!(opt.is_none());
                 *match_initial = Some(init);
             }
-            let init = session.init_round(Some(RoundInitial {
+            let opt = session.init_round(Some(RoundInitial {
                 seed1: th19.rand_seed1().unwrap(),
                 seed2: th19.rand_seed2().unwrap(),
                 seed3: th19.rand_seed3().unwrap(),
@@ -33,10 +34,10 @@ pub fn on_input_players(
                 seed7: th19.rand_seed7().unwrap(),
                 seed8: th19.rand_seed8().unwrap(),
             }))?;
-            assert!(init.is_none());
+            debug_assert!(opt.is_none());
         } else {
             if match_initial.is_none() {
-                *match_initial = Some(session.recv_init_match().unwrap());
+                *match_initial = Some(session.init_match(None)?.unwrap());
             }
             let init = session.init_round(None)?.unwrap();
             th19.set_rand_seed1(init.seed1).unwrap();
