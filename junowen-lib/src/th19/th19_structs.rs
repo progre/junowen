@@ -30,7 +30,9 @@ pub struct InputDevice {
     _unknown1: [u8; 0x010],
     pub input: Input,
     pub prev_input: Input,
-    _unknown2: [u8; 0x3bc],
+    _unknown2: [u8; 0x2a8],
+    _unknown3: [u8; 0x010],
+    pub raw_keys: [u8; 0x104],
 }
 
 #[repr(C)]

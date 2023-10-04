@@ -134,9 +134,9 @@ impl Session {
         self.delayed_inputs.recv_init_round()
     }
 
-    pub fn enqueue_input(&mut self, input: u8) {
+    pub fn enqueue_input(&mut self, input: u8, delay: Option<u8>) {
         self.delayed_inputs
-            .enqueue_local(DelayedInput::Input(input));
+            .enqueue_input(DelayedInput::Input(input), delay);
     }
 
     pub fn dequeue_inputs(&mut self) -> Result<(u8, u8), RecvError> {

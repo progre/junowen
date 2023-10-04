@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use tracing::{trace, warn};
+use tracing::{debug, trace, warn};
 
 use super::{MatchInitial, RoundInitial};
 
@@ -36,9 +36,7 @@ pub struct DelayedInputs {
     remote_sender: mpsc::Sender<InternalDelayedInput>,
     remote_receiver: mpsc::Receiver<InternalDelayedInput>,
     remote_round_initial: Option<Option<RoundInitial>>,
-    /** バッファーが多すぎる時はプラス値、バッファーが足りない時はマイナス値 */
     delay: u8,
-    delay_gap: i8,
 }
 
 impl DelayedInputs {
@@ -55,8 +53,18 @@ impl DelayedInputs {
             remote_receiver,
             remote_round_initial: None,
             delay: default_delay,
-            delay_gap: -(default_delay as i8),
         }
+    }
+
+    /// positive value when buffer data is too much,
+    /// negative value when buffer data is not enough
+    fn delay_gap(&self) -> i8 {
+        let current_delay = self
+            .local
+            .iter()
+            .filter(|x| matches!(x, InternalDelayedInput::Input(_)))
+            .count() as i32;
+        current_delay as i8 - (self.delay as i8)
     }
 
     pub fn send_init_match(&mut self, init: MatchInitial) {
@@ -99,7 +107,7 @@ impl DelayedInputs {
                 }
                 InternalDelayedInput::InitMatch(_) => panic!("unexpected message: {:?}", msg),
                 InternalDelayedInput::InitRound(round_initial) => {
-                    self.delay_gap = -(self.delay as i8);
+                    trace!("delay gap updated: {}", self.delay_gap());
                     return Ok(round_initial);
                 }
             }
@@ -107,11 +115,16 @@ impl DelayedInputs {
         panic!("desync");
     }
 
-    pub fn _enqueue_delay(&mut self, delay: u8) {
-        self.local.push_back(InternalDelayedInput::Delay(delay));
-    }
-
-    pub fn enqueue_local(&mut self, input: DelayedInput) {
+    pub fn enqueue_input(&mut self, input: DelayedInput, delay: Option<u8>) {
+        if self.delay_gap() > 0 {
+            // self.delay_gap() -= 1;
+            trace!("delay gap updated: {}", self.delay_gap());
+            return;
+        }
+        if let Some(delay) = delay {
+            let _ = self.remote_sender.send(InternalDelayedInput::Delay(delay));
+            self.local.push_back(InternalDelayedInput::Delay(delay));
+        }
         let DelayedInput::Input(input_u8) = input;
         let _ = self
             .remote_sender
@@ -120,74 +133,73 @@ impl DelayedInputs {
     }
 
     pub fn dequeue_inputs(&mut self) -> Result<(DelayedInput, u8), RecvError> {
-        if self.delay_gap < 0 {
-            trace!("current delay gap: {}", self.delay_gap);
-            self.delay_gap += 1;
+        // TODO: enqueue したりしなかったりする分でギャップがずれる
+        if self.delay_gap() < 0 {
+            // self.delay_gap() += 1;
+            trace!("delay gap updated: {}", self.delay_gap());
             return Ok((DelayedInput::Input(0), 0));
         }
-        loop {
-            let (p1, p2) = if self.host {
-                let local = self.dequeue_local().unwrap();
-                let DelayedInput::Input(remote) = self.dequeue_remote()?;
-                (local, remote)
-            } else {
-                let remote = self.dequeue_remote()?;
-                let DelayedInput::Input(local) = self.dequeue_local().unwrap();
-                (remote, local)
-            };
-            if self.delay_gap > 0 {
-                self.delay_gap -= 1;
-                continue;
-            }
-            return Ok((p1, p2));
+        let (p1, p2, delay) = if self.host {
+            let (local, local_delay) = self.dequeue_local().unwrap();
+            let (DelayedInput::Input(remote), _remote_delay) = self.dequeue_remote()?;
+            (local, remote, local_delay)
+        } else {
+            let (remote, remote_delay) = self.dequeue_remote()?;
+            let (DelayedInput::Input(local), _local_delay) = self.dequeue_local().unwrap();
+            (remote, local, remote_delay)
+        };
+        if let Some(delay) = delay {
+            self.update_delay(delay);
         }
+        Ok((p1, p2))
     }
 
     fn update_delay(&mut self, delay: u8) {
+        debug!("delay update: {} -> {}", self.delay, delay);
         self.delay = delay;
-        let current_delay = (self
-            .local
-            .iter()
-            .filter(|x| matches!(x, InternalDelayedInput::Input(_)))
-            .count() as i32)
-            - 1; // TODO: -1 であってる？
-        self.delay_gap += current_delay as i8 - (delay as i8);
+        debug!("delay gap={}", self.delay_gap());
     }
 
-    fn dequeue_local(&mut self) -> Option<DelayedInput> {
+    fn dequeue_local(&mut self) -> Option<(DelayedInput, Option<u8>)> {
+        let mut delay = None;
         loop {
             let local = self.local.pop_front()?;
             debug_assert!(matches!(local, InternalDelayedInput::Input(_)) || self.host);
             match local {
-                InternalDelayedInput::Delay(delay) => {
-                    self.update_delay(delay);
+                InternalDelayedInput::Delay(d) => {
+                    delay = Some(d);
                     continue;
                 }
-                InternalDelayedInput::Input(input) => return Some(DelayedInput::Input(input)),
+                InternalDelayedInput::Input(input) => {
+                    return Some((DelayedInput::Input(input), delay))
+                }
                 InternalDelayedInput::InitMatch(_) | InternalDelayedInput::InitRound(_) => panic!(),
             }
         }
     }
 
-    fn dequeue_remote(&mut self) -> Result<DelayedInput, RecvError> {
+    fn dequeue_remote(&mut self) -> Result<(DelayedInput, Option<u8>), RecvError> {
         if self.remote_round_initial.is_some() {
-            return Ok(DelayedInput::Input(0));
+            return Ok((DelayedInput::Input(0), None));
         }
+        let mut delay = None;
         loop {
             let remote = self.remote_receiver.recv()?;
             match remote {
-                InternalDelayedInput::Delay(delay) => {
-                    self.update_delay(delay);
+                InternalDelayedInput::Delay(d) => {
+                    delay = Some(d);
                     continue;
                 }
-                InternalDelayedInput::Input(input) => return Ok(DelayedInput::Input(input)),
+                InternalDelayedInput::Input(input) => {
+                    return Ok((DelayedInput::Input(input), delay))
+                }
                 InternalDelayedInput::InitMatch(_) => {
                     warn!("MAYBE DESYNC: {:?}", remote)
                 }
                 InternalDelayedInput::InitRound(round_initial) => {
                     debug_assert!(self.remote_round_initial.is_none());
                     self.remote_round_initial = Some(round_initial);
-                    return Ok(DelayedInput::Input(0));
+                    return Ok((DelayedInput::Input(0), None));
                 }
             }
         }

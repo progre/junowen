@@ -12,7 +12,7 @@ pub fn on_input_players(session: &mut Session, th19: &mut Th19) -> Result<(), Re
         input.set_p1_input(Input(0));
         input.set_p2_input(Input(0));
     } else {
-        session.enqueue_input(th19.input().p1_input().0 as u8);
+        session.enqueue_input(th19.input().p1_input().0 as u8, None);
         let (p1, p2) = session.dequeue_inputs()?;
         let input = th19.input_mut();
         input.set_p1_input(Input(p1 as u32));

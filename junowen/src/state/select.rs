@@ -55,7 +55,13 @@ pub fn on_input_players(
         return Ok(());
     }
 
-    session.enqueue_input(th19.input().p1_input().0 as u8);
+    let delay = if !session.host() {
+        None
+    } else {
+        let raw_keys = &th19.input().input_device_array[0].raw_keys;
+        (0..=9).find(|i| raw_keys[(b'0' + i) as usize] & 0x80 != 0)
+    };
+    session.enqueue_input(th19.input().p1_input().0 as u8, delay);
     let (p1, p2) = session.dequeue_inputs()?;
     let input = th19.input_mut();
     input.set_p1_input(Input(p1 as u32));
@@ -70,11 +76,14 @@ pub fn on_input_menu(session: &mut Session, th19: &mut Th19) -> Result<(), RecvE
         return Ok(());
     }
 
-    session.enqueue_input(if session.host() {
-        th19.menu_input().0 as u8
-    } else {
-        Input::NULL as u8
-    });
+    session.enqueue_input(
+        if session.host() {
+            th19.menu_input().0 as u8
+        } else {
+            Input::NULL as u8
+        },
+        None,
+    );
     let (p1, _p2) = session.dequeue_inputs()?;
     *th19.menu_input_mut() = Input(p1 as u32);
     Ok(())
