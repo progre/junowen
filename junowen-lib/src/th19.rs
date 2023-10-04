@@ -208,6 +208,12 @@ impl Th19 {
             .ok_or_else(|| anyhow!("IDirect3DDevice9::from_raw_borrowed failed"))
     }
 
+    pub fn set_no_wait(&mut self, value: bool) {
+        self.memory_accessor
+            .write_u32(0x208498, if value { 0x00000001 } else { 0x80000000 })
+            .unwrap();
+    }
+
     pub fn game_settings_in_menu(&self) -> Result<GameSettings> {
         self.game_settings_from(0x208644)
     }

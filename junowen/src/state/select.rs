@@ -16,6 +16,7 @@ pub fn on_input_players(
     match_initial: &mut Option<MatchInitial>,
 ) -> Result<(), RecvError> {
     if first_time {
+        th19.set_no_wait(false);
         reset_cursors(th19);
 
         if session.host() {
