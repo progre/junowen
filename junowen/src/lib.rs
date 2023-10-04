@@ -1,4 +1,5 @@
 mod cui;
+mod helper;
 mod interprocess;
 mod session;
 mod state;

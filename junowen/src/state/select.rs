@@ -3,7 +3,10 @@ use std::sync::mpsc::RecvError;
 use anyhow::Result;
 use junowen_lib::{th19_helpers::reset_cursors, Input, Menu, ScreenId, Th19};
 
-use crate::session::{MatchInitial, RoundInitial, Session};
+use crate::{
+    helper::inputed_number,
+    session::{MatchInitial, RoundInitial, Session},
+};
 
 pub fn on_input_players(
     first_time: bool,
@@ -55,13 +58,13 @@ pub fn on_input_players(
         return Ok(());
     }
 
-    let delay = if !session.host() {
-        None
+    let input = th19.input();
+    let delay = if session.host() {
+        inputed_number(input)
     } else {
-        let raw_keys = &th19.input().input_device_array[0].raw_keys;
-        (0..=9).find(|i| raw_keys[(b'0' + i) as usize] & 0x80 != 0)
+        None
     };
-    let (p1, p2) = session.enqueue_input_and_dequeue(th19.input().p1_input().0 as u8, delay)?;
+    let (p1, p2) = session.enqueue_input_and_dequeue(input.p1_input().0 as u8, delay)?;
     let input = th19.input_mut();
     input.set_p1_input(Input(p1 as u32));
     input.set_p2_input(Input(p2 as u32));
@@ -75,13 +78,18 @@ pub fn on_input_menu(session: &mut Session, th19: &mut Th19) -> Result<(), RecvE
         return Ok(());
     }
 
+    let delay = if session.host() {
+        inputed_number(th19.input())
+    } else {
+        None
+    };
     let (p1, _p2) = session.enqueue_input_and_dequeue(
         if session.host() {
             th19.menu_input().0 as u8
         } else {
             Input::NULL as u8
         },
-        None,
+        delay,
     )?;
     *th19.menu_input_mut() = Input(p1 as u32);
     Ok(())
