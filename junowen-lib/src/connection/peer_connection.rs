@@ -94,7 +94,7 @@ pub struct PeerConnection {
 unsafe impl Send for PeerConnection {}
 unsafe impl Sync for PeerConnection {}
 
-const PROTOCOL: &str = "JUNOWEN/0.0";
+const PROTOCOL: &str = "JUNOWEN/0.2";
 
 impl PeerConnection {
     pub async fn new() -> Result<Self> {
