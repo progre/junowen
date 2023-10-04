@@ -207,15 +207,15 @@ fn move_to_battle_menu_input(
             GameMode::Versus,
             PlayerMatchup::HumanVsHuman | PlayerMatchup::HumanVsCpu | PlayerMatchup::CpuVsCpu,
         ) => {
-            *th19.menu_input_mut() = select_cursor(
-                *th19.prev_menu_input(),
+            th19.set_menu_input(select_cursor(
+                th19.prev_menu_input(),
                 &mut menu.cursor,
                 inits.difficulty as u32,
-            );
+            ));
             false
         }
         (ScreenId::CharacterSelect, GameMode::Versus, _) => {
-            *th19.menu_input_mut() = Input::NULL.into();
+            th19.set_menu_input(Input::NULL.into());
             false
         }
         (ScreenId::GameLoading, GameMode::Versus, _) => true,

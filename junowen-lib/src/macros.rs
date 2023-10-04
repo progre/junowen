@@ -72,12 +72,27 @@ macro_rules! ptr_opt {
 #[macro_export]
 macro_rules! value {
     ($addr:expr, $getter:ident, $type:ty) => {
-        pub fn $getter(&self) -> &'static $type {
+        pub fn $getter(&self) -> $type {
             self.value($addr)
         }
     };
-    ($addr:expr, $getter:ident, $getter_mut:ident, $type:ty) => {
+    ($addr:expr, $getter:ident, $setter:ident, $type:ty) => {
         value!($addr, $getter, $type);
+        pub fn $setter(&mut self, value: $type) {
+            self.set_value($addr, value)
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! value_ref {
+    ($addr:expr, $getter:ident, $type:ty) => {
+        pub fn $getter(&self) -> &'static $type {
+            self.value_ref($addr)
+        }
+    };
+    ($addr:expr, $getter:ident, $getter_mut:ident, $type:ty) => {
+        value_ref!($addr, $getter, $type);
         pub fn $getter_mut(&mut self) -> &'static mut $type {
             self.value_mut($addr)
         }

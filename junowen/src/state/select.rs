@@ -92,7 +92,7 @@ pub fn on_input_menu(session: &mut Session, th19: &mut Th19) -> Result<(), RecvE
         },
         delay,
     )?;
-    *th19.menu_input_mut() = Input(p1 as u32);
+    th19.set_menu_input(Input(p1 as u32));
     Ok(())
 }
 

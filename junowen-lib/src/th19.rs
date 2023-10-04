@@ -13,7 +13,7 @@ pub use crate::memory_accessors::FnOfHookAssembly;
 use crate::{
     hook,
     memory_accessors::{ExternalProcess, HookedProcess, MemoryAccessor},
-    pointer, ptr_opt, u16_prop, u32_prop, value,
+    pointer, ptr_opt, u16_prop, u32_prop, value, value_ref,
 };
 pub use th19_structs::*;
 
@@ -178,10 +178,10 @@ impl Th19 {
     ptr_opt!(0x_1ae464, game, Game);
     value!(0x200850, p1_input, Input);
     value!(0x200b10, p2_input, Input);
-    value!(0x200dd0, menu_input, menu_input_mut, Input);
+    value!(0x200dd0, menu_input, set_menu_input, Input);
     value!(0x200dd4, prev_menu_input, Input);
-    value!(0x207910, p1, p1_mut, Player);
-    value!(0x2079d0, p2, p2_mut, Player);
+    value_ref!(0x207910, p1, p1_mut, Player);
+    value_ref!(0x2079d0, p2, p2_mut, Player);
 
     pub fn difficulty(&self) -> Result<Difficulty> {
         self.memory_accessor.read_u32(0x207a90)?.try_into()
@@ -223,7 +223,22 @@ impl Th19 {
 
     // -------------------------------------------------------------------------
 
-    fn value<T>(&self, addr: usize) -> &'static T {
+    fn value<T>(&self, addr: usize) -> T
+    where
+        T: Copy,
+    {
+        let p_obj = self.hooked_process_memory_accessor().raw_ptr(addr) as *const T;
+        unsafe { *p_obj }
+    }
+    fn set_value<T>(&mut self, addr: usize, value: T)
+    where
+        T: Copy,
+    {
+        let p_obj = self.hooked_process_memory_accessor_mut().raw_ptr(addr) as *mut T;
+        unsafe { *p_obj = value };
+    }
+
+    fn value_ref<T>(&self, addr: usize) -> &'static T {
         let p_obj = self.hooked_process_memory_accessor().raw_ptr(addr) as *const T;
         unsafe { p_obj.as_ref().unwrap() }
     }

@@ -48,24 +48,28 @@ pub fn reset_cursors(th19: &mut Th19) {
 }
 
 pub fn move_to_title(th19: &mut Th19, menu: &Menu) {
-    *th19.menu_input_mut() = match (
-        menu.screen_id,
-        th19.game_mode().unwrap(),
-        th19.player_matchup().unwrap(),
-    ) {
-        (ScreenId::TitleLoading, _, _) => Input(0),
-        (ScreenId::Title, _, _) => Input(0),
-        (
-            ScreenId::PlayerMatchupSelect | ScreenId::DifficultySelect | ScreenId::CharacterSelect,
-            _,
-            _,
-        ) => charge_repeatedly(*th19.prev_menu_input()),
-        (ScreenId::GameLoading, _, _) => Input(0),
-        _ => {
-            warn!("unsupported screen {}", menu.screen_id as u32);
-            Input(0)
-        }
-    }
+    th19.set_menu_input(
+        match (
+            menu.screen_id,
+            th19.game_mode().unwrap(),
+            th19.player_matchup().unwrap(),
+        ) {
+            (ScreenId::TitleLoading, _, _) => Input(0),
+            (ScreenId::Title, _, _) => Input(0),
+            (
+                ScreenId::PlayerMatchupSelect
+                | ScreenId::DifficultySelect
+                | ScreenId::CharacterSelect,
+                _,
+                _,
+            ) => charge_repeatedly(th19.prev_menu_input()),
+            (ScreenId::GameLoading, _, _) => Input(0),
+            _ => {
+                warn!("unsupported screen {}", menu.screen_id as u32);
+                Input(0)
+            }
+        },
+    )
 }
 
 pub fn move_to_local_versus_difficulty_select(
@@ -73,29 +77,31 @@ pub fn move_to_local_versus_difficulty_select(
     menu: &mut Menu,
     target_player_matchup: PlayerMatchup,
 ) {
-    *th19.menu_input_mut() = match (
-        menu.screen_id,
-        th19.game_mode().unwrap(),
-        th19.player_matchup().unwrap(),
-    ) {
-        (ScreenId::TitleLoading, _, _) => Input(0),
-        (ScreenId::Title, _, _) => select_cursor(*th19.prev_menu_input(), &mut menu.cursor, 1),
-        (ScreenId::PlayerMatchupSelect, _, _) => {
-            let target = if target_player_matchup == PlayerMatchup::HumanVsCpu {
-                1
-            } else {
-                0
-            };
-            select_cursor(*th19.prev_menu_input(), &mut menu.cursor, target)
-        }
-        (
-            ScreenId::DifficultySelect,
-            GameMode::Versus,
-            PlayerMatchup::HumanVsHuman | PlayerMatchup::HumanVsCpu | PlayerMatchup::CpuVsCpu,
-        ) => Input(0),
-        _ => {
-            warn!("unsupported screen {}", menu.screen_id as u32);
-            Input(0)
-        }
-    }
+    th19.set_menu_input(
+        match (
+            menu.screen_id,
+            th19.game_mode().unwrap(),
+            th19.player_matchup().unwrap(),
+        ) {
+            (ScreenId::TitleLoading, _, _) => Input(0),
+            (ScreenId::Title, _, _) => select_cursor(th19.prev_menu_input(), &mut menu.cursor, 1),
+            (ScreenId::PlayerMatchupSelect, _, _) => {
+                let target = if target_player_matchup == PlayerMatchup::HumanVsCpu {
+                    1
+                } else {
+                    0
+                };
+                select_cursor(th19.prev_menu_input(), &mut menu.cursor, target)
+            }
+            (
+                ScreenId::DifficultySelect,
+                GameMode::Versus,
+                PlayerMatchup::HumanVsHuman | PlayerMatchup::HumanVsCpu | PlayerMatchup::CpuVsCpu,
+            ) => Input(0),
+            _ => {
+                warn!("unsupported screen {}", menu.screen_id as u32);
+                Input(0)
+            }
+        },
+    )
 }
