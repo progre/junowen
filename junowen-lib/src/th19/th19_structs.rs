@@ -25,6 +25,7 @@ impl From<u16> for Input {
     }
 }
 
+/// 0x3d4
 #[repr(C)]
 pub struct InputDevice {
     _unknown1: [u8; 0x010],
@@ -40,7 +41,7 @@ pub struct InputDevices {
     _unknown1: [u8; 0x20],
     pub input_device_array: [InputDevice; 3 + 9],
     _unknown2: [u8; 0x14],
-    p1_idx: u32,
+    pub p1_idx: u32,
     p2_idx: u32,
     // unknown continues...
 }

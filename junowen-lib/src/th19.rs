@@ -23,6 +23,7 @@ pub type Fn012480 = extern "thiscall" fn(this: *const c_void, arg1: u32) -> u32;
 pub type Fn0a9000 = extern "fastcall" fn(arg1: i32);
 pub type Fn102ff0 = extern "fastcall" fn(arg1: *const c_void);
 pub type Fn1049e0 = extern "fastcall" fn();
+pub type Fn10f720 = extern "fastcall" fn();
 
 extern "fastcall" fn dummy_from_02d1f0_007c() {
     unsafe {
@@ -158,6 +159,7 @@ impl Th19 {
 
     hook!(0x130ed0 + 0x03ec, hook_130ed0_03ec, Fn102ff0);
 
+    hook!(0x13f9d0 + 0x0345, hook_13f9d0_0345, Fn10f720);
     hook!(0x13f9d0 + 0x0446, hook_13f9d0_0446, Fn009fa0);
 
     // -------------------------------------------------------------------------

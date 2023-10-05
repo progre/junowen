@@ -7,7 +7,7 @@ mod tracing_helper;
 
 use std::{ffi::c_void, path::PathBuf, sync::mpsc};
 
-use junowen_lib::{Fn009fa0, Fn1049e0, FnOfHookAssembly, Th19};
+use junowen_lib::{Fn009fa0, Fn1049e0, Fn10f720, FnOfHookAssembly, Th19};
 use session::Session;
 use state::State;
 use windows::{
@@ -30,6 +30,7 @@ struct Props {
     old_on_input_players: Option<FnOfHookAssembly>,
     old_on_input_menu: Option<FnOfHookAssembly>,
     old_fn_from_11f870_034c: Fn1049e0,
+    old_fn_from_13f9d0_0345: Fn10f720,
     old_fn_from_13f9d0_0446: Fn009fa0,
     session_receiver: mpsc::Receiver<Session>,
 }
@@ -66,6 +67,10 @@ extern "fastcall" fn on_round_over() {
     state::on_round_over(state_mut());
 }
 
+extern "fastcall" fn on_rewrite_controller_assignments() {
+    state::on_rewrite_controller_assignments(props().old_fn_from_13f9d0_0345, state_mut());
+}
+
 extern "thiscall" fn on_loaded_game_settings(this: *const c_void, arg1: u32) -> u32 {
     state::on_loaded_game_settings(state_mut());
 
@@ -99,6 +104,8 @@ pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32
         let (old_on_input_menu, apply_hook_on_input_menu) = th19.hook_on_input_menu(on_input_menu);
         let (old_fn_from_11f870_034c, apply_hook_11f870_034c) =
             th19.hook_11f870_034c(on_round_over);
+        let (old_fn_from_13f9d0_0345, apply_hook_13f9d0_0345) =
+            th19.hook_13f9d0_0345(on_rewrite_controller_assignments);
         let (old_fn_from_13f9d0_0446, apply_hook_13f9d0_0446) =
             th19.hook_13f9d0_0446(on_loaded_game_settings);
 
@@ -109,6 +116,7 @@ pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32
                 old_on_input_players,
                 old_on_input_menu,
                 old_fn_from_11f870_034c,
+                old_fn_from_13f9d0_0345,
                 old_fn_from_13f9d0_0446,
                 session_receiver,
             });
@@ -118,6 +126,7 @@ pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32
         apply_hook_on_input_players(th19);
         apply_hook_on_input_menu(th19);
         apply_hook_11f870_034c(th19);
+        apply_hook_13f9d0_0345(th19);
         apply_hook_13f9d0_0446(th19);
     }
     true

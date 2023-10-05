@@ -6,7 +6,7 @@ use std::sync::mpsc::RecvError;
 
 use anyhow::Result;
 use getset::MutGetters;
-use junowen_lib::{Menu, ScreenId, Th19};
+use junowen_lib::{Fn10f720, Menu, ScreenId, Th19};
 use tracing::debug;
 
 use crate::{
@@ -228,6 +228,20 @@ pub fn on_round_over(state: &mut State) {
             debug!("session aborted: {}", err);
             state.end_session();
         }
+    }
+}
+
+pub fn on_rewrite_controller_assignments(old_fn: Fn10f720, state: &mut State) {
+    let mut old_p1_idx = 0;
+    if !matches!(state.net_battle_state(), NetBattleState::Standby) {
+        old_p1_idx = state.th19.input_devices().p1_idx;
+    }
+    old_fn();
+    if !matches!(state.net_battle_state(), NetBattleState::Standby)
+        && old_p1_idx == 0
+        && state.th19.input_devices().p1_idx != 0
+    {
+        state.th19.input_devices_mut().p1_idx = 0;
     }
 }
 
