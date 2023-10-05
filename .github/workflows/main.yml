@@ -40,7 +40,7 @@ jobs:
         with:
           name: artifact
           path: ./artifact
-  release-junowen:
+  release:
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
@@ -49,31 +49,7 @@ jobs:
         name: artifact
       - run: |
           cd artifact
-          zip ../junowen lang/* junowen.exe junowen_hook.dll LICENSE README.md
-      - id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Ju. N. Owen ${{ github.ref }}
-      - uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./junowen.zip
-          asset_name: ${{ github.event.repository.name }}.zip
-          asset_content_type: application/zip
-  release-th19loader:
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v2
-        name: artifact
-      - run: |
-          cd artifact
+          zip ../${{ github.event.repository.name }} lang/* junowen.exe junowen_hook.dll LICENSE README.md
           zip ../th19loader d3d9.dll modules/th19_onlinevsfix.dll LICENSE
       - id: create_release
         uses: actions/create-release@v1
@@ -81,12 +57,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          release_name: th19loader ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
       - uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./th19loader.zip
-          asset_name: th19loader.zip
+          asset_path: ./${{ github.event.repository.name }}.zip
+          asset_name: ${{ github.event.repository.name }}_${{ github.ref }}.zip
           asset_content_type: application/zip
