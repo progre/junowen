@@ -115,7 +115,7 @@ impl Drop for PeerConnection {
     }
 }
 
-const PROTOCOL: &str = "JUNOWEN/0.2";
+const PROTOCOL: &str = "JUNOWEN/0.3";
 
 impl PeerConnection {
     pub async fn new() -> Result<Self> {
@@ -244,7 +244,6 @@ impl PeerConnection {
             let mut data_channel = self.data_channel_rx.take().unwrap().await.unwrap();
             data_channel.wait_for_open_data_channel().await;
             if data_channel.protocol() != PROTOCOL {
-                // TODO: ここでエラーを返すとコネクションがリークするかも
                 bail!("unexpected protocol: {}", data_channel.protocol());
             }
             Ok(data_channel)
