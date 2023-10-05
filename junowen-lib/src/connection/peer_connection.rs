@@ -11,7 +11,7 @@ use tokio::{
     select,
     sync::{broadcast, oneshot},
 };
-use tracing::debug;
+use tracing::{debug, trace};
 use webrtc::{
     api::media_engine::MediaEngine,
     data_channel::data_channel_init::RTCDataChannelInit,
@@ -85,7 +85,7 @@ async fn create_default_peer_connection() -> Result<RTCPeerConnection> {
 }
 
 pub struct PeerConnection {
-    rtc: RTCPeerConnection,
+    rtc: Option<RTCPeerConnection>,
     peer_connection_state_disconnected_rx: Option<broadcast::Receiver<()>>,
     peer_connection_state_failed_rx: Option<oneshot::Receiver<()>>,
     data_channel_rx: Option<oneshot::Receiver<DataChannel>>,
@@ -93,6 +93,27 @@ pub struct PeerConnection {
 
 unsafe impl Send for PeerConnection {}
 unsafe impl Sync for PeerConnection {}
+
+impl Drop for PeerConnection {
+    fn drop(&mut self) {
+        trace!("drop connection");
+        let rtc_peer_connection = self.rtc.take().unwrap();
+        let drop = async move {
+            // NOTE: If the connection was established, it will not be disconnected by drop,
+            //       so close it explicitly.
+            let _ = rtc_peer_connection.close().await;
+            trace!("connection closed");
+        };
+        if let Ok(rt) = tokio::runtime::Handle::try_current() {
+            rt.spawn(drop);
+        } else {
+            tokio::runtime::Builder::new_current_thread()
+                .build()
+                .unwrap()
+                .block_on(drop);
+        }
+    }
+}
 
 const PROTOCOL: &str = "JUNOWEN/0.2";
 
@@ -136,16 +157,20 @@ impl PeerConnection {
         // }));
 
         Ok(Self {
-            rtc,
+            rtc: Some(rtc),
             peer_connection_state_failed_rx: Some(peer_connection_state_failed_rx),
             peer_connection_state_disconnected_rx: Some(peer_connection_state_disconnected_rx),
             data_channel_rx: None,
         })
     }
 
+    fn rtc(&self) -> &RTCPeerConnection {
+        self.rtc.as_ref().unwrap()
+    }
+
     pub async fn start_as_offerer(&mut self) -> Result<CompressedSessionDesc> {
         let rtc_data_channel = self
-            .rtc
+            .rtc()
             .create_data_channel(
                 "data",
                 Some(RTCDataChannelInit {
@@ -159,14 +184,14 @@ impl PeerConnection {
         self.data_channel_rx = Some(data_channel_rx);
         let _ = data_channel_tx.send(DataChannel::new(rtc_data_channel, disconnected_rx).await);
 
-        let offer = self.rtc.create_offer(None).await?;
+        let offer = self.rtc().create_offer(None).await?;
 
-        let mut gather_complete = self.rtc.gathering_complete_promise().await;
-        self.rtc.set_local_description(offer).await?;
+        let mut gather_complete = self.rtc().gathering_complete_promise().await;
+        self.rtc().set_local_description(offer).await?;
         let _ = gather_complete.recv().await;
 
         let local_desc = self
-            .rtc
+            .rtc()
             .local_description()
             .await
             .ok_or_else(|| anyhow!("Failed to get local description"))?;
@@ -181,24 +206,25 @@ impl PeerConnection {
         self.data_channel_rx = Some(data_channel_rx);
         let mut data_channel_tx = Some(data_channel_tx);
         let mut disconnected_rx = Some(self.peer_connection_state_disconnected_rx.take().unwrap());
-        self.rtc.on_data_channel(Box::new(move |rtc_data_channel| {
-            let data_channel_tx = data_channel_tx.take().unwrap();
-            let disconnected_rx = disconnected_rx.take().unwrap();
-            Box::pin(async move {
-                let _ =
-                    data_channel_tx.send(DataChannel::new(rtc_data_channel, disconnected_rx).await);
-            })
-        }));
+        self.rtc()
+            .on_data_channel(Box::new(move |rtc_data_channel| {
+                let data_channel_tx = data_channel_tx.take().unwrap();
+                let disconnected_rx = disconnected_rx.take().unwrap();
+                Box::pin(async move {
+                    let _ = data_channel_tx
+                        .send(DataChannel::new(rtc_data_channel, disconnected_rx).await);
+                })
+            }));
         let offer_desc = decompress(&offer_desc.0)?;
-        self.rtc.set_remote_description(offer_desc).await?;
-        let offer = self.rtc.create_answer(None).await?;
+        self.rtc().set_remote_description(offer_desc).await?;
+        let offer = self.rtc().create_answer(None).await?;
 
-        let mut gather_complete = self.rtc.gathering_complete_promise().await;
-        self.rtc.set_local_description(offer).await?;
+        let mut gather_complete = self.rtc().gathering_complete_promise().await;
+        self.rtc().set_local_description(offer).await?;
         let _ = gather_complete.recv().await;
 
         let local_desc = self
-            .rtc
+            .rtc()
             .local_description()
             .await
             .ok_or_else(|| anyhow!("Failed to get local description"))?;
@@ -207,13 +233,13 @@ impl PeerConnection {
     }
 
     pub async fn set_answer_desc(&self, answer_desc: CompressedSessionDesc) -> Result<()> {
-        self.rtc
+        self.rtc()
             .set_remote_description(decompress(&answer_desc.0)?)
             .await?;
         Ok(())
     }
 
-    pub async fn wait_for_open_data_channel(mut self) -> Result<(RTCPeerConnection, DataChannel)> {
+    pub async fn wait_for_open_data_channel(&mut self) -> Result<DataChannel> {
         let data_channel_task = async {
             let mut data_channel = self.data_channel_rx.take().unwrap().await.unwrap();
             data_channel.wait_for_open_data_channel().await;
@@ -225,7 +251,7 @@ impl PeerConnection {
         };
         let failed_task = self.peer_connection_state_failed_rx.take().unwrap();
         select! {
-            result = data_channel_task => result.map(|data_channel| (self.rtc, data_channel)),
+            result = data_channel_task => result,
             _ = failed_task => bail!("RTCPeerConnection failed"),
         }
     }

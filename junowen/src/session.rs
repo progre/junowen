@@ -5,7 +5,10 @@ use std::sync::mpsc::{self, RecvError};
 use anyhow::Result;
 use bytes::Bytes;
 use getset::CopyGetters;
-use junowen_lib::{connection::Connection, GameSettings};
+use junowen_lib::{
+    connection::{DataChannel, PeerConnection},
+    GameSettings,
+};
 use serde::{Deserialize, Serialize};
 use tokio::{spawn, sync::broadcast};
 use tracing::{debug, info};
@@ -29,10 +32,14 @@ pub struct RoundInitial {
     pub seed8: u32,
 }
 
-pub async fn create_session(mut conn: Connection, delay: Option<u8>) -> Result<Session> {
+pub async fn create_session(
+    conn: PeerConnection,
+    mut data_channel: DataChannel,
+    delay: Option<u8>,
+) -> Result<Session> {
     let (hook_outgoing_tx, hook_outgoing_rx) = std::sync::mpsc::channel::<InternalDelayedInput>();
+    let data_channel_message_sender = data_channel.message_sender.clone();
 
-    let conn_message_sender = conn.message_sender.clone();
     spawn(async move {
         let mut hook_outgoing_rx = hook_outgoing_rx;
         loop {
@@ -49,7 +56,7 @@ pub async fn create_session(mut conn: Connection, delay: Option<u8>) -> Result<S
             };
             hook_outgoing_rx = reusable;
             let data = Bytes::from(rmp_serde::to_vec(&msg).unwrap());
-            if let Err(err) = conn_message_sender.send(data).await {
+            if let Err(err) = data_channel_message_sender.send(data).await {
                 debug!("send hook outgoing msg error: {}", err);
                 return;
             }
@@ -59,7 +66,7 @@ pub async fn create_session(mut conn: Connection, delay: Option<u8>) -> Result<S
     let (hook_incoming_tx, hook_incoming_rx) = mpsc::channel();
     spawn(async move {
         loop {
-            let Some(data) = conn.recv().await else {
+            let Some(data) = data_channel.recv().await else {
                 return;
             };
             let msg: InternalDelayedInput = rmp_serde::from_slice(&data).unwrap();
@@ -81,6 +88,7 @@ pub async fn create_session(mut conn: Connection, delay: Option<u8>) -> Result<S
     };
     let (closed_sender, closed_receiver) = broadcast::channel(1);
     Ok(Session {
+        _conn: conn,
         host,
         delayed_inputs: DelayedInputs::new(hook_outgoing_tx, hook_incoming_rx, host, delay),
         closed_sender,
@@ -90,6 +98,7 @@ pub async fn create_session(mut conn: Connection, delay: Option<u8>) -> Result<S
 
 #[derive(CopyGetters)]
 pub struct Session {
+    _conn: PeerConnection,
     #[getset(get_copy = "pub")]
     host: bool,
     delayed_inputs: DelayedInputs,

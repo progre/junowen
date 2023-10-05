@@ -3,7 +3,9 @@ pub mod async_read_write_socket;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 
-use super::super::{peer_connection::PeerConnection, Connection};
+use crate::connection::data_channel::DataChannel;
+
+use super::super::peer_connection::PeerConnection;
 
 use super::CompressedSessionDesc;
 
@@ -19,14 +21,14 @@ pub trait SignalingSocket {
     async fn offer(&mut self, desc: CompressedSessionDesc) -> Result<OfferResponse>;
     async fn answer(&mut self, desc: CompressedSessionDesc) -> Result<()>;
 
-    async fn receive_signaling(&mut self) -> Result<(bool, Connection)> {
+    async fn receive_signaling(&mut self) -> Result<(bool, PeerConnection, DataChannel)> {
         let mut conn = PeerConnection::new().await?;
         let offer_desc = conn
             .start_as_offerer()
             .await
             .context("Failed to start as host")?;
         let answer_desc = self.offer(offer_desc).await?;
-        let (answerer, conn) = match answer_desc {
+        let (answerer, mut conn) = match answer_desc {
             OfferResponse::Answer(answer_desc) => {
                 conn.set_answer_desc(answer_desc)
                     .await
@@ -43,7 +45,7 @@ pub trait SignalingSocket {
                 (true, conn)
             }
         };
-        let (rtc_peer_connection, data_channel) = conn.wait_for_open_data_channel().await?;
-        Ok((answerer, Connection::new(rtc_peer_connection, data_channel)))
+        let data_channel = conn.wait_for_open_data_channel().await?;
+        Ok((answerer, conn, data_channel))
     }
 }

@@ -24,19 +24,19 @@ async fn main() -> Result<()> {
     connect_as_answerer(&mut client_pipe, &Lang::resolve())
         .await
         .unwrap();
-    let (_, mut conn) = task.await.unwrap();
+    let (_, _conn, mut dc) = task.await.unwrap();
 
-    let msg = conn.recv().await.unwrap();
+    let msg = dc.recv().await.unwrap();
     println!("msg: {:?}", msg);
-    conn.message_sender
+    dc.message_sender
         .send(Bytes::from_iter(b"pong".iter().copied()))
         .await?;
-    let msg = conn.recv().await.unwrap();
+    let msg = dc.recv().await.unwrap();
     println!("msg: {:?}", msg);
-    conn.message_sender
+    dc.message_sender
         .send(Bytes::from_iter(b"pong".iter().copied()))
         .await?;
-    let msg = conn.recv().await;
+    let msg = dc.recv().await;
     println!("msg: {:?}", msg);
 
     Ok(())

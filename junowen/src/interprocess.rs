@@ -20,7 +20,7 @@ async fn ipc(session_sender: &mpsc::Sender<Session>) -> Result<()> {
     ))?)
     .await?;
 
-    let (anserer, conn) = AsyncReadWriteSocket::new(&mut pipe)
+    let (anserer, conn, data_channel) = AsyncReadWriteSocket::new(&mut pipe)
         .receive_signaling()
         .await?;
     let host = !anserer;
@@ -36,7 +36,7 @@ async fn ipc(session_sender: &mpsc::Sender<Session>) -> Result<()> {
     } else {
         None
     };
-    let session = create_session(conn, delay).await?;
+    let session = create_session(conn, data_channel, delay).await?;
     let mut closed = session.subscribe_closed_receiver();
     session_sender.send(session)?;
     closed.recv().await.unwrap();
