@@ -11,7 +11,7 @@ name = "d3d9"
 
 [dependencies]
 anyhow.workspace = true
-sha3 = "0.10.8"
+junowen-lib = { path = "../junowen-lib" }
 windows = { version = "0.51.1", features = [
   "Win32_Foundation",
   "Win32_Graphics_Direct3D9",

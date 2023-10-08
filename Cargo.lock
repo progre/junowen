@@ -1016,6 +1016,7 @@ dependencies = [
  "regex",
  "rmp-serde",
  "serde",
+ "sha3",
  "sys-locale",
  "tokio",
  "toml",
@@ -1909,7 +1910,7 @@ name = "th19loader"
 version = "0.3.0"
 dependencies = [
  "anyhow",
- "sha3",
+ "junowen-lib",
  "windows 0.51.1",
 ]
 

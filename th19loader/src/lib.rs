@@ -1,8 +1,7 @@
-use std::{env::current_dir, fs::File, io::Read, mem::transmute};
+use std::{env::current_dir, mem::transmute};
 
-use sha3::digest::Digest; // Sha3_224::new() で使用
+use junowen_lib::hook_utils::calc_th19_hash;
 
-use sha3::{digest::generic_array::GenericArray, Sha3_224};
 use windows::{
     core::{s, HSTRING, PCWSTR},
     Win32::{
@@ -10,7 +9,7 @@ use windows::{
         Graphics::Direct3D9::IDirect3D9,
         System::{
             Console::AllocConsole,
-            LibraryLoader::{GetModuleFileNameW, GetProcAddress, LoadLibraryW},
+            LibraryLoader::{GetProcAddress, LoadLibraryW},
             SystemInformation::GetSystemDirectoryW,
             SystemServices::{DLL_PROCESS_ATTACH, DLL_PROCESS_DETACH},
         },
@@ -46,23 +45,9 @@ fn show_warn_dialog(msg: &str) {
     };
 }
 
-fn calc_th19_hash() -> Vec<u8> {
-    let mut buf = [0u16; MAX_PATH as usize];
-    if unsafe { GetModuleFileNameW(None, &mut buf) } == 0 {
-        panic!();
-    }
-    let exe_file_path = unsafe { PCWSTR::from_raw(buf.as_ptr()).to_string() }.unwrap();
-    let mut file = File::open(exe_file_path).unwrap();
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).unwrap();
-    let mut hasher: Sha3_224 = Sha3_224::new();
-    hasher.update(&buffer);
-    let hash: GenericArray<_, _> = hasher.finalize();
-    hash.to_vec()
-}
-
 fn hook(direct_3d: *const IDirect3D9) {
     let hash = calc_th19_hash();
+    println!("{:x?}", hash);
 
     let directory = current_dir().unwrap().join("modules");
     if !directory.is_dir() {

@@ -4,7 +4,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use junowen_lib::{FnOfHookAssembly, InputDevices, ScreenId, Th19};
+use junowen_lib::{
+    hook_utils::WELL_KNOWN_VERSION_HASHES, FnOfHookAssembly, InputDevices, ScreenId, Th19,
+};
 use th19replayplayer_lib::{FileInputList, ReplayFile};
 use windows::{
     core::PCWSTR,
@@ -83,10 +85,7 @@ pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32
 #[allow(non_snake_case)]
 #[no_mangle]
 pub extern "C" fn CheckVersion(hash: *const u8, length: usize) -> bool {
-    let valid_hash: [u8; 28] = [
-        0xaa, 0x4e, 0xf4, 0xe6, 0xfa, 0xe1, 0x23, 0xcb, 0xcb, 0xc1, 0xc2, 0xc2, 0x32, 0x46, 0x2d,
-        0x5e, 0xfa, 0x6b, 0x21, 0x5d, 0x4a, 0x94, 0xf6, 0x4d, 0x62, 0xbc, 0xef, 0xcb,
-    ];
+    let valid_hash = &WELL_KNOWN_VERSION_HASHES.v100a_steam;
     if length != valid_hash.len() {
         return false;
     }
