@@ -8,7 +8,7 @@ use std::{
 use anyhow::{anyhow, bail, Result};
 use junowen_lib::connection::signaling::stdio_signaling_interface::connect_as_answerer;
 use junowen_lib::connection::signaling::stdio_signaling_interface::connect_as_offerer;
-use junowen_lib::{inject_dll::inject_dll, lang::Lang};
+use junowen_lib::{hook_utils::inject_dll, lang::Lang};
 use serde::{Deserialize, Serialize};
 use tokio::{
     io::{stdout, AsyncReadExt, AsyncWriteExt},

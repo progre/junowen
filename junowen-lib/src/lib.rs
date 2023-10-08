@@ -1,6 +1,6 @@
 pub mod connection;
 mod find_process_id;
-pub mod inject_dll;
+pub mod hook_utils;
 pub mod lang;
 mod macros;
 mod memory_accessors;

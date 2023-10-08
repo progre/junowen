@@ -9,7 +9,7 @@ use std::{
 use anyhow::Result;
 use bytes::{BufMut, BytesMut};
 use interprocess::os::windows::named_pipe::ByteWriterPipeStream;
-use junowen_lib::inject_dll::inject_dll;
+use junowen_lib::hook_utils::inject_dll;
 
 fn main() -> Result<()> {
     let replay_file = env::args().nth(1).unwrap();

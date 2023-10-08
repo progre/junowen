@@ -1,5 +1,3 @@
-mod load_library_w_addr;
-
 use std::{
     mem::{size_of_val, transmute},
     os::raw::c_void,
@@ -21,7 +19,7 @@ use windows::{
 
 use crate::{find_process_id::find_process_id, win_api_wrappers::SafeHandle};
 
-use load_library_w_addr::load_library_w_addr;
+use super::load_library_w_addr::load_library_w_addr;
 
 struct VirtualAllocatedMem<'a> {
     process: &'a SafeHandle,
