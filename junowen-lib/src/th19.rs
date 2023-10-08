@@ -1,3 +1,5 @@
+mod app;
+mod inputdevices;
 pub mod th19_helpers;
 mod th19_structs;
 
@@ -15,6 +17,8 @@ use crate::{
     memory_accessors::{ExternalProcess, HookedProcess, MemoryAccessor},
     pointer, ptr_opt, u16_prop, u32_prop, value, value_ref,
 };
+pub use app::*;
+pub use inputdevices::*;
 pub use th19_structs::*;
 
 pub type Fn002530 = extern "thiscall" fn(this: *const c_void);

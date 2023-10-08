@@ -1,6 +1,11 @@
 use tracing::warn;
 
-use crate::{GameMode, Input, Menu, PlayerMatchup, ScreenId, Th19};
+use crate::{GameMode, PlayerMatchup, Th19};
+
+use super::{
+    app::{Menu, ScreenId},
+    inputdevices::Input,
+};
 
 pub fn shot_repeatedly(prev: Input) -> Input {
     if prev.0 == Input::SHOT as u32 {
