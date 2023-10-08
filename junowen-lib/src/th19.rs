@@ -25,6 +25,7 @@ pub type Fn002530 = extern "thiscall" fn(this: *const c_void);
 pub type Fn009fa0 = extern "thiscall" fn(this: *const c_void, arg1: u32) -> u32;
 pub type Fn012480 = extern "thiscall" fn(this: *const c_void, arg1: u32) -> u32;
 pub type Fn0a9000 = extern "fastcall" fn(arg1: i32);
+pub type Fn0d6e10 = extern "thiscall" fn(this: *const c_void, arg1: *const c_void) -> u32;
 pub type Fn102ff0 = extern "fastcall" fn(arg1: *const c_void);
 pub type Fn1049e0 = extern "fastcall" fn();
 pub type Fn10f720 = extern "fastcall" fn();
@@ -156,6 +157,15 @@ impl Th19 {
         self.hook_assembly(ADDR, SIZE, dummy_from_0aba30_018e, target)
     }
 
+    pub fn render_text(&self, this: *const c_void, text: &RenderingText) -> u32 {
+        type Fn = extern "thiscall" fn(*const c_void, *const RenderingText) -> u32;
+        const ADDR: usize = 0x0d5ae0;
+        let ptr = self.hooked_process_memory_accessor().raw_ptr(ADDR);
+        (unsafe { transmute::<_, Fn>(ptr) })(this, text)
+    }
+
+    hook!(0x0d7180 + 0x0008, hook_0d7180_0008, Fn0d6e10);
+
     hook!(0x107540 + 0x0046, hook_107540_0046, Fn012480);
     hook!(0x107540 + 0x0937, hook_107540_0937, Fn002530);
 
@@ -226,6 +236,9 @@ impl Th19 {
     pub fn put_game_settings_in_menu(&mut self, game_settings: &GameSettings) -> Result<()> {
         self.put_game_settings_to(0x208644, game_settings)
     }
+
+    u32_prop!(0x20b1b0, screen_width);
+    u32_prop!(0x20b1b4, screen_height);
 
     // -------------------------------------------------------------------------
 

@@ -5,7 +5,7 @@ mod select;
 use std::sync::mpsc::RecvError;
 
 use anyhow::Result;
-use getset::MutGetters;
+use getset::{Getters, MutGetters};
 use junowen_lib::{Fn10f720, Menu, ScreenId, Th19};
 use tracing::debug;
 
@@ -32,11 +32,12 @@ enum NetBattleState<'a> {
     BackToSelect,
 }
 
-#[derive(MutGetters)]
+#[derive(Getters, MutGetters)]
 pub struct State {
-    #[getset(get_mut = "pub")]
+    #[getset(get = "pub", get_mut = "pub")]
     th19: Th19,
     state: u8,
+    #[getset(get = "pub")]
     session: Option<Session>,
     match_initial: Option<MatchInitial>,
 }

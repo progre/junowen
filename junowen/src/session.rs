@@ -117,6 +117,10 @@ impl Drop for Session {
 }
 
 impl Session {
+    pub fn delay(&self) -> u8 {
+        self.delayed_inputs.delay()
+    }
+
     pub fn subscribe_closed_receiver(&self) -> broadcast::Receiver<()> {
         self.closed_receiver.resubscribe()
     }

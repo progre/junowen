@@ -4,6 +4,7 @@ use std::{
 };
 
 use anyhow::Result;
+use getset::CopyGetters;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, trace};
 
@@ -18,12 +19,14 @@ pub enum InternalDelayedInput {
     InitRound(Option<RoundInitial>),
 }
 
+#[derive(CopyGetters)]
 pub struct DelayedInputs {
     host: bool,
     local: LinkedList<InternalDelayedInput>,
     remote_sender: mpsc::Sender<InternalDelayedInput>,
     remote_receiver: mpsc::Receiver<InternalDelayedInput>,
     remote_round_initial: Option<Option<RoundInitial>>,
+    #[getset(get_copy = "pub")]
     delay: u8,
 }
 
