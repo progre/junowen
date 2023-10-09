@@ -106,12 +106,10 @@ extern "thiscall" fn on_render_text(this: *const c_void, arg: *const c_void) -> 
 
 fn check_version() -> bool {
     let hash = calc_th19_hash();
-    [
-        WELL_KNOWN_VERSION_HASHES.v100a,
-        WELL_KNOWN_VERSION_HASHES.v100a_steam,
-    ]
-    .iter()
-    .any(|valid_hash| valid_hash == &hash[..])
+    WELL_KNOWN_VERSION_HASHES
+        .all_v100a()
+        .iter()
+        .any(|&valid_hash| valid_hash == &hash[..])
 }
 
 #[no_mangle]

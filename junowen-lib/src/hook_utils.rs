@@ -32,6 +32,12 @@ pub struct WellKnownVersionHashes {
     pub v100a_steam: [u8; 28],
 }
 
+impl WellKnownVersionHashes {
+    pub fn all_v100a(&self) -> [&[u8; 28]; 2] {
+        [&self.v100a, &self.v100a_steam]
+    }
+}
+
 pub const WELL_KNOWN_VERSION_HASHES: WellKnownVersionHashes = WellKnownVersionHashes {
     v100a: [
         0xef, 0xf4, 0x38, 0x36, 0x51, 0xe5, 0xa2, 0x4b, 0x75, 0x11, 0xda, 0xa0, 0xd6, 0x44, 0x14,
