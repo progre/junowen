@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::{io::Write, time::Duration};
 
 use anyhow::{anyhow, bail, Result};
 use base64::{prelude::BASE64_STANDARD_NO_PAD, Engine};
@@ -13,10 +13,9 @@ use tokio::{
 };
 use tracing::{debug, trace};
 use webrtc::{
-    api::media_engine::MediaEngine,
+    api::setting_engine::SettingEngine,
     data_channel::data_channel_init::RTCDataChannelInit,
     ice_transport::ice_server::RTCIceServer,
-    interceptor::registry::Registry,
     peer_connection::{
         configuration::RTCConfiguration,
         peer_connection_state::RTCPeerConnectionState,
@@ -76,9 +75,10 @@ fn create_default_config() -> RTCConfiguration {
 }
 
 async fn create_default_peer_connection() -> Result<RTCPeerConnection> {
+    let mut setting_engine = SettingEngine::default();
+    setting_engine.set_ice_timeouts(None, Some(Duration::from_secs(60)), None);
     Ok(webrtc::api::APIBuilder::new()
-        .with_interceptor_registry(Registry::new())
-        .with_media_engine(MediaEngine::default())
+        .with_setting_engine(setting_engine)
         .build()
         .new_peer_connection(create_default_config())
         .await?)
