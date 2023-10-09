@@ -7,9 +7,13 @@ mod tracing_helper;
 
 use std::{ffi::c_void, path::PathBuf, sync::mpsc};
 
-use junowen_lib::{Fn009fa0, Fn0d6e10, Fn1049e0, Fn10f720, FnOfHookAssembly, RenderingText, Th19};
+use junowen_lib::{
+    hook_utils::{calc_th19_hash, WELL_KNOWN_VERSION_HASHES},
+    Fn009fa0, Fn0d6e10, Fn1049e0, Fn10f720, FnOfHookAssembly, RenderingText, Th19,
+};
 use session::Session;
 use state::State;
+use tracing::warn;
 use windows::{
     core::PCWSTR,
     Win32::{
@@ -100,6 +104,16 @@ extern "thiscall" fn on_render_text(this: *const c_void, arg: *const c_void) -> 
     ret
 }
 
+fn check_version() -> bool {
+    let hash = calc_th19_hash();
+    [
+        WELL_KNOWN_VERSION_HASHES.v100a,
+        WELL_KNOWN_VERSION_HASHES.v100a_steam,
+    ]
+    .iter()
+    .any(|valid_hash| valid_hash == &hash[..])
+}
+
 #[no_mangle]
 pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32) -> bool {
     if reason == DLL_PROCESS_ATTACH {
@@ -120,6 +134,11 @@ pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32
             &format!("{}.log", dll_path.file_stem().unwrap().to_string_lossy()),
             false,
         );
+
+        if !check_version() {
+            warn!("version mismatch: {:?}", calc_th19_hash());
+        }
+
         let mut th19 = Th19::new_hooked_process("th19.exe").unwrap();
 
         let (old_on_input_players, apply_hook_on_input_players) =
