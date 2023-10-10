@@ -72,15 +72,9 @@ pub fn on_input_menu(session: &mut Session, th19: &mut Th19) -> Result<(), RecvE
     } else {
         None
     };
-    let (p1, _p2) = session.enqueue_input_and_dequeue(
-        if session.host() {
-            th19.menu_input().0 as u16
-        } else {
-            Input::NULL
-        },
-        delay,
-    )?;
-    th19.set_menu_input(Input(p1 as u32));
+    let (p1, p2) = session.enqueue_input_and_dequeue(th19.menu_input().0 as u16, delay)?;
+    let input = if p1 != 0 { p1 } else { p2 };
+    th19.set_menu_input(Input(input as u32));
     Ok(())
 }
 
