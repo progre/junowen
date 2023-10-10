@@ -22,7 +22,7 @@ pub fn on_input_players(session: &mut Session, th19: &mut Th19) -> Result<(), Re
             None
         };
         let (p1, p2) =
-            session.enqueue_input_and_dequeue(input_devices.p1_input().0 as u8, delay)?;
+            session.enqueue_input_and_dequeue(input_devices.p1_input().0 as u16, delay)?;
         let input_devices = th19.input_devices_mut();
         input_devices.set_p1_input(Input(p1 as u32));
         input_devices.set_p2_input(Input(p2 as u32));

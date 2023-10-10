@@ -105,10 +105,10 @@ fn create_vertex(center_x: f32, color: u32, (sides, sin_cos, invert): Shape) -> 
     .collect()
 }
 
-extern "fastcall" fn hook_0a9000(arg1: i32) {
+extern "thiscall" fn hook_0a9000(this: *const c_void) {
     let state = state();
 
-    (state.original_fn_0a9000)(arg1);
+    (state.original_fn_0a9000)(this);
 
     let th19 = th19();
     let p1 = th19.p1_input();

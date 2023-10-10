@@ -13,7 +13,7 @@ use super::{MatchInitial, RoundInitial};
 /** input 以外はホストのみ発行できる */
 #[derive(Debug, Deserialize, Serialize)]
 pub enum InternalDelayedInput {
-    Input(u8),
+    Input(u16),
     Delay(u8),
     InitMatch(MatchInitial),
     InitRound(Option<RoundInitial>),
@@ -111,9 +111,9 @@ impl DelayedInputs {
 
     pub fn enqueue_input_and_dequeue(
         &mut self,
-        input: u8,
+        input: u16,
         delay: Option<u8>,
-    ) -> Result<(u8, u8), RecvError> {
+    ) -> Result<(u16, u16), RecvError> {
         let delay_gap = self.delay_gap();
         if delay_gap <= 0 {
             if let Some(delay) = delay {
@@ -146,7 +146,7 @@ impl DelayedInputs {
         debug!("delay gap={}", self.delay_gap());
     }
 
-    fn dequeue_local(&mut self) -> Option<(u8, Option<u8>)> {
+    fn dequeue_local(&mut self) -> Option<(u16, Option<u8>)> {
         let mut delay = None;
         loop {
             let local = self.local.pop_front()?;
@@ -164,7 +164,7 @@ impl DelayedInputs {
         }
     }
 
-    fn dequeue_remote(&mut self) -> Result<(u8, Option<u8>), RecvError> {
+    fn dequeue_remote(&mut self) -> Result<(u16, Option<u8>), RecvError> {
         if self.remote_round_initial.is_some() {
             return Ok((0, None));
         }

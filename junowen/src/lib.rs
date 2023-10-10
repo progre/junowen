@@ -9,7 +9,8 @@ use std::{ffi::c_void, path::PathBuf, sync::mpsc};
 
 use junowen_lib::{
     hook_utils::{calc_th19_hash, WELL_KNOWN_VERSION_HASHES},
-    Fn009fa0, Fn0d6e10, Fn1049e0, Fn10f720, FnOfHookAssembly, RenderingText, Th19,
+    Fn009fa0, Fn011560, Fn0d6e10, Fn1049e0, Fn10f720, FnOfHookAssembly, RenderingText, Selection,
+    Th19,
 };
 use session::Session;
 use state::State;
@@ -35,6 +36,8 @@ struct Props {
     old_on_input_menu: Option<FnOfHookAssembly>,
     old_fn_from_0d7180_0008: Fn0d6e10,
     old_fn_from_11f870_034c: Fn1049e0,
+    old_fn_from_1243f0_00f9: Fn011560,
+    old_fn_from_1243f0_0320: Fn011560,
     old_fn_from_13f9d0_0345: Fn10f720,
     old_fn_from_13f9d0_0446: Fn009fa0,
     session_receiver: mpsc::Receiver<Session>,
@@ -69,22 +72,6 @@ extern "fastcall" fn on_input_menu() {
     }
 }
 
-extern "fastcall" fn on_round_over() {
-    (props().old_fn_from_11f870_034c)();
-
-    state::on_round_over(state_mut());
-}
-
-extern "fastcall" fn on_rewrite_controller_assignments() {
-    state::on_rewrite_controller_assignments(props().old_fn_from_13f9d0_0345, state_mut());
-}
-
-extern "thiscall" fn on_loaded_game_settings(this: *const c_void, arg1: u32) -> u32 {
-    state::on_loaded_game_settings(state_mut());
-
-    (props().old_fn_from_13f9d0_0446)(this, arg1)
-}
-
 extern "thiscall" fn on_render_text(this: *const c_void, arg: *const c_void) -> u32 {
     let ret = (props().old_fn_from_0d7180_0008)(this, arg);
 
@@ -102,6 +89,38 @@ extern "thiscall" fn on_render_text(this: *const c_void, arg: *const c_void) -> 
     }
 
     ret
+}
+
+extern "fastcall" fn on_round_over() {
+    (props().old_fn_from_11f870_034c)();
+
+    state::on_round_over(state_mut());
+}
+
+fn is_online_vs(this: *const Selection, old: Fn011560) -> u8 {
+    let ret = old(this);
+    if state().session().is_some() {
+        return 1;
+    }
+    ret
+}
+
+extern "thiscall" fn fn_from_1243f0_00f9(this: *const Selection) -> u8 {
+    is_online_vs(this, props().old_fn_from_1243f0_00f9)
+}
+
+extern "thiscall" fn fn_from_1243f0_0320(this: *const Selection) -> u8 {
+    is_online_vs(this, props().old_fn_from_1243f0_0320)
+}
+
+extern "fastcall" fn on_rewrite_controller_assignments() {
+    state::on_rewrite_controller_assignments(props().old_fn_from_13f9d0_0345, state_mut());
+}
+
+extern "thiscall" fn on_loaded_game_settings(this: *const c_void, arg1: u32) -> u32 {
+    state::on_loaded_game_settings(state_mut());
+
+    (props().old_fn_from_13f9d0_0446)(this, arg1)
 }
 
 fn check_version() -> bool {
@@ -146,6 +165,10 @@ pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32
             th19.hook_0d7180_0008(on_render_text);
         let (old_fn_from_11f870_034c, apply_hook_11f870_034c) =
             th19.hook_11f870_034c(on_round_over);
+        let (old_fn_from_1243f0_00f9, apply_hook_1243f0_00f9) =
+            th19.hook_1243f0_00f9(fn_from_1243f0_00f9);
+        let (old_fn_from_1243f0_0320, apply_hook_1243f0_0320) =
+            th19.hook_1243f0_0320(fn_from_1243f0_0320);
         let (old_fn_from_13f9d0_0345, apply_hook_13f9d0_0345) =
             th19.hook_13f9d0_0345(on_rewrite_controller_assignments);
         let (old_fn_from_13f9d0_0446, apply_hook_13f9d0_0446) =
@@ -159,6 +182,8 @@ pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32
                 old_on_input_menu,
                 old_fn_from_0d7180_0008,
                 old_fn_from_11f870_034c,
+                old_fn_from_1243f0_00f9,
+                old_fn_from_1243f0_0320,
                 old_fn_from_13f9d0_0345,
                 old_fn_from_13f9d0_0446,
                 session_receiver,
@@ -170,6 +195,8 @@ pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32
         apply_hook_on_input_menu(th19);
         apply_hook_0d7180_0008(th19);
         apply_hook_11f870_034c(th19);
+        apply_hook_1243f0_00f9(th19);
+        apply_hook_1243f0_0320(th19);
         apply_hook_13f9d0_0345(th19);
         apply_hook_13f9d0_0446(th19);
     }

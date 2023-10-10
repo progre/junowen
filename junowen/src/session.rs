@@ -149,9 +149,9 @@ impl Session {
 
     pub fn enqueue_input_and_dequeue(
         &mut self,
-        input: u8,
+        input: u16,
         delay: Option<u8>,
-    ) -> Result<(u8, u8), RecvError> {
+    ) -> Result<(u16, u16), RecvError> {
         self.delayed_inputs.enqueue_input_and_dequeue(input, delay)
     }
 }

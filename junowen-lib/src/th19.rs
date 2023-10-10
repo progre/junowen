@@ -23,8 +23,9 @@ pub use th19_structs::*;
 
 pub type Fn002530 = extern "thiscall" fn(this: *const c_void);
 pub type Fn009fa0 = extern "thiscall" fn(this: *const c_void, arg1: u32) -> u32;
+pub type Fn011560 = extern "thiscall" fn(this: *const Selection) -> u8;
 pub type Fn012480 = extern "thiscall" fn(this: *const c_void, arg1: u32) -> u32;
-pub type Fn0a9000 = extern "fastcall" fn(arg1: i32);
+pub type Fn0a9000 = extern "thiscall" fn(this: *const c_void);
 pub type Fn0d6e10 = extern "thiscall" fn(this: *const c_void, arg1: *const c_void) -> u32;
 pub type Fn102ff0 = extern "fastcall" fn(arg1: *const c_void);
 pub type Fn1049e0 = extern "fastcall" fn();
@@ -170,6 +171,9 @@ impl Th19 {
     hook!(0x107540 + 0x0937, hook_107540_0937, Fn002530);
 
     hook!(0x11f870 + 0x034c, hook_11f870_034c, Fn1049e0);
+
+    hook!(0x1243f0 + 0x00f9, hook_1243f0_00f9, Fn011560);
+    hook!(0x1243f0 + 0x0320, hook_1243f0_0320, Fn011560);
 
     hook!(0x130ed0 + 0x03ec, hook_130ed0_03ec, Fn102ff0);
 
