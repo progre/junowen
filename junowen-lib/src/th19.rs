@@ -196,18 +196,8 @@ impl Th19 {
     value!(0x200b10, p2_input, Input);
     value!(0x200dd0, menu_input, set_menu_input, Input);
     value!(0x200dd4, prev_menu_input, Input);
-    value_ref!(0x207910, p1, p1_mut, Player);
-    value_ref!(0x2079d0, p2, p2_mut, Player);
 
-    pub fn difficulty(&self) -> Result<Difficulty> {
-        self.memory_accessor.read_u32(0x207a90)?.try_into()
-    }
-    pub fn game_mode(&self) -> Result<GameMode> {
-        self.memory_accessor.read_u32(0x207a94)?.try_into()
-    }
-    pub fn player_matchup(&self) -> Result<PlayerMatchup> {
-        self.memory_accessor.read_u32(0x207a98)?.try_into()
-    }
+    value_ref!(0x207910, selection, selection_mut, Selection);
 
     // 0x208260 Game
     pub fn game_settings_in_game(&self) -> Result<GameSettings> {

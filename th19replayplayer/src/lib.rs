@@ -193,8 +193,8 @@ fn move_to_battle_menu_input(
 ) -> bool {
     match (
         menu.screen_id,
-        th19.game_mode().unwrap(),
-        th19.player_matchup().unwrap(),
+        th19.selection().game_mode,
+        th19.selection().player_matchup,
     ) {
         (ScreenId::TitleLoading, _, _)
         | (ScreenId::Title, _, _)
@@ -234,8 +234,8 @@ fn move_to_battle_player_inputs(
     let input_devices = th19.input_devices_mut();
     match (
         menu.screen_id,
-        th19.game_mode().unwrap(),
-        th19.player_matchup().unwrap(),
+        th19.selection().game_mode,
+        th19.selection().player_matchup,
     ) {
         (ScreenId::TitleLoading, _, _)
         | (ScreenId::Title, _, _)
@@ -247,9 +247,9 @@ fn move_to_battle_player_inputs(
         }
         (ScreenId::CharacterSelect, GameMode::Versus, _) => {
             menu.p1_cursor.cursor = inits.p1_character as u32;
-            th19.p1_mut().card = inits.p1_card as u32;
+            th19.selection_mut().p1_mut().card = inits.p1_card as u32;
             menu.p2_cursor.cursor = inits.p2_character as u32;
-            th19.p2_mut().card = inits.p2_card as u32;
+            th19.selection_mut().p2_mut().card = inits.p2_card as u32;
             th19.put_game_settings_in_game(inits.battle_settings)
                 .unwrap();
             input_devices.set_p1_input(shot_repeatedly(input_devices.p1_prev_input()));

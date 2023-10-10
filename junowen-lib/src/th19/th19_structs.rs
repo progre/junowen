@@ -6,6 +6,7 @@ use std::{
 
 use anyhow::{bail, Result};
 use derivative::Derivative;
+use getset::{Getters, MutGetters};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -36,6 +37,7 @@ impl Game {
     }
 }
 
+/// length=c0
 #[repr(C)]
 pub struct Player {
     _unknown1: [u8; 0x0c],
@@ -44,6 +46,7 @@ pub struct Player {
     _unknown2: [u8; 0x80],
     /// Available on player select screen
     pub card: u32,
+    _unknown3: [u8; 0x2c],
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -71,7 +74,7 @@ impl TryFrom<u32> for Difficulty {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 #[repr(u32)]
 pub enum GameMode {
     Story,
@@ -113,6 +116,19 @@ impl TryFrom<u32> for PlayerMatchup {
         Ok(unsafe { transmute(value) })
     }
 }
+
+#[derive(Getters, MutGetters)]
+#[repr(C)]
+pub struct Selection {
+    #[getset(get = "pub", get_mut = "pub")]
+    p1: Player,
+    #[getset(get = "pub", get_mut = "pub")]
+    p2: Player,
+    pub difficulty: Difficulty,
+    pub game_mode: GameMode,
+    pub player_matchup: PlayerMatchup,
+}
+
 #[derive(Derivative)]
 #[derivative(Default)]
 #[repr(C)]

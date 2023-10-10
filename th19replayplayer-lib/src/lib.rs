@@ -31,17 +31,17 @@ pub struct ReplayFile {
 
 impl ReplayFile {
     pub fn read_header_from_memory(th19: &Th19) -> Result<Self> {
-        let player_matchup = th19.player_matchup()?;
+        let player_matchup = th19.selection().player_matchup;
         Ok(Self {
             rand_seed1: th19.rand_seed1()?,
             rand_seed2: th19.rand_seed2()?,
-            difficulty: th19.difficulty()?,
+            difficulty: th19.selection().difficulty,
             player_matchup,
             battle_settings: th19.game_settings_in_game()?,
-            p1_character: th19.p1().character as u8,
-            p1_card: th19.p1().card as u8,
-            p2_character: th19.p2().character as u8,
-            p2_card: th19.p2().card as u8,
+            p1_character: th19.selection().p1().character as u8,
+            p1_card: th19.selection().p1().card as u8,
+            p2_character: th19.selection().p2().character as u8,
+            p2_card: th19.selection().p2().card as u8,
             inputs: if player_matchup == PlayerMatchup::HumanVsHuman
                 || player_matchup == PlayerMatchup::YoukaiVsYoukai
             {
