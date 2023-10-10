@@ -10,7 +10,7 @@ use windows::{
     Win32::{Foundation::MAX_PATH, System::LibraryLoader::GetModuleFileNameW},
 };
 
-pub use inject_dll::inject_dll;
+pub use inject_dll::{inject_dll, InjectDllError};
 
 pub fn calc_th19_hash() -> Vec<u8> {
     let mut buf = [0u16; MAX_PATH as usize];

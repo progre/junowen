@@ -4,7 +4,7 @@ use std::{
     path::Path,
 };
 
-use anyhow::Result;
+use anyhow::{Error, Result};
 use windows::{
     core::HSTRING,
     Win32::{
@@ -41,9 +41,23 @@ impl<'a> Drop for VirtualAllocatedMem<'a> {
     }
 }
 
-pub fn inject_dll(exe_file: &str, dll_path: &Path) -> Result<()> {
-    let process_id = find_process_id(exe_file)?;
-    let process = SafeHandle(unsafe { OpenProcess(PROCESS_ALL_ACCESS, FALSE, process_id) }?);
+#[derive(Debug, thiserror::Error)]
+pub enum InjectDllError {
+    #[error("DLL not found")]
+    DllNotFound,
+    #[error("Process not found: {}", .0)]
+    ProcessNotFound(Error),
+}
+
+pub fn inject_dll(exe_file: &str, dll_path: &Path) -> Result<(), InjectDllError> {
+    if !dll_path.exists() {
+        return Err(InjectDllError::DllNotFound);
+    }
+    let process_id = find_process_id(exe_file).map_err(InjectDllError::ProcessNotFound)?;
+    let process = SafeHandle(
+        unsafe { OpenProcess(PROCESS_ALL_ACCESS, FALSE, process_id) }
+            .map_err(|err| InjectDllError::ProcessNotFound(Error::new(err)))?,
+    );
     let dll_path_hstr = HSTRING::from(dll_path);
     let dll_path_hstr_size = size_of_val(dll_path_hstr.as_wide());
     let remote_dll_path_wstr = VirtualAllocatedMem::new(&process, dll_path_hstr_size);
@@ -56,20 +70,24 @@ pub fn inject_dll(exe_file: &str, dll_path: &Path) -> Result<()> {
             dll_path_hstr_size,
             None,
         )
-    }?;
-    let thread = SafeHandle(unsafe {
-        CreateRemoteThread(
-            process.0,
-            None,
-            0,
-            transmute(load_library_w_addr(process_id)?),
-            Some(remote_dll_path_wstr.addr),
-            0,
-            None,
-        )
-    }?);
+    }
+    .unwrap();
+    let thread = SafeHandle(
+        unsafe {
+            CreateRemoteThread(
+                process.0,
+                None,
+                0,
+                transmute(load_library_w_addr(process_id).unwrap()),
+                Some(remote_dll_path_wstr.addr),
+                0,
+                None,
+            )
+        }
+        .unwrap(),
+    );
 
-    unsafe { WaitForSingleObject(thread.0, u32::MAX) }; // wait DllMain
+    unsafe { WaitForSingleObject(thread.0, u32::MAX) }; // wait thread
 
     Ok(())
 }

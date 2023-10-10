@@ -10,7 +10,10 @@
 "0) Exit" = "0) 終了"
 "Select (0-2): " = "選択 (0-2): "
 #
-"Hook module not found." = "フックモジュールが見つかりません。"
+"junowen_hook.dll not found." = "junowen_hook.dll が見つかりません。"
+"th19.exe process not found: " = "th19.exe のプロセスが見つかりません。"
+"waiting for th19.exe process..." = "th19.exe のプロセスを待っています..."
+"Failed to communicate with junowen_hook.dll: " = "junowen_hook.dll との疎通に失敗しました: "
 "th19 disconnected." = "th19 との接続が切断されました。"
 #
 "Your signaling code:" = "あなたのシグナリングコード:"
