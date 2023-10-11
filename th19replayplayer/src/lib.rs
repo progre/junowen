@@ -275,7 +275,7 @@ fn on_input_players_internal() {
             on_input_players_internal();
         }
         ReplayPlayerState::Prepare { th19, replay_file } => {
-            let Some(menu) = th19.app().main_loop_tasks.find_menu_mut() else {
+            let Some(menu) = th19.app_mut().main_loop_tasks.find_menu_mut() else {
                 return;
             };
             if move_to_battle_player_inputs(
@@ -322,7 +322,7 @@ extern "fastcall" fn on_input_menu() {
             return;
         }
         ReplayPlayerState::Prepare { th19, replay_file } => {
-            let Some(menu) = th19.app().main_loop_tasks.find_menu_mut() else {
+            let Some(menu) = th19.app_mut().main_loop_tasks.find_menu_mut() else {
                 return;
             };
             move_to_battle_menu_input(

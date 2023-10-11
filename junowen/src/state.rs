@@ -115,7 +115,7 @@ fn update_state(state: &mut State, props: &Props) -> Option<(bool, Option<&'stat
         NetBattleState::Prepare {
             state: prepare_state,
         } => {
-            let Some(menu) = state.th19.app().main_loop_tasks.find_menu_mut() else {
+            let Some(menu) = state.th19.app_mut().main_loop_tasks.find_menu_mut() else {
                 return Some((false, None));
             };
             match prepare_state {
@@ -150,7 +150,12 @@ fn update_state(state: &mut State, props: &Props) -> Option<(bool, Option<&'stat
             }
         }
         NetBattleState::Select { .. } => {
-            let menu = state.th19.app().main_loop_tasks.find_menu_mut().unwrap();
+            let menu = state
+                .th19
+                .app_mut()
+                .main_loop_tasks
+                .find_menu_mut()
+                .unwrap();
             match menu.screen_id {
                 ScreenId::GameLoading => {
                     state.change_to_game_loading();
@@ -181,7 +186,7 @@ fn update_state(state: &mut State, props: &Props) -> Option<(bool, Option<&'stat
             Some((true, None))
         }
         NetBattleState::BackToSelect => {
-            let Some(menu) = state.th19.app().main_loop_tasks.find_menu_mut() else {
+            let Some(menu) = state.th19.app_mut().main_loop_tasks.find_menu_mut() else {
                 return Some((false, None));
             };
             if menu.screen_id != ScreenId::CharacterSelect {

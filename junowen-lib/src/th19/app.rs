@@ -114,7 +114,7 @@ impl MainLoopTasksLinkedList {
         unsafe { arg.as_mut() }
     }
 
-    pub fn find_menu(&self) -> Option<&'static Menu> {
+    pub fn find_menu(&self) -> Option<&Menu> {
         let arg = self
             .to_vec()
             .iter()
@@ -122,7 +122,7 @@ impl MainLoopTasksLinkedList {
             .arg as *const Menu;
         unsafe { arg.as_ref() }
     }
-    pub fn find_menu_mut(&self) -> Option<&'static mut Menu> {
+    pub fn find_menu_mut(&mut self) -> Option<&mut Menu> {
         let arg = self
             .to_vec()
             .iter()
@@ -147,5 +147,5 @@ impl MainLoopTasksLinkedList {
 #[repr(C)]
 pub struct App {
     _unknown1: [u8; 0x18],
-    pub main_loop_tasks: &'static MainLoopTasksLinkedList,
+    pub main_loop_tasks: &'static mut MainLoopTasksLinkedList,
 }

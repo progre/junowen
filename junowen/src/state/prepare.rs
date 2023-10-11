@@ -7,7 +7,7 @@ use junowen_lib::{
 
 pub fn on_input_menu(th19: &mut Th19, prepare_state: u8) {
     th19.set_no_wait(true);
-    let Some(menu) = th19.app().main_loop_tasks.find_menu_mut() else {
+    let Some(menu) = th19.app_mut().main_loop_tasks.find_menu_mut() else {
         return;
     };
     match prepare_state {

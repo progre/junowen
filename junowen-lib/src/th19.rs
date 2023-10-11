@@ -186,7 +186,7 @@ impl Th19 {
 
     pointer!(0x_1ae3a0, input_devices, input_devices_mut, InputDevices);
     u16_prop!(0x1ae410, rand_seed1, set_rand_seed1);
-    pointer!(0x_1ae41c, app, App);
+    pointer!(0x_1ae41c, app, app_mut, App);
     u16_prop!(0x1ae430, rand_seed2, set_rand_seed2);
     ptr_opt!(0x_1ae464, game, Game);
     value!(0x200850, p1_input, Input);
