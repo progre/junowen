@@ -1,4 +1,4 @@
-use tracing::warn;
+use tracing::{trace, warn};
 
 use crate::{GameMode, PlayerMatchup, Th19};
 
@@ -15,11 +15,11 @@ pub fn shot_repeatedly(prev: Input) -> Input {
     }
 }
 
-fn charge_repeatedly(prev: Input) -> Input {
-    if prev.0 == Input::CHARGE as u32 {
+fn escape_repeatedly(prev: Input) -> Input {
+    if prev.0 == Input::START as u32 {
         Input(Input::NULL as u32)
     } else {
-        Input(Input::CHARGE as u32)
+        Input(Input::START as u32)
     }
 }
 
@@ -52,28 +52,94 @@ pub fn reset_cursors(th19: &mut Th19) {
     //       it will reset in title screen, and online vs disconnected.
 }
 
-pub fn move_to_title(th19: &mut Th19, menu: &Menu) {
-    th19.set_menu_input(
-        match (
-            menu.screen_id,
-            th19.selection().game_mode,
-            th19.selection().player_matchup,
-        ) {
-            (ScreenId::Title, _, _) => Input(0),
-            (ScreenId::ControllerSelect, _, _) => {
-                if let Some(ctrler_select) = th19.app().main_loop_tasks.find_controller_select_mut()
-                {
-                    select_cursor(th19.prev_menu_input(), &mut ctrler_select.cursor, 3)
-                } else {
-                    Input(Input::NULL as u32)
-                }
-            }
-            _ => charge_repeatedly(th19.prev_menu_input()),
-        },
-    )
+pub enum AutomaticInputs {
+    TransitionToTitle,
+    ResolveKeyboardFullConflict,
+    TransitionToLocalVersusDifficultySelect(PlayerMatchup),
 }
 
-pub fn resolve_keyboard_full_conflict(th19: &mut Th19, menu: &mut Menu) -> bool {
+impl AutomaticInputs {
+    pub fn on_input_players(&self, th19: &mut Th19) {
+        match self {
+            Self::TransitionToTitle => transition_to_title_on_input_players(th19),
+            _ => {
+                let (p1, p2) = (Input::NULL.into(), Input::NULL.into());
+                th19.input_devices_mut().set_p1_input(p1);
+                th19.input_devices_mut().set_p2_input(p2);
+            }
+        }
+    }
+
+    pub fn on_input_menu(&self, th19: &mut Th19, menu: &mut Menu) -> bool {
+        match self {
+            Self::TransitionToTitle => transition_to_title_on_input_menu(th19, menu),
+            Self::ResolveKeyboardFullConflict => resolve_keyboard_full_conflict(th19, menu),
+            Self::TransitionToLocalVersusDifficultySelect(target_player_matchup) => {
+                transition_to_local_versus_difficulty_select(th19, menu, *target_player_matchup)
+            }
+        }
+    }
+}
+
+fn transition_to_title_on_input_players(th19: &mut Th19) {
+    let input_devices = th19.input_devices_mut();
+    let (p1, p2) = if let Some(menu) = th19.app_mut().main_loop_tasks.find_menu_mut() {
+        match menu.screen_id {
+            ScreenId::CharacterSelect => (
+                escape_repeatedly(input_devices.p1_prev_input()),
+                escape_repeatedly(input_devices.p2_prev_input()),
+            ),
+            ScreenId::Archievements => (
+                Input::SHOT.into(), // skip ending
+                Input::NULL.into(),
+            ),
+            ScreenId::Option => return,
+            _ => (
+                escape_repeatedly(th19.prev_menu_input()),
+                Input::NULL.into(),
+            ),
+        }
+    } else {
+        (Input::NULL.into(), Input::NULL.into())
+    };
+    input_devices.set_p1_input(p1);
+    input_devices.set_p2_input(p2);
+}
+
+fn transition_to_title_on_input_menu(th19: &mut Th19, menu: &Menu) -> bool {
+    trace!("menu.screen_id: {:x?}", menu.screen_id);
+    th19.set_menu_input(match menu.screen_id {
+        ScreenId::TitleLoading => return false,
+        ScreenId::Title => Input(0),
+        ScreenId::ControllerSelect => 'a: {
+            let Some(ctrler_select) = th19.app().main_loop_tasks.find_controller_select_mut()
+            else {
+                break 'a Input(Input::NULL as u32);
+            };
+            if ctrler_select.depth == 1 {
+                return false;
+            }
+            select_cursor(th19.prev_menu_input(), &mut ctrler_select.cursor, 3)
+        }
+        ScreenId::Option => 'a: {
+            if th19
+                .app()
+                .main_loop_tasks
+                .find_controller_select_mut()
+                .is_none()
+            {
+                break 'a escape_repeatedly(th19.prev_menu_input());
+            }
+            // NOTE: Can't determine whether it is in key config or not,
+            //       so control is not possible.
+            return false;
+        }
+        _ => escape_repeatedly(th19.prev_menu_input()),
+    });
+    true
+}
+
+fn resolve_keyboard_full_conflict(th19: &mut Th19, menu: &mut Menu) -> bool {
     if !th19.input_devices().is_conflict_keyboard_full() {
         return true;
     }
@@ -100,17 +166,17 @@ pub fn resolve_keyboard_full_conflict(th19: &mut Th19, menu: &mut Menu) -> bool 
                     Input(Input::NULL as u32)
                 }
             }
-            _ => charge_repeatedly(th19.prev_menu_input()),
+            _ => escape_repeatedly(th19.prev_menu_input()),
         },
     );
-    false
+    true
 }
 
-pub fn move_to_local_versus_difficulty_select(
+fn transition_to_local_versus_difficulty_select(
     th19: &mut Th19,
     menu: &mut Menu,
     target_player_matchup: PlayerMatchup,
-) {
+) -> bool {
     th19.set_menu_input(
         match (
             menu.screen_id,
@@ -137,5 +203,6 @@ pub fn move_to_local_versus_difficulty_select(
                 Input(0)
             }
         },
-    )
+    );
+    true
 }

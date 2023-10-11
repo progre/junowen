@@ -4,6 +4,8 @@ pub struct ControllerSelect {
     pub cursor: u32,
     _prev_cursor: u32,
     pub max_cursor: u32,
+    _unknown2: [u8; 0x80],
+    pub depth: u32,
     // ... unknown remains
 }
 
@@ -29,8 +31,15 @@ pub enum ScreenId {
     Unknown7,
     Unknown8,
     Manual,
-    Unknown9,
+    Manual2,
+    Unknown10,
     Archievements,
+    Unknown11,
+    Unknown12,
+    Unknown13,
+    Unknown14,
+    Unknown15,
+    Unknown16,
 }
 
 #[repr(C)]
@@ -44,7 +53,7 @@ pub struct CharacterCursor {
 pub struct Menu {
     _unknown1: [u8; 0x18],
     pub screen_id: ScreenId,
-    _prev_screen_id: u32,
+    _prev_screen_id: ScreenId,
     _unknown2: u32,
     _unknown3: u32,
     _unknown4: u32,

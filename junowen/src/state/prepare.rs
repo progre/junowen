@@ -1,25 +1,23 @@
-use junowen_lib::{
-    th19_helpers::{
-        move_to_local_versus_difficulty_select, move_to_title, resolve_keyboard_full_conflict,
-    },
-    PlayerMatchup, Th19,
-};
+use junowen_lib::{th19_helpers::AutomaticInputs, PlayerMatchup, Th19};
+
+fn to_automatic_inputs(prepare_state: u8) -> AutomaticInputs {
+    match prepare_state {
+        0 => AutomaticInputs::TransitionToTitle,
+        1 => AutomaticInputs::ResolveKeyboardFullConflict,
+        2 => AutomaticInputs::TransitionToLocalVersusDifficultySelect(PlayerMatchup::HumanVsHuman),
+        _ => unreachable!(),
+    }
+}
+
+pub fn on_input_players(th19: &mut Th19, prepare_state: u8) {
+    th19.set_no_wait(true);
+    to_automatic_inputs(prepare_state).on_input_players(th19);
+}
 
 pub fn on_input_menu(th19: &mut Th19, prepare_state: u8) {
-    th19.set_no_wait(true);
     let Some(menu) = th19.app_mut().main_loop_tasks.find_menu_mut() else {
         return;
     };
-    match prepare_state {
-        0 => {
-            move_to_title(th19, menu);
-        }
-        1 => {
-            resolve_keyboard_full_conflict(th19, menu);
-        }
-        2 => {
-            move_to_local_versus_difficulty_select(th19, menu, PlayerMatchup::HumanVsHuman);
-        }
-        _ => unreachable!(),
-    }
+    let no_wait = to_automatic_inputs(prepare_state).on_input_menu(th19, menu);
+    th19.set_no_wait(no_wait);
 }

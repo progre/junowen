@@ -205,7 +205,12 @@ fn update_th19_on_input_players(
 ) -> Result<(), RecvError> {
     match state.net_battle_state() {
         NetBattleState::Standby => unreachable!(),
-        NetBattleState::Prepare { .. } => Ok(()),
+        NetBattleState::Prepare {
+            state: prepare_state,
+        } => {
+            prepare::on_input_players(&mut state.th19, prepare_state);
+            Ok(())
+        }
         NetBattleState::Select {
             th19,
             session,

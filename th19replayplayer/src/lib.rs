@@ -10,7 +10,7 @@ use anyhow::Result;
 use bytes::{Buf, BytesMut};
 use interprocess::os::windows::named_pipe::{ByteReaderPipeStream, PipeListenerOptions, PipeMode};
 use junowen_lib::{
-    th19_helpers::{move_to_local_versus_difficulty_select, select_cursor, shot_repeatedly},
+    th19_helpers::{select_cursor, shot_repeatedly, AutomaticInputs},
     Difficulty, FnOfHookAssembly, Game, GameMode, GameSettings, Input, InputDevices, Menu,
     PlayerMatchup, ScreenId, Th19,
 };
@@ -199,7 +199,8 @@ fn move_to_battle_menu_input(
         (ScreenId::TitleLoading, _, _)
         | (ScreenId::Title, _, _)
         | (ScreenId::PlayerMatchupSelect, _, _) => {
-            move_to_local_versus_difficulty_select(th19, menu, inits.player_matchup);
+            AutomaticInputs::TransitionToLocalVersusDifficultySelect(inits.player_matchup)
+                .on_input_menu(th19, menu);
             false
         }
         (
