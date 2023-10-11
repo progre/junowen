@@ -17,7 +17,8 @@ use crate::{
 enum NetBattleState<'a> {
     Standby,
     Prepare {
-        passing_title: bool,
+        /// 0: back to title, 1: resolve controller, 2: forward to difficulty select
+        state: u8,
     },
     Select {
         session: &'a mut Session,
@@ -55,8 +56,8 @@ impl State {
     fn net_battle_state(&mut self) -> NetBattleState {
         match self.state {
             0x00 => NetBattleState::Standby,
-            0x10 | 0x11 => NetBattleState::Prepare {
-                passing_title: self.state == 0x11,
+            0x10..=0x12 => NetBattleState::Prepare {
+                state: self.state - 0x10,
             },
             0x20 | 0x21 => NetBattleState::Select {
                 session: self.session.as_mut().unwrap(),
@@ -78,8 +79,8 @@ impl State {
         self.session = Some(session);
     }
 
-    fn change_to_prepare(&mut self, passing_title: bool) {
-        self.state = if passing_title { 0x11 } else { 0x10 };
+    fn change_to_prepare(&mut self, state: u8) {
+        self.state = 0x10 + state;
     }
 
     fn change_to_select(&mut self) {
@@ -111,22 +112,42 @@ fn update_state(state: &mut State, props: &Props) -> Option<(bool, Option<&'stat
             state.start_session(session);
             Some((true, None))
         }
-        NetBattleState::Prepare { passing_title } => {
+        NetBattleState::Prepare {
+            state: prepare_state,
+        } => {
             let Some(menu) = state.th19.app().main_loop_tasks.find_menu_mut() else {
                 return Some((false, None));
             };
-            if !passing_title {
-                if menu.screen_id != ScreenId::Title {
-                    return Some((false, Some(menu)));
+            match prepare_state {
+                0 => {
+                    if menu.screen_id != ScreenId::Title {
+                        return Some((false, Some(menu)));
+                    }
+                    state.change_to_prepare(
+                        if state.th19.input_devices().is_conflict_keyboard_full() {
+                            1
+                        } else {
+                            2
+                        },
+                    );
+                    Some((true, Some(menu)))
                 }
-                state.change_to_prepare(true);
-                return Some((true, Some(menu)));
+                1 => {
+                    if state.th19.input_devices().is_conflict_keyboard_full() {
+                        return Some((false, Some(menu)));
+                    }
+                    state.change_to_prepare(0);
+                    Some((true, Some(menu)))
+                }
+                2 => {
+                    if menu.screen_id != ScreenId::DifficultySelect {
+                        return Some((false, Some(menu)));
+                    }
+                    state.change_to_select();
+                    Some((true, Some(menu)))
+                }
+                _ => unreachable!(),
             }
-            if menu.screen_id != ScreenId::DifficultySelect {
-                return Some((false, Some(menu)));
-            }
-            state.change_to_select();
-            Some((true, Some(menu)))
         }
         NetBattleState::Select { .. } => {
             let menu = state.th19.app().main_loop_tasks.find_menu_mut().unwrap();
@@ -204,9 +225,9 @@ pub(crate) fn on_input_players(state: &mut State, props: &Props) {
 pub fn on_input_menu(state: &mut State) {
     match state.net_battle_state() {
         NetBattleState::Standby => {}
-        NetBattleState::Prepare { passing_title } => {
-            prepare::on_input_menu(&mut state.th19, passing_title)
-        }
+        NetBattleState::Prepare {
+            state: prepare_state,
+        } => prepare::on_input_menu(&mut state.th19, prepare_state),
         NetBattleState::Select {
             th19,
             session,

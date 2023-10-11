@@ -1,16 +1,25 @@
 use junowen_lib::{
-    th19_helpers::{move_to_local_versus_difficulty_select, move_to_title},
+    th19_helpers::{
+        move_to_local_versus_difficulty_select, move_to_title, resolve_keyboard_full_conflict,
+    },
     PlayerMatchup, Th19,
 };
 
-pub fn on_input_menu(th19: &mut Th19, passing_title: bool) {
+pub fn on_input_menu(th19: &mut Th19, prepare_state: u8) {
     th19.set_no_wait(true);
     let Some(menu) = th19.app().main_loop_tasks.find_menu_mut() else {
         return;
     };
-    if !passing_title {
-        move_to_title(th19, menu);
-    } else {
-        move_to_local_versus_difficulty_select(th19, menu, PlayerMatchup::HumanVsHuman);
+    match prepare_state {
+        0 => {
+            move_to_title(th19, menu);
+        }
+        1 => {
+            resolve_keyboard_full_conflict(th19, menu);
+        }
+        2 => {
+            move_to_local_versus_difficulty_select(th19, menu, PlayerMatchup::HumanVsHuman);
+        }
+        _ => unreachable!(),
     }
 }

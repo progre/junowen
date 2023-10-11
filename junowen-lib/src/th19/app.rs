@@ -1,11 +1,20 @@
-#[derive(Clone, Copy, PartialEq)]
+#[repr(C)]
+pub struct ControllerSelect {
+    _unknown1: [u8; 0x14],
+    pub cursor: u32,
+    _prev_cursor: u32,
+    pub max_cursor: u32,
+    // ... unknown remains
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(u32)]
 pub enum ScreenId {
     TitleLoading,
     Title,
     GameLoading,
     Option,
-    ControllerSettings,
+    ControllerSelect,
     GameSettings,
     Unknown2,
     DifficultySelect,
@@ -49,6 +58,7 @@ pub struct Menu {
 
 #[derive(Debug)]
 enum MainLoopTaskId {
+    ControllerSelect = 0x09,
     Menu = 0x0a,
 }
 
@@ -85,6 +95,23 @@ impl MainLoopTasksLinkedList {
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+
+    pub fn find_controller_select(&self) -> Option<&ControllerSelect> {
+        let arg = self
+            .to_vec()
+            .iter()
+            .find(|item| item.id == MainLoopTaskId::ControllerSelect as u32)?
+            .arg as *const ControllerSelect;
+        unsafe { arg.as_ref() }
+    }
+    pub fn find_controller_select_mut(&self) -> Option<&mut ControllerSelect> {
+        let arg = self
+            .to_vec()
+            .iter()
+            .find(|item| item.id == MainLoopTaskId::ControllerSelect as u32)?
+            .arg as *mut ControllerSelect;
+        unsafe { arg.as_mut() }
     }
 
     pub fn find_menu(&self) -> Option<&'static Menu> {

@@ -1,3 +1,5 @@
+use getset::Getters;
+
 #[derive(Clone, Copy, PartialEq)]
 pub struct Input(pub u32);
 
@@ -21,6 +23,7 @@ impl From<u16> for Input {
 }
 
 /// 0x3d4
+#[derive(Getters)]
 #[repr(C)]
 pub struct InputDevice {
     _unknown1: [u8; 0x010],
@@ -28,17 +31,20 @@ pub struct InputDevice {
     pub prev_input: Input,
     _unknown2: [u8; 0x2a8],
     _unknown3: [u8; 0x010],
-    pub raw_keys: [u8; 0x104],
+    #[getset(get = "pub")]
+    raw_keys: [u8; 0x104],
 }
 
+#[derive(Getters)]
 #[repr(C)]
 pub struct InputDevices {
     _unknown1: [u8; 0x20],
-    pub input_device_array: [InputDevice; 3 + 9],
+    #[getset(get = "pub")]
+    input_device_array: [InputDevice; 3 + 9],
     _unknown2: [u8; 0x14],
     pub p1_idx: u32,
     p2_idx: u32,
-    // unknown continues...
+    // unknown remains...
 }
 
 impl InputDevices {
@@ -60,5 +66,9 @@ impl InputDevices {
     }
     pub fn p2_prev_input(&self) -> Input {
         self.input_device_array[self.p2_idx as usize].prev_input
+    }
+
+    pub fn is_conflict_keyboard_full(&self) -> bool {
+        self.p1_idx == 0 && self.p2_idx == 0
     }
 }

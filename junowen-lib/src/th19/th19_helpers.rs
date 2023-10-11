@@ -59,22 +59,51 @@ pub fn move_to_title(th19: &mut Th19, menu: &Menu) {
             th19.selection().game_mode,
             th19.selection().player_matchup,
         ) {
-            (ScreenId::TitleLoading, _, _) => Input(0),
             (ScreenId::Title, _, _) => Input(0),
-            (
-                ScreenId::PlayerMatchupSelect
-                | ScreenId::DifficultySelect
-                | ScreenId::CharacterSelect,
-                _,
-                _,
-            ) => charge_repeatedly(th19.prev_menu_input()),
-            (ScreenId::GameLoading, _, _) => Input(0),
-            _ => {
-                warn!("unsupported screen {}", menu.screen_id as u32);
-                Input(0)
+            (ScreenId::ControllerSelect, _, _) => {
+                if let Some(ctrler_select) = th19.app().main_loop_tasks.find_controller_select_mut()
+                {
+                    select_cursor(th19.prev_menu_input(), &mut ctrler_select.cursor, 3)
+                } else {
+                    Input(Input::NULL as u32)
+                }
             }
+            _ => charge_repeatedly(th19.prev_menu_input()),
         },
     )
+}
+
+pub fn resolve_keyboard_full_conflict(th19: &mut Th19, menu: &mut Menu) -> bool {
+    if !th19.input_devices().is_conflict_keyboard_full() {
+        return true;
+    }
+    th19.set_menu_input(
+        match (
+            menu.screen_id,
+            th19.selection().game_mode,
+            th19.selection().player_matchup,
+        ) {
+            (ScreenId::Title, _, _) => select_cursor(th19.prev_menu_input(), &mut menu.cursor, 1),
+            (ScreenId::PlayerMatchupSelect, _, _) => {
+                select_cursor(th19.prev_menu_input(), &mut menu.cursor, 4)
+            }
+            (ScreenId::ControllerSelect, _, _) => {
+                if let Some(ctrler_select) = th19.app().main_loop_tasks.find_controller_select_mut()
+                {
+                    ctrler_select.cursor = 1;
+                    if th19.prev_menu_input().0 == Input::LEFT as u32 {
+                        Input(Input::NULL as u32)
+                    } else {
+                        Input(Input::LEFT as u32)
+                    }
+                } else {
+                    Input(Input::NULL as u32)
+                }
+            }
+            _ => charge_repeatedly(th19.prev_menu_input()),
+        },
+    );
+    false
 }
 
 pub fn move_to_local_versus_difficulty_select(
