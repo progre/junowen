@@ -12,19 +12,19 @@ use super::{MatchInitial, RoundInitial};
 
 /** input 以外はホストのみ発行できる */
 #[derive(Debug, Deserialize, Serialize)]
-pub enum InternalDelayedInput {
-    Input(u16),
-    Delay(u8),
+pub enum SessionMessage {
     InitMatch((String, Option<MatchInitial>)),
     InitRound(Option<RoundInitial>),
+    Delay(u8),
+    Input(u16),
 }
 
 #[derive(CopyGetters)]
 pub struct DelayedInputs {
     host: bool,
-    local: LinkedList<InternalDelayedInput>,
-    remote_sender: mpsc::Sender<InternalDelayedInput>,
-    remote_receiver: mpsc::Receiver<InternalDelayedInput>,
+    local: LinkedList<SessionMessage>,
+    remote_sender: mpsc::Sender<SessionMessage>,
+    remote_receiver: mpsc::Receiver<SessionMessage>,
     remote_round_initial: Option<Option<RoundInitial>>,
     #[getset(get_copy = "pub")]
     delay: u8,
@@ -32,8 +32,8 @@ pub struct DelayedInputs {
 
 impl DelayedInputs {
     pub fn new(
-        remote_sender: mpsc::Sender<InternalDelayedInput>,
-        remote_receiver: mpsc::Receiver<InternalDelayedInput>,
+        remote_sender: mpsc::Sender<SessionMessage>,
+        remote_receiver: mpsc::Receiver<SessionMessage>,
         host: bool,
         default_delay: u8,
     ) -> Self {
@@ -53,29 +53,25 @@ impl DelayedInputs {
         let current_delay = self
             .local
             .iter()
-            .filter(|x| matches!(x, InternalDelayedInput::Input(_)))
+            .filter(|x| matches!(x, SessionMessage::Input(_)))
             .count() as i32;
         current_delay as i8 - (self.delay as i8)
     }
 
     pub fn send_init_match(&mut self, init: (String, Option<MatchInitial>)) {
-        let _ = self
-            .remote_sender
-            .send(InternalDelayedInput::InitMatch(init));
+        let _ = self.remote_sender.send(SessionMessage::InitMatch(init));
     }
 
     pub fn recv_init_match(&mut self) -> Result<(String, Option<MatchInitial>), RecvError> {
         let msg = self.remote_receiver.recv()?;
-        let InternalDelayedInput::InitMatch(init) = msg else {
+        let SessionMessage::InitMatch(init) = msg else {
             panic!("unexpected message: {:?}", msg);
         };
         Ok(init)
     }
 
     pub fn send_init_round(&mut self, init: Option<RoundInitial>) {
-        let _ = self
-            .remote_sender
-            .send(InternalDelayedInput::InitRound(init));
+        let _ = self.remote_sender.send(SessionMessage::InitRound(init));
     }
 
     pub fn recv_init_round(&mut self) -> Result<Option<RoundInitial>, RecvError> {
@@ -117,11 +113,11 @@ impl DelayedInputs {
         let delay_gap = self.delay_gap();
         if delay_gap <= 0 {
             if let Some(delay) = delay {
-                let _ = self.remote_sender.send(InternalDelayedInput::Delay(delay));
-                self.local.push_back(InternalDelayedInput::Delay(delay));
+                let _ = self.remote_sender.send(SessionMessage::Delay(delay));
+                self.local.push_back(SessionMessage::Delay(delay));
             }
-            let _ = self.remote_sender.send(InternalDelayedInput::Input(input));
-            self.local.push_back(InternalDelayedInput::Input(input));
+            let _ = self.remote_sender.send(SessionMessage::Input(input));
+            self.local.push_back(SessionMessage::Input(input));
         }
         if delay_gap < 0 {
             trace!("delay gap updated: {}", self.delay_gap());
@@ -150,16 +146,16 @@ impl DelayedInputs {
         let mut delay = None;
         loop {
             let local = self.local.pop_front()?;
-            debug_assert!(matches!(local, InternalDelayedInput::Input(_)) || self.host);
+            debug_assert!(matches!(local, SessionMessage::Input(_)) || self.host);
             match local {
-                InternalDelayedInput::InitMatch(_) => panic!("unexpected message: {:?}", local),
-                InternalDelayedInput::Delay(d) => {
+                SessionMessage::InitMatch(_) => panic!("unexpected message: {:?}", local),
+                SessionMessage::Delay(d) => {
                     debug_assert!(self.host);
                     delay = Some(d);
                     continue;
                 }
-                InternalDelayedInput::Input(input) => return Some((input, delay)),
-                InternalDelayedInput::InitRound(_) => panic!(),
+                SessionMessage::Input(input) => return Some((input, delay)),
+                SessionMessage::InitRound(_) => panic!(),
             }
         }
     }
@@ -172,14 +168,14 @@ impl DelayedInputs {
         loop {
             let remote = self.remote_receiver.recv()?;
             match remote {
-                InternalDelayedInput::InitMatch(_) => panic!("unexpected message: {:?}", remote),
-                InternalDelayedInput::Delay(d) => {
+                SessionMessage::InitMatch(_) => panic!("unexpected message: {:?}", remote),
+                SessionMessage::Delay(d) => {
                     debug_assert!(!self.host);
                     delay = Some(d);
                     continue;
                 }
-                InternalDelayedInput::Input(input) => return Ok((input, delay)),
-                InternalDelayedInput::InitRound(round_initial) => {
+                SessionMessage::Input(input) => return Ok((input, delay)),
+                SessionMessage::InitRound(round_initial) => {
                     debug_assert!(self.remote_round_initial.is_none());
                     self.remote_round_initial = Some(round_initial);
                     return Ok((0, None));

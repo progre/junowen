@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use tokio::{spawn, sync::broadcast};
 use tracing::{debug, info};
 
-use self::delayed_inputs::{DelayedInputs, InternalDelayedInput};
+use self::delayed_inputs::{DelayedInputs, SessionMessage};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct MatchInitial {
@@ -37,7 +37,7 @@ pub async fn create_session(
     mut data_channel: DataChannel,
     delay: Option<u8>,
 ) -> Result<Session> {
-    let (hook_outgoing_tx, hook_outgoing_rx) = std::sync::mpsc::channel::<InternalDelayedInput>();
+    let (hook_outgoing_tx, hook_outgoing_rx) = std::sync::mpsc::channel::<SessionMessage>();
     let data_channel_message_sender = data_channel.message_sender.clone();
 
     spawn(async move {
@@ -69,7 +69,7 @@ pub async fn create_session(
             let Some(data) = data_channel.recv().await else {
                 return;
             };
-            let msg: InternalDelayedInput = rmp_serde::from_slice(&data).unwrap();
+            let msg: SessionMessage = rmp_serde::from_slice(&data).unwrap();
             if let Err(err) = hook_incoming_tx.send(msg) {
                 debug!("send hook incoming msg error: {}", err);
                 return;
@@ -77,11 +77,11 @@ pub async fn create_session(
         }
     });
     let (host, delay) = if let Some(delay) = delay {
-        hook_outgoing_tx.send(InternalDelayedInput::Delay(delay))?;
+        hook_outgoing_tx.send(SessionMessage::Delay(delay))?;
         (true, delay)
     } else {
         let msg = hook_incoming_rx.recv()?;
-        let InternalDelayedInput::Delay(delay) = msg else {
+        let SessionMessage::Delay(delay) = msg else {
             panic!("unexpected message: {:?}", msg);
         };
         (false, delay)
