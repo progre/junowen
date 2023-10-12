@@ -14,7 +14,7 @@ use junowen_lib::{
 use junowen_lib::{hook_utils::inject_dll, lang::Lang};
 use serde::{Deserialize, Serialize};
 use tokio::{
-    io::{stdout, AsyncReadExt, AsyncWriteExt},
+    io::{AsyncReadExt, AsyncWriteExt},
     net::windows::named_pipe,
 };
 use tokio::{net::windows::named_pipe::NamedPipeClient, time::sleep};
@@ -114,18 +114,7 @@ fn read_line() -> String {
 async fn host(pipe: &mut NamedPipeClient, lang: &Lang) -> Result<()> {
     connect_as_offerer(pipe, lang).await?;
 
-    let delay = loop {
-        lang.print("Input network delay (0-9): ");
-        stdout().flush().await.unwrap();
-        let buf = read_line();
-        let Ok(delay) = buf.trim().parse::<u8>() else {
-            continue;
-        };
-        if !(0..=9).contains(&delay) {
-            continue;
-        }
-        break delay;
-    };
+    let delay = 1;
     pipe.write_all(&rmp_serde::to_vec(&IpcMessageToHook::Delay(delay)).unwrap())
         .await?;
 

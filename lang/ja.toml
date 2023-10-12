@@ -1,5 +1,4 @@
 "Module loaded by th19.exe." = "th19.exe にモジュールがロードされました。"
-"Input network delay (0-9): " = "ディレイを指定してください (0-9): "
 "Connected with guest." = "ゲストと接続しました。"
 "Guest disconnected." = "ゲストとの接続が切断されました。"
 "Connected with host." = "ホストと接続しました。"

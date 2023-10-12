@@ -79,8 +79,15 @@ extern "thiscall" fn on_render_text(this: *const c_void, arg: *const c_void) -> 
     if let Some(session) = state.session() {
         let th19 = state.th19();
         let mut text = RenderingText::default();
-        text.set_text(format!("Delay: {}", session.delay()).as_bytes());
-        text.x = (th19.screen_width().unwrap() * 1000 / 1280) as f32;
+        text.set_text(
+            format!(
+                "Ju.N.Owen (v{}) Delay: {}",
+                env!("CARGO_PKG_VERSION"),
+                session.delay()
+            )
+            .as_bytes(),
+        );
+        text.x = (th19.screen_width().unwrap() * 16 / 1280) as f32;
         text.y = (th19.screen_height().unwrap() * 940 / 960) as f32;
         text.color = 0xffffffff;
         text.font_type = 1;

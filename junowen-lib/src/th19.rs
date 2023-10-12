@@ -224,6 +224,10 @@ impl Th19 {
         self.put_game_settings_to(0x208644, game_settings)
     }
 
+    // 0x208380+0x0910
+    // 04: menu, 07: game
+    u32_prop!(0x208c90, scene);
+
     u32_prop!(0x20b1b0, screen_width);
     u32_prop!(0x20b1b4, screen_height);
 
