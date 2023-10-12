@@ -99,6 +99,25 @@ fn transfer_to_title_on_input_players(th19: &mut Th19) {
                 Input::NULL.into(),
             ),
         }
+    } else if let Some(game) = th19.app_mut().main_loop_tasks_mut().find_game_mut() {
+        if game.pause() == 0 {
+            (
+                escape_repeatedly(input_devices.p1_prev_input()),
+                escape_repeatedly(input_devices.p2_prev_input()),
+            )
+        } else if game.depth() == 0 {
+            game.set_cursor(1);
+            (
+                shot_repeatedly(input_devices.p1_prev_input()),
+                shot_repeatedly(input_devices.p2_prev_input()),
+            )
+        } else {
+            game.set_cursor(0);
+            (
+                shot_repeatedly(input_devices.p1_prev_input()),
+                shot_repeatedly(input_devices.p2_prev_input()),
+            )
+        }
     } else {
         (Input::NULL.into(), Input::NULL.into())
     };

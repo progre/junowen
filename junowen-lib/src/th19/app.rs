@@ -1,4 +1,4 @@
-use getset::{Getters, MutGetters};
+use getset::{CopyGetters, Getters, MutGetters, Setters};
 
 #[repr(C)]
 pub struct ControllerSelect {
@@ -67,10 +67,30 @@ pub struct Menu {
     pub p2_cursor: CharacterCursor,
 }
 
+#[derive(CopyGetters, Setters)]
+#[repr(C)]
+pub struct Game {
+    _unknown1: [u8; 0x0038],
+    #[getset(get_copy = "pub", set = "pub")]
+    cursor: u32,
+    _prev_cursor: u32,
+    _max_cursor: u32,
+    _unknown2: [u8; 0x0080],
+    #[getset(get_copy = "pub")]
+    depth: u32,
+    _unknown3: [u8; 0x012c],
+    // 0x01f4
+    #[getset(get_copy = "pub")]
+    pause: u32,
+    _inverted_pause: u32,
+    // unknown remains...
+}
+
 #[derive(Copy, Clone, Debug)]
 enum MainLoopTaskId {
     ControllerSelect = 0x09,
     Menu = 0x0a,
+    Game = 0x0e,
 }
 
 #[derive(Debug)]
@@ -120,6 +140,13 @@ impl MainLoopTasksLinkedList {
     }
     pub fn find_menu_mut(&mut self) -> Option<&mut Menu> {
         self.find_mut(MainLoopTaskId::Menu)
+    }
+
+    pub fn find_game(&self) -> Option<&Game> {
+        self.find(MainLoopTaskId::Game)
+    }
+    pub fn find_game_mut(&mut self) -> Option<&mut Game> {
+        self.find_mut(MainLoopTaskId::Game)
     }
 
     fn find<T>(&self, id: MainLoopTaskId) -> Option<&T> {
