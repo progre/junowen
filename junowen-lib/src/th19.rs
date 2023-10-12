@@ -185,9 +185,16 @@ impl Th19 {
     u32_prop!(0x1a2478, difficulty_cursor, set_difficulty_cursor);
 
     pointer!(0x_1ae3a0, input_devices, input_devices_mut, InputDevices);
-    u16_prop!(0x1ae410, rand_seed1, set_rand_seed1);
+    u16_prop!(0x1ae410, rand_seed1, set_rand_seed1); // 同一フレームでも変わる可能性あり ここを起点にdesyncする？
+    u32_prop!(0x1ae414, rand_seed5, set_rand_seed5); // 公式にsyncしてない 遅いほうだけ書き換わる？0,0 時に複数回書き換わるが、その後は変わらない?
+                                                     // 0x1ae418: unknown
     pointer!(0x_1ae41c, app, app_mut, App);
-    u16_prop!(0x1ae430, rand_seed2, set_rand_seed2);
+    u16_prop!(0x1ae420, rand_seed4, set_rand_seed4); // frame 依存?
+    u32_prop!(0x1ae424, rand_seed6, set_rand_seed6); // 公式にsyncしてない 書き換えが稀
+    u16_prop!(0x1ae428, rand_seed3, set_rand_seed3); // frame 依存 0x1ae410 のコピー？
+    u32_prop!(0x1ae42c, rand_seed7, set_rand_seed7); // frame 依存 インクリメント
+    u16_prop!(0x1ae430, rand_seed2, set_rand_seed2); // frame 依存 0x1ae420 のコピー？
+    u32_prop!(0x1ae434, rand_seed8, set_rand_seed8); // frame 依存 インクリメント
     ptr_opt!(0x_1ae464, round, Round);
     pointer!(0x_1ae60c, player_name, PlayerName);
     value!(0x200850, p1_input, Input);
