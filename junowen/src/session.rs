@@ -4,7 +4,7 @@ use std::sync::mpsc::{self, RecvError};
 
 use anyhow::Result;
 use bytes::Bytes;
-use getset::CopyGetters;
+use getset::{CopyGetters, Getters, Setters};
 use junowen_lib::{
     connection::{DataChannel, PeerConnection},
     GameSettings,
@@ -83,6 +83,7 @@ pub async fn create_session(
     let (closed_sender, closed_receiver) = broadcast::channel(1);
     Ok(Session {
         _conn: conn,
+        remote_player_name: "".to_owned(),
         host,
         delayed_inputs: DelayedInputs::new(hook_outgoing_tx, hook_incoming_rx, host, delay),
         closed_sender,
@@ -90,9 +91,11 @@ pub async fn create_session(
     })
 }
 
-#[derive(CopyGetters)]
+#[derive(CopyGetters, Getters, Setters)]
 pub struct Session {
     _conn: PeerConnection,
+    #[getset(get = "pub", set = "pub")]
+    remote_player_name: String,
     #[getset(get_copy = "pub")]
     host: bool,
     delayed_inputs: DelayedInputs,
@@ -121,14 +124,17 @@ impl Session {
 
     pub fn init_match(
         &mut self,
+        player_name: String,
         init: Option<MatchInitial>,
-    ) -> Result<Option<MatchInitial>, RecvError> {
+    ) -> Result<(String, Option<MatchInitial>), RecvError> {
         debug_assert!(self.host == init.is_some());
         if let Some(init) = init {
-            self.delayed_inputs.send_init_match(init);
-            Ok(None)
+            self.delayed_inputs
+                .send_init_match((player_name, Some(init)));
+            self.delayed_inputs.recv_init_match()
         } else {
-            Ok(Some(self.delayed_inputs.recv_init_match()?))
+            self.delayed_inputs.send_init_match((player_name, None));
+            self.delayed_inputs.recv_init_match()
         }
     }
 

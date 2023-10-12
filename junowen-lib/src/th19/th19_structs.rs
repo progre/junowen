@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     ffi::{CStr, FromBytesUntilNulError},
     fmt,
     mem::transmute,
@@ -34,6 +35,30 @@ pub struct Round {
 impl Round {
     pub fn is_first_frame(&self) -> bool {
         self.pre_frame == 0xffffffff && self.frame == 0
+    }
+}
+
+#[repr(C)]
+pub struct PlayerName {
+    _unknown1: [u8; 0x02E868],
+    _unknown2: [u8; 0x08],
+    _unknown3: [u8; 0x58],
+    player_name: [u8; 0x22],
+    room_name: [u8; 0x22],
+    // unknown remains...
+}
+
+impl PlayerName {
+    pub fn player_name(&self) -> Cow<'_, str> {
+        CStr::from_bytes_until_nul(&self.player_name)
+            .unwrap_or_default()
+            .to_string_lossy()
+    }
+
+    pub fn room_name(&self) -> Cow<'_, str> {
+        CStr::from_bytes_until_nul(&self.room_name)
+            .unwrap_or_default()
+            .to_string_lossy()
     }
 }
 

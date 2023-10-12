@@ -15,7 +15,7 @@ use super::{MatchInitial, RoundInitial};
 pub enum InternalDelayedInput {
     Input(u16),
     Delay(u8),
-    InitMatch(MatchInitial),
+    InitMatch((String, Option<MatchInitial>)),
     InitRound(Option<RoundInitial>),
 }
 
@@ -58,13 +58,13 @@ impl DelayedInputs {
         current_delay as i8 - (self.delay as i8)
     }
 
-    pub fn send_init_match(&mut self, init: MatchInitial) {
+    pub fn send_init_match(&mut self, init: (String, Option<MatchInitial>)) {
         let _ = self
             .remote_sender
             .send(InternalDelayedInput::InitMatch(init));
     }
 
-    pub fn recv_init_match(&mut self) -> Result<MatchInitial, RecvError> {
+    pub fn recv_init_match(&mut self) -> Result<(String, Option<MatchInitial>), RecvError> {
         let msg = self.remote_receiver.recv()?;
         let InternalDelayedInput::InitMatch(init) = msg else {
             panic!("unexpected message: {:?}", msg);
