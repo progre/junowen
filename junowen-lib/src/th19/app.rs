@@ -1,3 +1,5 @@
+use getset::{Getters, MutGetters};
+
 #[repr(C)]
 pub struct ControllerSelect {
     _unknown1: [u8; 0x14],
@@ -6,7 +8,7 @@ pub struct ControllerSelect {
     pub max_cursor: u32,
     _unknown2: [u8; 0x80],
     pub depth: u32,
-    // ... unknown remains
+    // unknown remains...
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -65,7 +67,7 @@ pub struct Menu {
     pub p2_cursor: CharacterCursor,
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 enum MainLoopTaskId {
     ControllerSelect = 0x09,
     Menu = 0x0a,
@@ -107,36 +109,25 @@ impl MainLoopTasksLinkedList {
     }
 
     pub fn find_controller_select(&self) -> Option<&ControllerSelect> {
-        let arg = self
-            .to_vec()
-            .iter()
-            .find(|item| item.id == MainLoopTaskId::ControllerSelect as u32)?
-            .arg as *const ControllerSelect;
-        unsafe { arg.as_ref() }
+        self.find(MainLoopTaskId::ControllerSelect)
     }
-    pub fn find_controller_select_mut(&self) -> Option<&mut ControllerSelect> {
-        let arg = self
-            .to_vec()
-            .iter()
-            .find(|item| item.id == MainLoopTaskId::ControllerSelect as u32)?
-            .arg as *mut ControllerSelect;
-        unsafe { arg.as_mut() }
+    pub fn find_controller_select_mut(&mut self) -> Option<&mut ControllerSelect> {
+        self.find_mut(MainLoopTaskId::ControllerSelect)
     }
 
     pub fn find_menu(&self) -> Option<&Menu> {
-        let arg = self
-            .to_vec()
-            .iter()
-            .find(|item| item.id == MainLoopTaskId::Menu as u32)?
-            .arg as *const Menu;
-        unsafe { arg.as_ref() }
+        self.find(MainLoopTaskId::Menu)
     }
     pub fn find_menu_mut(&mut self) -> Option<&mut Menu> {
-        let arg = self
-            .to_vec()
-            .iter()
-            .find(|item| item.id == MainLoopTaskId::Menu as u32)?
-            .arg as *mut Menu;
+        self.find_mut(MainLoopTaskId::Menu)
+    }
+
+    fn find<T>(&self, id: MainLoopTaskId) -> Option<&T> {
+        let arg = self.to_vec().iter().find(|item| item.id == id as u32)?.arg as *const T;
+        unsafe { arg.as_ref() }
+    }
+    fn find_mut<T>(&mut self, id: MainLoopTaskId) -> Option<&mut T> {
+        let arg = self.to_vec().iter().find(|item| item.id == id as u32)?.arg as *mut T;
         unsafe { arg.as_mut() }
     }
 
@@ -153,8 +144,11 @@ impl MainLoopTasksLinkedList {
     }
 }
 
+#[derive(Getters, MutGetters)]
 #[repr(C)]
 pub struct App {
     _unknown1: [u8; 0x18],
-    pub main_loop_tasks: &'static mut MainLoopTasksLinkedList,
+    #[getset(get = "pub", get_mut = "pub")]
+    main_loop_tasks: &'static mut MainLoopTasksLinkedList,
+    // unknown remains...
 }

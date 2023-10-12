@@ -10,7 +10,7 @@ use crate::{
 
 pub fn on_input_players(session: &mut Session, th19: &mut Th19) -> Result<(), RecvError> {
     // -1フレーム目、0フレーム目は複数回呼ばれ、回数が不定なのでスキップする
-    if th19.game().unwrap().frame < 1 {
+    if th19.round().unwrap().frame < 1 {
         let input_devices = th19.input_devices_mut();
         input_devices.set_p1_input(Input(0));
         input_devices.set_p2_input(Input(0));

@@ -25,13 +25,13 @@ pub struct Settings {
 
 #[derive(Debug)]
 #[repr(C)]
-pub struct Game {
+pub struct Round {
     _unknown: [u8; 0x10],
     pub pre_frame: u32,
     pub frame: u32,
 }
 
-impl Game {
+impl Round {
     pub fn is_first_frame(&self) -> bool {
         self.pre_frame == 0xffffffff && self.frame == 0
     }

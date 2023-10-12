@@ -15,7 +15,7 @@ pub fn on_input_players(th19: &mut Th19, prepare_state: u8) {
 }
 
 pub fn on_input_menu(th19: &mut Th19, prepare_state: u8) {
-    let Some(menu) = th19.app_mut().main_loop_tasks.find_menu_mut() else {
+    let Some(menu) = th19.app_mut().main_loop_tasks_mut().find_menu_mut() else {
         return;
     };
     let no_wait = to_automatic_inputs(prepare_state).on_input_menu(th19, menu);

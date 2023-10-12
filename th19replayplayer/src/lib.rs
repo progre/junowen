@@ -11,8 +11,8 @@ use bytes::{Buf, BytesMut};
 use interprocess::os::windows::named_pipe::{ByteReaderPipeStream, PipeListenerOptions, PipeMode};
 use junowen_lib::{
     th19_helpers::{select_cursor, shot_repeatedly, AutomaticInputs},
-    Difficulty, FnOfHookAssembly, Game, GameMode, GameSettings, Input, InputDevices, Menu,
-    PlayerMatchup, ScreenId, Th19,
+    Difficulty, FnOfHookAssembly, GameMode, GameSettings, Input, InputDevices, Menu, PlayerMatchup,
+    Round, ScreenId, Th19,
 };
 use th19replayplayer_lib::{FileInputList, ReplayFile};
 use windows::Win32::{
@@ -165,7 +165,7 @@ fn init_battle(th19: &mut Th19, replay_file: &ReplayFile) {
     th19.set_rand_seed2(replay_file.rand_seed2).unwrap();
 }
 
-fn tick_battle(input_devices: &mut InputDevices, battle: &Game, replay_file: &ReplayFile) -> bool {
+fn tick_battle(input_devices: &mut InputDevices, battle: &Round, replay_file: &ReplayFile) -> bool {
     match &replay_file.inputs {
         FileInputList::HumanVsHuman(vec) => {
             if battle.frame as usize >= vec.len() {
@@ -276,7 +276,7 @@ fn on_input_players_internal() {
             on_input_players_internal();
         }
         ReplayPlayerState::Prepare { th19, replay_file } => {
-            let Some(menu) = th19.app_mut().main_loop_tasks.find_menu_mut() else {
+            let Some(menu) = th19.app_mut().main_loop_tasks_mut().find_menu_mut() else {
                 return;
             };
             if move_to_battle_player_inputs(
@@ -297,7 +297,7 @@ fn on_input_players_internal() {
             }
         }
         ReplayPlayerState::InGame { th19, replay_file } => {
-            if let Some(battle) = th19.game() {
+            if let Some(battle) = th19.round() {
                 if tick_battle(th19.input_devices_mut(), battle, replay_file) {
                     return;
                 }
@@ -323,7 +323,7 @@ extern "fastcall" fn on_input_menu() {
             return;
         }
         ReplayPlayerState::Prepare { th19, replay_file } => {
-            let Some(menu) = th19.app_mut().main_loop_tasks.find_menu_mut() else {
+            let Some(menu) = th19.app_mut().main_loop_tasks_mut().find_menu_mut() else {
                 return;
             };
             move_to_battle_menu_input(

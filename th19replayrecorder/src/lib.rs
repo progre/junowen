@@ -140,7 +140,7 @@ fn on_input() {
 
     let state = state_mut();
     if !state.in_game {
-        let Some(menu) = props.th19.app().main_loop_tasks.find_menu() else {
+        let Some(menu) = props.th19.app().main_loop_tasks().find_menu() else {
             return;
         };
         if menu.screen_id == ScreenId::GameLoading {
@@ -148,7 +148,7 @@ fn on_input() {
             state.in_game = true;
         }
     } else {
-        if let Some(battle) = props.th19.game() {
+        if let Some(battle) = props.th19.round() {
             tick_recording(&mut state.replay_file.inputs, battle.frame, input_devices);
             return;
         };

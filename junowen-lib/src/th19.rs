@@ -188,7 +188,7 @@ impl Th19 {
     u16_prop!(0x1ae410, rand_seed1, set_rand_seed1);
     pointer!(0x_1ae41c, app, app_mut, App);
     u16_prop!(0x1ae430, rand_seed2, set_rand_seed2);
-    ptr_opt!(0x_1ae464, game, Game);
+    ptr_opt!(0x_1ae464, round, Round);
     value!(0x200850, p1_input, Input);
     value!(0x200b10, p2_input, Input);
     value!(0x200dd0, menu_input, set_menu_input, Input);

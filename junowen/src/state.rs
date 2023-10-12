@@ -115,7 +115,7 @@ fn update_state(state: &mut State, props: &Props) -> Option<(bool, Option<&'stat
         NetBattleState::Prepare {
             state: prepare_state,
         } => {
-            let Some(menu) = state.th19.app_mut().main_loop_tasks.find_menu_mut() else {
+            let Some(menu) = state.th19.app_mut().main_loop_tasks_mut().find_menu_mut() else {
                 return Some((false, None));
             };
             match prepare_state {
@@ -153,7 +153,7 @@ fn update_state(state: &mut State, props: &Props) -> Option<(bool, Option<&'stat
             let menu = state
                 .th19
                 .app_mut()
-                .main_loop_tasks
+                .main_loop_tasks_mut()
                 .find_menu_mut()
                 .unwrap();
             match menu.screen_id {
@@ -169,7 +169,7 @@ fn update_state(state: &mut State, props: &Props) -> Option<(bool, Option<&'stat
             }
         }
         NetBattleState::GameLoading => {
-            let Some(game) = state.th19.game() else {
+            let Some(game) = state.th19.round() else {
                 return Some((false, None));
             };
             if !game.is_first_frame() {
@@ -179,14 +179,14 @@ fn update_state(state: &mut State, props: &Props) -> Option<(bool, Option<&'stat
             Some((true, None))
         }
         NetBattleState::Game { session: _, th19 } => {
-            if th19.game().is_some() {
+            if th19.round().is_some() {
                 return Some((false, None));
             }
             state.change_to_back_to_select();
             Some((true, None))
         }
         NetBattleState::BackToSelect => {
-            let Some(menu) = state.th19.app_mut().main_loop_tasks.find_menu_mut() else {
+            let Some(menu) = state.th19.app_mut().main_loop_tasks_mut().find_menu_mut() else {
                 return Some((false, None));
             };
             if menu.screen_id != ScreenId::CharacterSelect {

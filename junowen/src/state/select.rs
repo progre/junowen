@@ -62,7 +62,11 @@ pub fn on_input_players(
 }
 
 pub fn on_input_menu(session: &mut Session, th19: &mut Th19) -> Result<(), RecvError> {
-    let menu = th19.app_mut().main_loop_tasks.find_menu_mut().unwrap();
+    let menu = th19
+        .app_mut()
+        .main_loop_tasks_mut()
+        .find_menu_mut()
+        .unwrap();
     if menu.screen_id != ScreenId::DifficultySelect {
         return Ok(());
     }
