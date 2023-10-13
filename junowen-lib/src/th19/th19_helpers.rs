@@ -5,18 +5,18 @@ use crate::{GameMode, InputFlags, InputValue, PlayerMatchup, Th19};
 use super::app::{Menu, ScreenId};
 
 pub fn shot_repeatedly(prev: InputValue) -> InputValue {
-    if prev.0 == InputFlags::SHOT as u32 {
-        InputValue(InputFlags::NULL as u32)
+    if prev == InputFlags::SHOT.into() {
+        InputValue::empty()
     } else {
-        InputValue(InputFlags::SHOT as u32)
+        InputFlags::SHOT.into()
     }
 }
 
 fn escape_repeatedly(prev: InputValue) -> InputValue {
-    if prev.0 == InputFlags::START as u32 {
-        InputValue(InputFlags::NULL as u32)
+    if prev == InputFlags::START.into() {
+        InputValue::empty()
     } else {
-        InputValue(InputFlags::START as u32)
+        InputFlags::START.into()
     }
 }
 
@@ -60,7 +60,7 @@ impl AutomaticInputs {
         match self {
             Self::TransitionToTitle => transfer_to_title_on_input_players(th19),
             _ => {
-                let (p1, p2) = (InputFlags::NULL.into(), InputFlags::NULL.into());
+                let (p1, p2) = (InputValue::empty(), InputValue::empty());
                 let input_devices = th19.input_devices_mut();
                 input_devices.p1_input_mut().set_current(p1);
                 input_devices.p2_input_mut().set_current(p2);
@@ -89,12 +89,12 @@ fn transfer_to_title_on_input_players(th19: &mut Th19) {
             ),
             ScreenId::Archievements => (
                 InputFlags::SHOT.into(), // skip ending
-                InputFlags::NULL.into(),
+                InputValue::empty(),
             ),
             ScreenId::Option => return,
             _ => (
                 escape_repeatedly(th19.menu_input().prev()),
-                InputFlags::NULL.into(),
+                InputValue::empty(),
             ),
         }
     } else if let Some(game) = th19.app_mut().main_loop_tasks_mut().find_game_mut() {
@@ -117,7 +117,7 @@ fn transfer_to_title_on_input_players(th19: &mut Th19) {
             )
         }
     } else {
-        (InputFlags::NULL.into(), InputFlags::NULL.into())
+        (InputValue::empty(), InputValue::empty())
     };
     input_devices.p1_input_mut().set_current(p1);
     input_devices.p2_input_mut().set_current(p2);
@@ -127,14 +127,14 @@ fn transfer_to_title_on_input_menu(th19: &mut Th19, menu: &Menu) -> bool {
     trace!("menu.screen_id: {:x?}", menu.screen_id);
     let menu_input = match menu.screen_id {
         ScreenId::TitleLoading => return false,
-        ScreenId::Title => InputValue(0),
+        ScreenId::Title => InputValue::empty(),
         ScreenId::ControllerSelect => 'a: {
             let Some(ctrler_select) = th19
                 .app_mut()
                 .main_loop_tasks_mut()
                 .find_controller_select_mut()
             else {
-                break 'a InputValue(InputFlags::NULL as u32);
+                break 'a InputValue::empty();
             };
             if ctrler_select.depth == 1 {
                 return false;
@@ -180,13 +180,13 @@ fn resolve_keyboard_full_conflict(th19: &mut Th19, menu: &mut Menu) -> bool {
                 .find_controller_select_mut()
             {
                 ctrler_select.cursor = 1;
-                if th19.menu_input().prev().0 == InputFlags::LEFT as u32 {
-                    InputValue(InputFlags::NULL as u32)
+                if th19.menu_input().prev() == InputFlags::LEFT.into() {
+                    InputValue::empty()
                 } else {
-                    InputValue(InputFlags::LEFT as u32)
+                    InputFlags::LEFT.into()
                 }
             } else {
-                InputValue(InputFlags::NULL as u32)
+                InputValue::empty()
             }
         }
         _ => escape_repeatedly(th19.menu_input().prev()),
@@ -206,7 +206,7 @@ fn transfer_to_local_versus_difficulty_select(
             th19.selection().game_mode,
             th19.selection().player_matchup,
         ) {
-            (ScreenId::TitleLoading, _, _) => InputValue(0),
+            (ScreenId::TitleLoading, _, _) => InputValue::empty(),
             (ScreenId::Title, _, _) => {
                 select_cursor(th19.menu_input_mut().prev(), &mut menu.cursor, 1)
             }
@@ -222,10 +222,10 @@ fn transfer_to_local_versus_difficulty_select(
                 ScreenId::DifficultySelect,
                 GameMode::Versus,
                 PlayerMatchup::HumanVsHuman | PlayerMatchup::HumanVsCpu | PlayerMatchup::CpuVsCpu,
-            ) => InputValue(0),
+            ) => InputValue::empty(),
             _ => {
                 warn!("unsupported screen {}", menu.screen_id as u32);
-                InputValue(0)
+                InputValue::empty()
             }
         },
     );

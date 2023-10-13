@@ -7,7 +7,7 @@ use windows::Win32::{
     System::{Console::AllocConsole, SystemServices::DLL_PROCESS_ATTACH},
 };
 
-use junowen_lib::{FnOfHookAssembly, InputValue, Th19};
+use junowen_lib::{FnOfHookAssembly, Th19};
 
 static mut PROPS: Option<Props> = None;
 static mut STATE: Option<State> = None;
@@ -69,15 +69,15 @@ extern "fastcall" fn hook_0abb2b() {
     }
 
     if !state.p1_buffer.is_empty() {
-        let old_p1 = InputValue(state.p1_buffer.get_u32());
+        let old_p1 = state.p1_buffer.get_u32().try_into().unwrap();
         let p1 = input_devices.p1_input().current();
         input_devices.p1_input_mut().set_current(old_p1);
-        state.p1_buffer.put_u32(p1.0);
+        state.p1_buffer.put_u32(p1.bits());
 
-        let old_p2 = InputValue(state.p2_buffer.get_u32());
+        let old_p2 = state.p2_buffer.get_u32().try_into().unwrap();
         let p2 = input_devices.p2_input().current();
         input_devices.p2_input_mut().set_current(old_p2);
-        state.p2_buffer.put_u32(p2.0);
+        state.p2_buffer.put_u32(p2.bits());
     }
 
     if let Some(func) = props().original_fn_from_0aba30_00fb {

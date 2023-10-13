@@ -1,7 +1,7 @@
 use std::sync::mpsc::RecvError;
 
 use anyhow::Result;
-use junowen_lib::{th19_helpers::reset_cursors, InputValue, Menu, ScreenId, Th19};
+use junowen_lib::{th19_helpers::reset_cursors, Menu, ScreenId, Th19};
 
 use crate::{
     helper::inputed_number,
@@ -73,14 +73,14 @@ pub fn on_input_players(
     } else {
         None
     };
-    let (p1, p2) =
-        session.enqueue_input_and_dequeue(input_devices.p1_input().current().0 as u16, delay)?;
+    let (p1, p2) = session
+        .enqueue_input_and_dequeue(input_devices.p1_input().current().bits() as u16, delay)?;
     input_devices
         .p1_input_mut()
-        .set_current(InputValue(p1 as u32));
+        .set_current((p1 as u32).try_into().unwrap());
     input_devices
         .p2_input_mut()
-        .set_current(InputValue(p2 as u32));
+        .set_current((p2 as u32).try_into().unwrap());
 
     Ok(())
 }
@@ -101,9 +101,9 @@ pub fn on_input_menu(session: &mut Session, th19: &mut Th19) -> Result<(), RecvE
         None
     };
     let menu_input = th19.menu_input_mut();
-    let (p1, p2) = session.enqueue_input_and_dequeue(menu_input.current().0 as u16, delay)?;
+    let (p1, p2) = session.enqueue_input_and_dequeue(menu_input.current().bits() as u16, delay)?;
     let input = if p1 != 0 { p1 } else { p2 };
-    menu_input.set_current(InputValue(input as u32));
+    menu_input.set_current((input as u32).try_into().unwrap());
     Ok(())
 }
 

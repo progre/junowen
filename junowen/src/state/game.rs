@@ -12,8 +12,12 @@ pub fn on_input_players(session: &mut Session, th19: &mut Th19) -> Result<(), Re
     // -1フレーム目、0フレーム目は複数回呼ばれ、回数が不定なのでスキップする
     if th19.round().unwrap().frame < 1 {
         let input_devices = th19.input_devices_mut();
-        input_devices.p1_input_mut().set_current(InputValue(0));
-        input_devices.p2_input_mut().set_current(InputValue(0));
+        input_devices
+            .p1_input_mut()
+            .set_current(InputValue::empty());
+        input_devices
+            .p2_input_mut()
+            .set_current(InputValue::empty());
     } else {
         let input_devices = th19.input_devices_mut();
         let delay = if session.host() {
@@ -22,13 +26,13 @@ pub fn on_input_players(session: &mut Session, th19: &mut Th19) -> Result<(), Re
             None
         };
         let (p1, p2) = session
-            .enqueue_input_and_dequeue(input_devices.p1_input().current().0 as u16, delay)?;
+            .enqueue_input_and_dequeue(input_devices.p1_input().current().bits() as u16, delay)?;
         input_devices
             .p1_input_mut()
-            .set_current(InputValue(p1 as u32));
+            .set_current((p1 as u32).try_into().unwrap());
         input_devices
             .p2_input_mut()
-            .set_current(InputValue(p2 as u32));
+            .set_current((p2 as u32).try_into().unwrap());
     }
     Ok(())
 }

@@ -116,13 +116,13 @@ fn tick_recording(inputs: &mut FileInputList, frame: u32, input_devices: &InputD
     match inputs {
         FileInputList::HumanVsHuman(vec) => {
             let item = (
-                input_devices.p1_input().current().0 as u16,
-                input_devices.p2_input().current().0 as u16,
+                input_devices.p1_input().current().bits() as u16,
+                input_devices.p2_input().current().bits() as u16,
             );
             put(vec, frame as usize, item);
         }
         FileInputList::HumanVsCpu(vec) => {
-            let item = input_devices.p1_input().current().0 as u16;
+            let item = input_devices.p1_input().current().bits() as u16;
             put(vec, frame as usize, item);
         }
     };

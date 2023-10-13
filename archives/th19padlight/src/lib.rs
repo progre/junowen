@@ -121,12 +121,12 @@ extern "thiscall" fn hook_0a9000(this: *const c_void) {
     }
     for (i, button) in state.buttons.iter().enumerate() {
         if i < 9 {
-            if ((p1.current().0 >> i) & 0x01) == 0 {
+            if ((p1.current().bits() >> i) & 0x01) == 0 {
                 continue;
             }
         } else {
             //
-            if ((p2.current().0 >> (i - 9)) & 0x01) == 0 {
+            if ((p2.current().bits() >> (i - 9)) & 0x01) == 0 {
                 continue;
             }
         }

@@ -11,8 +11,8 @@ use bytes::{Buf, BytesMut};
 use interprocess::os::windows::named_pipe::{ByteReaderPipeStream, PipeListenerOptions, PipeMode};
 use junowen_lib::{
     th19_helpers::{select_cursor, shot_repeatedly, AutomaticInputs},
-    Difficulty, FnOfHookAssembly, GameMode, GameSettings, InputDevices, InputFlags, InputValue,
-    Menu, PlayerMatchup, Round, ScreenId, Th19,
+    Difficulty, FnOfHookAssembly, GameMode, GameSettings, InputDevices, InputValue, Menu,
+    PlayerMatchup, Round, ScreenId, Th19,
 };
 use th19replayplayer_lib::{FileInputList, ReplayFile};
 use windows::Win32::{
@@ -174,10 +174,10 @@ fn tick_battle(input_devices: &mut InputDevices, battle: &Round, replay_file: &R
             let (p1_input, p2_input) = vec[battle.frame as usize];
             input_devices
                 .p1_input_mut()
-                .set_current(InputValue(p1_input as u32));
+                .set_current((p1_input as u32).try_into().unwrap());
             input_devices
                 .p2_input_mut()
-                .set_current(InputValue(p2_input as u32));
+                .set_current((p2_input as u32).try_into().unwrap());
         }
         FileInputList::HumanVsCpu(vec) => {
             if battle.frame as usize >= vec.len() {
@@ -186,7 +186,7 @@ fn tick_battle(input_devices: &mut InputDevices, battle: &Round, replay_file: &R
             let p1_input = vec[battle.frame as usize];
             input_devices
                 .p1_input_mut()
-                .set_current(InputValue(p1_input as u32));
+                .set_current((p1_input as u32).try_into().unwrap());
         }
     }
     true
@@ -222,7 +222,7 @@ fn move_to_battle_menu_input(
             false
         }
         (ScreenId::CharacterSelect, GameMode::Versus, _) => {
-            th19.menu_input_mut().set_current(InputFlags::NULL.into());
+            th19.menu_input_mut().set_current(InputValue::empty());
             false
         }
         (ScreenId::GameLoading, GameMode::Versus, _) => true,
@@ -250,10 +250,10 @@ fn move_to_battle_player_inputs(
         | (ScreenId::DifficultySelect, _, _) => {
             input_devices
                 .p1_input_mut()
-                .set_current(InputFlags::NULL.into());
+                .set_current(InputValue::empty());
             input_devices
                 .p2_input_mut()
-                .set_current(InputFlags::NULL.into());
+                .set_current(InputValue::empty());
             false
         }
         (ScreenId::CharacterSelect, GameMode::Versus, _) => {

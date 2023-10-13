@@ -1,9 +1,8 @@
-use flagset::flags;
+use flagset::{flags, FlagSet, InvalidBits};
 use getset::{CopyGetters, Getters, MutGetters, Setters};
 
 flags! {
     pub enum InputFlags: u32 {
-        NULL,
         SHOT,
         CHARGE,
         BOMB,
@@ -16,12 +15,30 @@ flags! {
     }
 }
 
-#[derive(Clone, Copy, PartialEq)]
-pub struct InputValue(pub u32);
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct InputValue(FlagSet<InputFlags>);
+
+impl InputValue {
+    pub fn empty() -> Self {
+        Self(None.into())
+    }
+
+    pub fn bits(&self) -> u32 {
+        self.0.bits()
+    }
+}
+
+impl TryFrom<u32> for InputValue {
+    type Error = InvalidBits;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        Ok(Self(FlagSet::<InputFlags>::new(value)?))
+    }
+}
 
 impl From<InputFlags> for InputValue {
-    fn from(value: InputFlags) -> Self {
-        Self(value as u32)
+    fn from(flag: InputFlags) -> Self {
+        Self(flag.into())
     }
 }
 
