@@ -1,7 +1,7 @@
 use std::sync::mpsc::RecvError;
 
 use anyhow::Result;
-use junowen_lib::{Input, Th19};
+use junowen_lib::{InputValue, Th19};
 
 use crate::{
     helper::inputed_number,
@@ -12,20 +12,23 @@ pub fn on_input_players(session: &mut Session, th19: &mut Th19) -> Result<(), Re
     // -1フレーム目、0フレーム目は複数回呼ばれ、回数が不定なのでスキップする
     if th19.round().unwrap().frame < 1 {
         let input_devices = th19.input_devices_mut();
-        input_devices.set_p1_input(Input(0));
-        input_devices.set_p2_input(Input(0));
+        input_devices.p1_input_mut().set_current(InputValue(0));
+        input_devices.p2_input_mut().set_current(InputValue(0));
     } else {
-        let input_devices = th19.input_devices();
+        let input_devices = th19.input_devices_mut();
         let delay = if session.host() {
             inputed_number(input_devices)
         } else {
             None
         };
-        let (p1, p2) =
-            session.enqueue_input_and_dequeue(input_devices.p1_input().0 as u16, delay)?;
-        let input_devices = th19.input_devices_mut();
-        input_devices.set_p1_input(Input(p1 as u32));
-        input_devices.set_p2_input(Input(p2 as u32));
+        let (p1, p2) = session
+            .enqueue_input_and_dequeue(input_devices.p1_input().current().0 as u16, delay)?;
+        input_devices
+            .p1_input_mut()
+            .set_current(InputValue(p1 as u32));
+        input_devices
+            .p2_input_mut()
+            .set_current(InputValue(p2 as u32));
     }
     Ok(())
 }

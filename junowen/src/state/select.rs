@@ -1,7 +1,7 @@
 use std::sync::mpsc::RecvError;
 
 use anyhow::Result;
-use junowen_lib::{th19_helpers::reset_cursors, Input, Menu, ScreenId, Th19};
+use junowen_lib::{th19_helpers::reset_cursors, InputValue, Menu, ScreenId, Th19};
 
 use crate::{
     helper::inputed_number,
@@ -67,16 +67,20 @@ pub fn on_input_players(
         return Ok(());
     }
 
-    let input_devices = th19.input_devices();
+    let input_devices = th19.input_devices_mut();
     let delay = if session.host() {
         inputed_number(input_devices)
     } else {
         None
     };
-    let (p1, p2) = session.enqueue_input_and_dequeue(input_devices.p1_input().0 as u16, delay)?;
-    let input_devices = th19.input_devices_mut();
-    input_devices.set_p1_input(Input(p1 as u32));
-    input_devices.set_p2_input(Input(p2 as u32));
+    let (p1, p2) =
+        session.enqueue_input_and_dequeue(input_devices.p1_input().current().0 as u16, delay)?;
+    input_devices
+        .p1_input_mut()
+        .set_current(InputValue(p1 as u32));
+    input_devices
+        .p2_input_mut()
+        .set_current(InputValue(p2 as u32));
 
     Ok(())
 }
@@ -96,9 +100,10 @@ pub fn on_input_menu(session: &mut Session, th19: &mut Th19) -> Result<(), RecvE
     } else {
         None
     };
-    let (p1, p2) = session.enqueue_input_and_dequeue(th19.menu_input().0 as u16, delay)?;
+    let menu_input = th19.menu_input_mut();
+    let (p1, p2) = session.enqueue_input_and_dequeue(menu_input.current().0 as u16, delay)?;
     let input = if p1 != 0 { p1 } else { p2 };
-    th19.set_menu_input(Input(input as u32));
+    menu_input.set_current(InputValue(input as u32));
     Ok(())
 }
 

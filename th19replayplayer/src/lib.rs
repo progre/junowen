@@ -11,8 +11,8 @@ use bytes::{Buf, BytesMut};
 use interprocess::os::windows::named_pipe::{ByteReaderPipeStream, PipeListenerOptions, PipeMode};
 use junowen_lib::{
     th19_helpers::{select_cursor, shot_repeatedly, AutomaticInputs},
-    Difficulty, FnOfHookAssembly, GameMode, GameSettings, Input, InputDevices, Menu, PlayerMatchup,
-    Round, ScreenId, Th19,
+    Difficulty, FnOfHookAssembly, GameMode, GameSettings, Input, InputDevices, InputValue, Menu,
+    PlayerMatchup, Round, ScreenId, Th19,
 };
 use th19replayplayer_lib::{FileInputList, ReplayFile};
 use windows::Win32::{
@@ -172,15 +172,21 @@ fn tick_battle(input_devices: &mut InputDevices, battle: &Round, replay_file: &R
                 return false;
             }
             let (p1_input, p2_input) = vec[battle.frame as usize];
-            input_devices.set_p1_input(Input(p1_input as u32));
-            input_devices.set_p2_input(Input(p2_input as u32));
+            input_devices
+                .p1_input_mut()
+                .set_current(InputValue(p1_input as u32));
+            input_devices
+                .p2_input_mut()
+                .set_current(InputValue(p2_input as u32));
         }
         FileInputList::HumanVsCpu(vec) => {
             if battle.frame as usize >= vec.len() {
                 return false;
             }
             let p1_input = vec[battle.frame as usize];
-            input_devices.set_p1_input(Input(p1_input as u32));
+            input_devices
+                .p1_input_mut()
+                .set_current(InputValue(p1_input as u32));
         }
     }
     true
@@ -208,15 +214,15 @@ fn move_to_battle_menu_input(
             GameMode::Versus,
             PlayerMatchup::HumanVsHuman | PlayerMatchup::HumanVsCpu | PlayerMatchup::CpuVsCpu,
         ) => {
-            th19.set_menu_input(select_cursor(
-                th19.prev_menu_input(),
+            th19.menu_input_mut().set_current(select_cursor(
+                th19.menu_input().prev(),
                 &mut menu.cursor,
                 inits.difficulty as u32,
             ));
             false
         }
         (ScreenId::CharacterSelect, GameMode::Versus, _) => {
-            th19.set_menu_input(Input::NULL.into());
+            th19.menu_input_mut().set_current(Input::NULL.into());
             false
         }
         (ScreenId::GameLoading, GameMode::Versus, _) => true,
@@ -242,8 +248,8 @@ fn move_to_battle_player_inputs(
         | (ScreenId::Title, _, _)
         | (ScreenId::PlayerMatchupSelect, _, _)
         | (ScreenId::DifficultySelect, _, _) => {
-            input_devices.set_p1_input(Input::NULL.into());
-            input_devices.set_p2_input(Input::NULL.into());
+            input_devices.p1_input_mut().set_current(Input::NULL.into());
+            input_devices.p2_input_mut().set_current(Input::NULL.into());
             false
         }
         (ScreenId::CharacterSelect, GameMode::Versus, _) => {
@@ -253,8 +259,10 @@ fn move_to_battle_player_inputs(
             th19.selection_mut().p2_mut().card = inits.p2_card as u32;
             th19.put_game_settings_in_game(inits.battle_settings)
                 .unwrap();
-            input_devices.set_p1_input(shot_repeatedly(input_devices.p1_prev_input()));
-            input_devices.set_p2_input(shot_repeatedly(input_devices.p2_prev_input()));
+            let p1 = shot_repeatedly(input_devices.p1_input().prev());
+            input_devices.p1_input_mut().set_current(p1);
+            let p2 = shot_repeatedly(input_devices.p2_input().prev());
+            input_devices.p2_input_mut().set_current(p2);
             false
         }
         (ScreenId::GameLoading, GameMode::Versus, _) => true,

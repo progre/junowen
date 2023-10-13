@@ -15,7 +15,7 @@ pub use crate::memory_accessors::FnOfHookAssembly;
 use crate::{
     hook,
     memory_accessors::{ExternalProcess, HookedProcess, MemoryAccessor},
-    pointer, ptr_opt, u16_prop, u32_prop, value, value_ref,
+    pointer, ptr_opt, u16_prop, u32_prop, value_ref,
 };
 pub use app::*;
 pub use inputdevices::*;
@@ -197,10 +197,9 @@ impl Th19 {
     u32_prop!(0x1ae434, rand_seed8, set_rand_seed8); // frame 依存 インクリメント
     ptr_opt!(0x_1ae464, round, Round);
     pointer!(0x_1ae60c, player_name, PlayerName);
-    value!(0x200850, p1_input, Input);
-    value!(0x200b10, p2_input, Input);
-    value!(0x200dd0, menu_input, set_menu_input, Input);
-    value!(0x200dd4, prev_menu_input, Input);
+    value_ref!(0x200850, p1_input, Input);
+    value_ref!(0x200b10, p2_input, Input);
+    value_ref!(0x200dd0, menu_input, menu_input_mut, Input);
 
     value_ref!(0x207910, selection, selection_mut, Selection);
 
@@ -241,14 +240,14 @@ impl Th19 {
 
     // -------------------------------------------------------------------------
 
-    fn value<T>(&self, addr: usize) -> T
+    fn _value<T>(&self, addr: usize) -> T
     where
         T: Copy,
     {
         let p_obj = self.hooked_process_memory_accessor().raw_ptr(addr) as *const T;
         unsafe { *p_obj }
     }
-    fn set_value<T>(&mut self, addr: usize, value: T)
+    fn _set_value<T>(&mut self, addr: usize, value: T)
     where
         T: Copy,
     {

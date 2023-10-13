@@ -1,29 +1,29 @@
 use tracing::{trace, warn};
 
-use crate::{GameMode, PlayerMatchup, Th19};
+use crate::{GameMode, InputValue, PlayerMatchup, Th19};
 
 use super::{
     app::{Menu, ScreenId},
     inputdevices::Input,
 };
 
-pub fn shot_repeatedly(prev: Input) -> Input {
+pub fn shot_repeatedly(prev: InputValue) -> InputValue {
     if prev.0 == Input::SHOT as u32 {
-        Input(Input::NULL as u32)
+        InputValue(Input::NULL as u32)
     } else {
-        Input(Input::SHOT as u32)
+        InputValue(Input::SHOT as u32)
     }
 }
 
-fn escape_repeatedly(prev: Input) -> Input {
+fn escape_repeatedly(prev: InputValue) -> InputValue {
     if prev.0 == Input::START as u32 {
-        Input(Input::NULL as u32)
+        InputValue(Input::NULL as u32)
     } else {
-        Input(Input::START as u32)
+        InputValue(Input::START as u32)
     }
 }
 
-pub fn select_cursor(prev_input: Input, current_cursor: &mut u32, target: u32) -> Input {
+pub fn select_cursor(prev_input: InputValue, current_cursor: &mut u32, target: u32) -> InputValue {
     if *current_cursor != target {
         *current_cursor = target;
     }
@@ -64,8 +64,9 @@ impl AutomaticInputs {
             Self::TransitionToTitle => transfer_to_title_on_input_players(th19),
             _ => {
                 let (p1, p2) = (Input::NULL.into(), Input::NULL.into());
-                th19.input_devices_mut().set_p1_input(p1);
-                th19.input_devices_mut().set_p2_input(p2);
+                let input_devices = th19.input_devices_mut();
+                input_devices.p1_input_mut().set_current(p1);
+                input_devices.p2_input_mut().set_current(p2);
             }
         }
     }
@@ -86,8 +87,8 @@ fn transfer_to_title_on_input_players(th19: &mut Th19) {
     let (p1, p2) = if let Some(menu) = th19.app_mut().main_loop_tasks_mut().find_menu_mut() {
         match menu.screen_id {
             ScreenId::CharacterSelect => (
-                escape_repeatedly(input_devices.p1_prev_input()),
-                escape_repeatedly(input_devices.p2_prev_input()),
+                escape_repeatedly(input_devices.p1_input().prev()),
+                escape_repeatedly(input_devices.p2_input().prev()),
             ),
             ScreenId::Archievements => (
                 Input::SHOT.into(), // skip ending
@@ -95,53 +96,53 @@ fn transfer_to_title_on_input_players(th19: &mut Th19) {
             ),
             ScreenId::Option => return,
             _ => (
-                escape_repeatedly(th19.prev_menu_input()),
+                escape_repeatedly(th19.menu_input().prev()),
                 Input::NULL.into(),
             ),
         }
     } else if let Some(game) = th19.app_mut().main_loop_tasks_mut().find_game_mut() {
         if game.pause() == 0 {
             (
-                escape_repeatedly(input_devices.p1_prev_input()),
-                escape_repeatedly(input_devices.p2_prev_input()),
+                escape_repeatedly(input_devices.p1_input().prev()),
+                escape_repeatedly(input_devices.p2_input().prev()),
             )
         } else if game.depth() == 0 {
             game.set_cursor(1);
             (
-                shot_repeatedly(input_devices.p1_prev_input()),
-                shot_repeatedly(input_devices.p2_prev_input()),
+                shot_repeatedly(input_devices.p1_input().prev()),
+                shot_repeatedly(input_devices.p2_input().prev()),
             )
         } else {
             game.set_cursor(0);
             (
-                shot_repeatedly(input_devices.p1_prev_input()),
-                shot_repeatedly(input_devices.p2_prev_input()),
+                shot_repeatedly(input_devices.p1_input().prev()),
+                shot_repeatedly(input_devices.p2_input().prev()),
             )
         }
     } else {
         (Input::NULL.into(), Input::NULL.into())
     };
-    input_devices.set_p1_input(p1);
-    input_devices.set_p2_input(p2);
+    input_devices.p1_input_mut().set_current(p1);
+    input_devices.p2_input_mut().set_current(p2);
 }
 
 fn transfer_to_title_on_input_menu(th19: &mut Th19, menu: &Menu) -> bool {
     trace!("menu.screen_id: {:x?}", menu.screen_id);
     let menu_input = match menu.screen_id {
         ScreenId::TitleLoading => return false,
-        ScreenId::Title => Input(0),
+        ScreenId::Title => InputValue(0),
         ScreenId::ControllerSelect => 'a: {
             let Some(ctrler_select) = th19
                 .app_mut()
                 .main_loop_tasks_mut()
                 .find_controller_select_mut()
             else {
-                break 'a Input(Input::NULL as u32);
+                break 'a InputValue(Input::NULL as u32);
             };
             if ctrler_select.depth == 1 {
                 return false;
             }
-            select_cursor(th19.prev_menu_input(), &mut ctrler_select.cursor, 3)
+            select_cursor(th19.menu_input().prev(), &mut ctrler_select.cursor, 3)
         }
         ScreenId::Option => 'a: {
             if th19
@@ -150,15 +151,15 @@ fn transfer_to_title_on_input_menu(th19: &mut Th19, menu: &Menu) -> bool {
                 .find_controller_select_mut()
                 .is_none()
             {
-                break 'a escape_repeatedly(th19.prev_menu_input());
+                break 'a escape_repeatedly(th19.menu_input().prev());
             }
             // NOTE: Can't determine whether it is in key config or not,
             //       so control is not possible.
             return false;
         }
-        _ => escape_repeatedly(th19.prev_menu_input()),
+        _ => escape_repeatedly(th19.menu_input().prev()),
     };
-    th19.set_menu_input(menu_input);
+    th19.menu_input_mut().set_current(menu_input);
     true
 }
 
@@ -171,9 +172,9 @@ fn resolve_keyboard_full_conflict(th19: &mut Th19, menu: &mut Menu) -> bool {
         th19.selection().game_mode,
         th19.selection().player_matchup,
     ) {
-        (ScreenId::Title, _, _) => select_cursor(th19.prev_menu_input(), &mut menu.cursor, 1),
+        (ScreenId::Title, _, _) => select_cursor(th19.menu_input().prev(), &mut menu.cursor, 1),
         (ScreenId::PlayerMatchupSelect, _, _) => {
-            select_cursor(th19.prev_menu_input(), &mut menu.cursor, 4)
+            select_cursor(th19.menu_input().prev(), &mut menu.cursor, 4)
         }
         (ScreenId::ControllerSelect, _, _) => {
             if let Some(ctrler_select) = th19
@@ -182,18 +183,18 @@ fn resolve_keyboard_full_conflict(th19: &mut Th19, menu: &mut Menu) -> bool {
                 .find_controller_select_mut()
             {
                 ctrler_select.cursor = 1;
-                if th19.prev_menu_input().0 == Input::LEFT as u32 {
-                    Input(Input::NULL as u32)
+                if th19.menu_input().prev().0 == Input::LEFT as u32 {
+                    InputValue(Input::NULL as u32)
                 } else {
-                    Input(Input::LEFT as u32)
+                    InputValue(Input::LEFT as u32)
                 }
             } else {
-                Input(Input::NULL as u32)
+                InputValue(Input::NULL as u32)
             }
         }
-        _ => escape_repeatedly(th19.prev_menu_input()),
+        _ => escape_repeatedly(th19.menu_input().prev()),
     };
-    th19.set_menu_input(menu_input);
+    th19.menu_input_mut().set_current(menu_input);
     true
 }
 
@@ -202,30 +203,32 @@ fn transfer_to_local_versus_difficulty_select(
     menu: &mut Menu,
     target_player_matchup: PlayerMatchup,
 ) -> bool {
-    th19.set_menu_input(
+    th19.menu_input_mut().set_current(
         match (
             menu.screen_id,
             th19.selection().game_mode,
             th19.selection().player_matchup,
         ) {
-            (ScreenId::TitleLoading, _, _) => Input(0),
-            (ScreenId::Title, _, _) => select_cursor(th19.prev_menu_input(), &mut menu.cursor, 1),
+            (ScreenId::TitleLoading, _, _) => InputValue(0),
+            (ScreenId::Title, _, _) => {
+                select_cursor(th19.menu_input_mut().prev(), &mut menu.cursor, 1)
+            }
             (ScreenId::PlayerMatchupSelect, _, _) => {
                 let target = if target_player_matchup == PlayerMatchup::HumanVsCpu {
                     1
                 } else {
                     0
                 };
-                select_cursor(th19.prev_menu_input(), &mut menu.cursor, target)
+                select_cursor(th19.menu_input_mut().prev(), &mut menu.cursor, target)
             }
             (
                 ScreenId::DifficultySelect,
                 GameMode::Versus,
                 PlayerMatchup::HumanVsHuman | PlayerMatchup::HumanVsCpu | PlayerMatchup::CpuVsCpu,
-            ) => Input(0),
+            ) => InputValue(0),
             _ => {
                 warn!("unsupported screen {}", menu.screen_id as u32);
-                Input(0)
+                InputValue(0)
             }
         },
     );
