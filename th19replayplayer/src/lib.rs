@@ -11,8 +11,8 @@ use bytes::{Buf, BytesMut};
 use interprocess::os::windows::named_pipe::{ByteReaderPipeStream, PipeListenerOptions, PipeMode};
 use junowen_lib::{
     th19_helpers::{select_cursor, shot_repeatedly, AutomaticInputs},
-    Difficulty, FnOfHookAssembly, GameMode, GameSettings, Input, InputDevices, InputValue, Menu,
-    PlayerMatchup, Round, ScreenId, Th19,
+    Difficulty, FnOfHookAssembly, GameMode, GameSettings, InputDevices, InputFlags, InputValue,
+    Menu, PlayerMatchup, Round, ScreenId, Th19,
 };
 use th19replayplayer_lib::{FileInputList, ReplayFile};
 use windows::Win32::{
@@ -222,7 +222,7 @@ fn move_to_battle_menu_input(
             false
         }
         (ScreenId::CharacterSelect, GameMode::Versus, _) => {
-            th19.menu_input_mut().set_current(Input::NULL.into());
+            th19.menu_input_mut().set_current(InputFlags::NULL.into());
             false
         }
         (ScreenId::GameLoading, GameMode::Versus, _) => true,
@@ -248,8 +248,12 @@ fn move_to_battle_player_inputs(
         | (ScreenId::Title, _, _)
         | (ScreenId::PlayerMatchupSelect, _, _)
         | (ScreenId::DifficultySelect, _, _) => {
-            input_devices.p1_input_mut().set_current(Input::NULL.into());
-            input_devices.p2_input_mut().set_current(Input::NULL.into());
+            input_devices
+                .p1_input_mut()
+                .set_current(InputFlags::NULL.into());
+            input_devices
+                .p2_input_mut()
+                .set_current(InputFlags::NULL.into());
             false
         }
         (ScreenId::CharacterSelect, GameMode::Versus, _) => {

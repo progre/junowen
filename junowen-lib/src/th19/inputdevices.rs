@@ -1,23 +1,26 @@
+use flagset::flags;
 use getset::{CopyGetters, Getters, MutGetters, Setters};
+
+flags! {
+    pub enum InputFlags: u32 {
+        NULL,
+        SHOT,
+        CHARGE,
+        BOMB,
+        SLOW,
+        UP,
+        DOWN,
+        LEFT,
+        RIGHT,
+        START,
+    }
+}
 
 #[derive(Clone, Copy, PartialEq)]
 pub struct InputValue(pub u32);
 
-impl Input {
-    pub const NULL:  /*-*/u16 = 0b00000000_00000000;
-    pub const SHOT:  /*-*/u16 = 0b00000000_00000001;
-    pub const CHARGE:/*-*/u16 = 0b00000000_00000010;
-    pub const BOMB:  /*-*/u16 = 0b00000000_00000100;
-    pub const SLOW:  /*-*/u16 = 0b00000000_00001000;
-    pub const UP:    /*-*/u16 = 0b00000000_00010000;
-    pub const DOWN:  /*-*/u16 = 0b00000000_00100000;
-    pub const LEFT:  /*-*/u16 = 0b00000000_01000000;
-    pub const RIGHT: /*-*/u16 = 0b00000000_10000000;
-    pub const START: /*-*/u16 = 0b00000001_00000000;
-}
-
-impl From<u16> for InputValue {
-    fn from(value: u16) -> Self {
+impl From<InputFlags> for InputValue {
+    fn from(value: InputFlags) -> Self {
         Self(value as u32)
     }
 }

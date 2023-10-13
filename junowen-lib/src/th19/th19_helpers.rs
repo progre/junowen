@@ -1,25 +1,22 @@
 use tracing::{trace, warn};
 
-use crate::{GameMode, InputValue, PlayerMatchup, Th19};
+use crate::{GameMode, InputFlags, InputValue, PlayerMatchup, Th19};
 
-use super::{
-    app::{Menu, ScreenId},
-    inputdevices::Input,
-};
+use super::app::{Menu, ScreenId};
 
 pub fn shot_repeatedly(prev: InputValue) -> InputValue {
-    if prev.0 == Input::SHOT as u32 {
-        InputValue(Input::NULL as u32)
+    if prev.0 == InputFlags::SHOT as u32 {
+        InputValue(InputFlags::NULL as u32)
     } else {
-        InputValue(Input::SHOT as u32)
+        InputValue(InputFlags::SHOT as u32)
     }
 }
 
 fn escape_repeatedly(prev: InputValue) -> InputValue {
-    if prev.0 == Input::START as u32 {
-        InputValue(Input::NULL as u32)
+    if prev.0 == InputFlags::START as u32 {
+        InputValue(InputFlags::NULL as u32)
     } else {
-        InputValue(Input::START as u32)
+        InputValue(InputFlags::START as u32)
     }
 }
 
@@ -63,7 +60,7 @@ impl AutomaticInputs {
         match self {
             Self::TransitionToTitle => transfer_to_title_on_input_players(th19),
             _ => {
-                let (p1, p2) = (Input::NULL.into(), Input::NULL.into());
+                let (p1, p2) = (InputFlags::NULL.into(), InputFlags::NULL.into());
                 let input_devices = th19.input_devices_mut();
                 input_devices.p1_input_mut().set_current(p1);
                 input_devices.p2_input_mut().set_current(p2);
@@ -91,13 +88,13 @@ fn transfer_to_title_on_input_players(th19: &mut Th19) {
                 escape_repeatedly(input_devices.p2_input().prev()),
             ),
             ScreenId::Archievements => (
-                Input::SHOT.into(), // skip ending
-                Input::NULL.into(),
+                InputFlags::SHOT.into(), // skip ending
+                InputFlags::NULL.into(),
             ),
             ScreenId::Option => return,
             _ => (
                 escape_repeatedly(th19.menu_input().prev()),
-                Input::NULL.into(),
+                InputFlags::NULL.into(),
             ),
         }
     } else if let Some(game) = th19.app_mut().main_loop_tasks_mut().find_game_mut() {
@@ -120,7 +117,7 @@ fn transfer_to_title_on_input_players(th19: &mut Th19) {
             )
         }
     } else {
-        (Input::NULL.into(), Input::NULL.into())
+        (InputFlags::NULL.into(), InputFlags::NULL.into())
     };
     input_devices.p1_input_mut().set_current(p1);
     input_devices.p2_input_mut().set_current(p2);
@@ -137,7 +134,7 @@ fn transfer_to_title_on_input_menu(th19: &mut Th19, menu: &Menu) -> bool {
                 .main_loop_tasks_mut()
                 .find_controller_select_mut()
             else {
-                break 'a InputValue(Input::NULL as u32);
+                break 'a InputValue(InputFlags::NULL as u32);
             };
             if ctrler_select.depth == 1 {
                 return false;
@@ -183,13 +180,13 @@ fn resolve_keyboard_full_conflict(th19: &mut Th19, menu: &mut Menu) -> bool {
                 .find_controller_select_mut()
             {
                 ctrler_select.cursor = 1;
-                if th19.menu_input().prev().0 == Input::LEFT as u32 {
-                    InputValue(Input::NULL as u32)
+                if th19.menu_input().prev().0 == InputFlags::LEFT as u32 {
+                    InputValue(InputFlags::NULL as u32)
                 } else {
-                    InputValue(Input::LEFT as u32)
+                    InputValue(InputFlags::LEFT as u32)
                 }
             } else {
-                InputValue(Input::NULL as u32)
+                InputValue(InputFlags::NULL as u32)
             }
         }
         _ => escape_repeatedly(th19.menu_input().prev()),
