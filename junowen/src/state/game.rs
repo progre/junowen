@@ -1,14 +1,24 @@
 use std::sync::mpsc::RecvError;
 
 use anyhow::Result;
-use junowen_lib::{InputValue, Th19};
+use junowen_lib::{InputValue, Menu, Th19};
 
 use crate::{
     helper::inputed_number,
     session::{RoundInitial, Session},
 };
 
-pub fn on_input_players(session: &mut Session, th19: &mut Th19) -> Result<(), RecvError> {
+use super::State;
+
+pub fn update_state(state: &mut State) -> Option<(bool, Option<&'static Menu>)> {
+    if state.th19.round().is_some() {
+        return Some((false, None));
+    }
+    state.change_to_back_to_select();
+    Some((true, None))
+}
+
+pub fn update_th19(session: &mut Session, th19: &mut Th19) -> Result<(), RecvError> {
     // -1フレーム目、0フレーム目は複数回呼ばれ、回数が不定なのでスキップする
     if th19.round().unwrap().frame < 1 {
         let input_devices = th19.input_devices_mut();

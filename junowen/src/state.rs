@@ -1,13 +1,14 @@
 mod game;
+mod in_session;
 mod prepare;
 mod select;
 
-use std::sync::mpsc::RecvError;
+use std::{ffi::c_void, sync::mpsc::RecvError};
 
 use anyhow::Result;
 use getset::{Getters, MutGetters};
 use junowen_lib::{Fn10f720, Menu, ScreenId, Th19};
-use tracing::debug;
+use tracing::{debug, trace};
 
 use crate::{
     session::{MatchInitial, Session},
@@ -114,60 +115,8 @@ fn update_state(state: &mut State, props: &Props) -> Option<(bool, Option<&'stat
         }
         NetBattleState::Prepare {
             state: prepare_state,
-        } => {
-            let Some(menu) = state.th19.app_mut().main_loop_tasks_mut().find_menu_mut() else {
-                return Some((false, None));
-            };
-            match prepare_state {
-                0 => {
-                    if menu.screen_id != ScreenId::Title {
-                        return Some((false, Some(menu)));
-                    }
-                    state.change_to_prepare(
-                        if state.th19.input_devices().is_conflict_keyboard_full() {
-                            1
-                        } else {
-                            2
-                        },
-                    );
-                    Some((true, Some(menu)))
-                }
-                1 => {
-                    if state.th19.input_devices().is_conflict_keyboard_full() {
-                        return Some((false, Some(menu)));
-                    }
-                    state.change_to_prepare(0);
-                    Some((true, Some(menu)))
-                }
-                2 => {
-                    if menu.screen_id != ScreenId::DifficultySelect {
-                        return Some((false, Some(menu)));
-                    }
-                    state.change_to_select();
-                    Some((true, Some(menu)))
-                }
-                _ => unreachable!(),
-            }
-        }
-        NetBattleState::Select { .. } => {
-            let menu = state
-                .th19
-                .app_mut()
-                .main_loop_tasks_mut()
-                .find_menu_mut()
-                .unwrap();
-            match menu.screen_id {
-                ScreenId::GameLoading => {
-                    state.change_to_game_loading();
-                    Some((true, Some(menu)))
-                }
-                ScreenId::PlayerMatchupSelect => {
-                    state.end_session();
-                    None
-                }
-                _ => Some((false, Some(menu))),
-            }
-        }
+        } => prepare::update_state(state, prepare_state),
+        NetBattleState::Select { .. } => select::update_state(state),
         NetBattleState::GameLoading => {
             let Some(game) = state.th19.round() else {
                 return Some((false, None));
@@ -178,13 +127,7 @@ fn update_state(state: &mut State, props: &Props) -> Option<(bool, Option<&'stat
             state.change_to_game();
             Some((true, None))
         }
-        NetBattleState::Game { session: _, th19 } => {
-            if th19.round().is_some() {
-                return Some((false, None));
-            }
-            state.change_to_back_to_select();
-            Some((true, None))
-        }
+        NetBattleState::Game { .. } => game::update_state(state),
         NetBattleState::BackToSelect => {
             let Some(menu) = state.th19.app_mut().main_loop_tasks_mut().find_menu_mut() else {
                 return Some((false, None));
@@ -208,16 +151,22 @@ fn update_th19_on_input_players(
         NetBattleState::Prepare {
             state: prepare_state,
         } => {
-            prepare::on_input_players(&mut state.th19, prepare_state);
+            prepare::update_th19_on_input_players(&mut state.th19, prepare_state);
             Ok(())
         }
         NetBattleState::Select {
             th19,
             session,
             match_initial,
-        } => select::on_input_players(changed, session, menu.unwrap(), th19, match_initial),
+        } => select::update_th19_on_input_players(
+            changed,
+            session,
+            menu.unwrap(),
+            th19,
+            match_initial,
+        ),
         NetBattleState::GameLoading => Ok(()),
-        NetBattleState::Game { session, th19 } => game::on_input_players(session, th19),
+        NetBattleState::Game { session, th19 } => game::update_th19(session, th19),
         NetBattleState::BackToSelect => Ok(()),
     }
 }
@@ -237,13 +186,13 @@ pub fn on_input_menu(state: &mut State) {
         NetBattleState::Standby => {}
         NetBattleState::Prepare {
             state: prepare_state,
-        } => prepare::on_input_menu(&mut state.th19, prepare_state),
+        } => prepare::update_th19_on_input_menu(&mut state.th19, prepare_state),
         NetBattleState::Select {
             th19,
             session,
             match_initial: _,
         } => {
-            if let Err(err) = select::on_input_menu(session, th19) {
+            if let Err(err) = select::update_th19_on_input_menu(session, th19) {
                 debug!("session aborted: {}", err);
                 state.end_session();
             }
@@ -251,6 +200,12 @@ pub fn on_input_menu(state: &mut State) {
         NetBattleState::GameLoading => {}
         NetBattleState::Game { .. } => {}
         NetBattleState::BackToSelect => {}
+    }
+}
+
+pub fn on_render_texts(text_renderer: *const c_void, state: &State) {
+    if let Some(session) = state.session() {
+        in_session::on_render_texts(text_renderer, state, session)
     }
 }
 
@@ -264,6 +219,11 @@ pub fn on_round_over(state: &mut State) {
 }
 
 pub fn on_rewrite_controller_assignments(old_fn: Fn10f720, state: &mut State) {
+    trace!(
+        "on_rewrite_controller_assignments: state.state={:x}",
+        state.state
+    );
+
     let mut old_p1_idx = 0;
     if !matches!(state.net_battle_state(), NetBattleState::Standby) {
         old_p1_idx = state.th19.input_devices().p1_idx;

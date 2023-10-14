@@ -8,7 +8,29 @@ use crate::{
     session::{MatchInitial, RoundInitial, Session},
 };
 
-pub fn on_input_players(
+use super::State;
+
+pub fn update_state(state: &mut State) -> Option<(bool, Option<&'static Menu>)> {
+    let menu = state
+        .th19
+        .app_mut()
+        .main_loop_tasks_mut()
+        .find_menu_mut()
+        .unwrap();
+    match menu.screen_id {
+        ScreenId::GameLoading => {
+            state.change_to_game_loading();
+            Some((true, Some(menu)))
+        }
+        ScreenId::PlayerMatchupSelect => {
+            state.end_session();
+            None
+        }
+        _ => Some((false, Some(menu))),
+    }
+}
+
+pub fn update_th19_on_input_players(
     first_time: bool,
     session: &mut Session,
     menu: &Menu,
@@ -85,7 +107,7 @@ pub fn on_input_players(
     Ok(())
 }
 
-pub fn on_input_menu(session: &mut Session, th19: &mut Th19) -> Result<(), RecvError> {
+pub fn update_th19_on_input_menu(session: &mut Session, th19: &mut Th19) -> Result<(), RecvError> {
     let menu = th19
         .app_mut()
         .main_loop_tasks_mut()

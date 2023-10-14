@@ -9,8 +9,7 @@ use std::{ffi::c_void, path::PathBuf, sync::mpsc};
 
 use junowen_lib::{
     hook_utils::{calc_th19_hash, WELL_KNOWN_VERSION_HASHES},
-    Fn009fa0, Fn011560, Fn0d6e10, Fn1049e0, Fn10f720, FnOfHookAssembly, RenderingText, Selection,
-    Th19,
+    Fn009fa0, Fn011560, Fn0d6e10, Fn1049e0, Fn10f720, FnOfHookAssembly, Selection, Th19,
 };
 use session::Session;
 use state::State;
@@ -72,54 +71,9 @@ extern "fastcall" fn on_input_menu() {
     }
 }
 
-extern "thiscall" fn on_render_text(this: *const c_void, arg: *const c_void) -> u32 {
-    let ret = (props().old_fn_from_0d7180_0008)(this, arg);
-
-    let state = state();
-    if let Some(session) = state.session() {
-        let th19 = state.th19();
-        let mut text = RenderingText::default();
-        text.set_text(
-            format!(
-                "Ju.N.Owen (v{}) Delay: {}",
-                env!("CARGO_PKG_VERSION"),
-                session.delay()
-            )
-            .as_bytes(),
-        );
-        text.x = (16 * th19.screen_width().unwrap() / 1280) as f32;
-        text.y = (940 * th19.screen_height().unwrap() / 960) as f32;
-        text.color = 0xffffffff;
-        text.font_type = 1;
-        th19.render_text(this, &text);
-
-        let (p1, p2) = if session.host() {
-            (
-                th19.player_name().player_name(),
-                session.remote_player_name().into(),
-            )
-        } else {
-            (
-                session.remote_player_name().into(),
-                th19.player_name().player_name(),
-            )
-        };
-        let mut text = RenderingText::default();
-        text.set_text(p1.as_bytes());
-        text.x = (16 * th19.screen_width().unwrap() / 1280) as f32;
-        text.y = (4 * th19.screen_height().unwrap() / 1280) as f32;
-        text.color = 0xffff8080;
-        th19.render_text(this, &text);
-
-        let mut text = RenderingText::default();
-        text.set_text(p2.as_bytes());
-        text.x = (1264 * th19.screen_width().unwrap() / 1280) as f32;
-        text.y = (4 * th19.screen_height().unwrap() / 1280) as f32;
-        text.color = 0xff8080ff;
-        text.horizontal_align = 2;
-        th19.render_text(this, &text);
-    }
-
+extern "thiscall" fn on_render_texts(text_renderer: *const c_void, arg: *const c_void) -> u32 {
+    let ret = (props().old_fn_from_0d7180_0008)(text_renderer, arg);
+    state::on_render_texts(text_renderer, state());
     ret
 }
 
@@ -137,10 +91,12 @@ fn is_online_vs(this: *const Selection, old: Fn011560) -> u8 {
     ret
 }
 
+/// for pause menu online vs view
 extern "thiscall" fn fn_from_1243f0_00f9(this: *const Selection) -> u8 {
     is_online_vs(this, props().old_fn_from_1243f0_00f9)
 }
 
+/// for pause menu online vs view
 extern "thiscall" fn fn_from_1243f0_0320(this: *const Selection) -> u8 {
     is_online_vs(this, props().old_fn_from_1243f0_0320)
 }
@@ -194,7 +150,7 @@ pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32
             th19.hook_on_input_players(on_input_players);
         let (old_on_input_menu, apply_hook_on_input_menu) = th19.hook_on_input_menu(on_input_menu);
         let (old_fn_from_0d7180_0008, apply_hook_0d7180_0008) =
-            th19.hook_0d7180_0008(on_render_text);
+            th19.hook_0d7180_0008(on_render_texts);
         let (old_fn_from_11f870_034c, apply_hook_11f870_034c) =
             th19.hook_11f870_034c(on_round_over);
         let (old_fn_from_1243f0_00f9, apply_hook_1243f0_00f9) =

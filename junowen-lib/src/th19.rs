@@ -158,11 +158,11 @@ impl Th19 {
         self.hook_assembly(ADDR, SIZE, dummy_from_0aba30_018e, target)
     }
 
-    pub fn render_text(&self, this: *const c_void, text: &RenderingText) -> u32 {
+    pub fn render_text(&self, text_renderer: *const c_void, text: &RenderingText) -> u32 {
         type Fn = extern "thiscall" fn(*const c_void, *const RenderingText) -> u32;
         const ADDR: usize = 0x0d5ae0;
         let ptr = self.hooked_process_memory_accessor().raw_ptr(ADDR);
-        (unsafe { transmute::<_, Fn>(ptr) })(this, text)
+        (unsafe { transmute::<_, Fn>(ptr) })(text_renderer, text)
     }
 
     hook!(0x0d7180 + 0x0008, hook_0d7180_0008, Fn0d6e10);
