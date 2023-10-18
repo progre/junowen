@@ -1,5 +1,6 @@
 mod cui;
 mod helper;
+mod in_game_lobby;
 mod interprocess;
 mod session;
 mod state;
@@ -9,7 +10,8 @@ use std::{ffi::c_void, path::PathBuf, sync::mpsc};
 
 use junowen_lib::{
     hook_utils::{calc_th19_hash, WELL_KNOWN_VERSION_HASHES},
-    Fn009fa0, Fn011560, Fn0d6e10, Fn1049e0, Fn10f720, FnOfHookAssembly, Selection, Th19,
+    Fn009fa0, Fn011560, Fn0b7d40, Fn0d5ae0, Fn0d6e10, Fn1049e0, Fn10f720, FnOfHookAssembly,
+    RenderingText, Selection, Th19,
 };
 use session::Session;
 use state::State;
@@ -33,6 +35,8 @@ static mut STATE: Option<State> = None;
 struct Props {
     old_on_input_players: Option<FnOfHookAssembly>,
     old_on_input_menu: Option<FnOfHookAssembly>,
+    old_fn_from_0bed70_00fc: Fn0b7d40,
+    old_fn_from_0d6e10_0039: Fn0d5ae0,
     old_fn_from_0d7180_0008: Fn0d6e10,
     old_fn_from_11f870_034c: Fn1049e0,
     old_fn_from_1243f0_00f9: Fn011560,
@@ -71,9 +75,19 @@ extern "fastcall" fn on_input_menu() {
     }
 }
 
+extern "thiscall" fn render_object(this: *const c_void, obj: *const c_void) {
+    state::render_object(state_mut(), props().old_fn_from_0bed70_00fc, this, obj);
+}
+
+extern "thiscall" fn render_text(text_renderer: *const c_void, text: *mut RenderingText) -> u32 {
+    let old = props().old_fn_from_0d6e10_0039;
+    let text = unsafe { text.as_mut().unwrap() };
+    state::render_text(state_mut(), old, text_renderer, text)
+}
+
 extern "thiscall" fn on_render_texts(text_renderer: *const c_void, arg: *const c_void) -> u32 {
     let ret = (props().old_fn_from_0d7180_0008)(text_renderer, arg);
-    state::on_render_texts(text_renderer, state());
+    state::on_render_texts(state_mut(), text_renderer);
     ret
 }
 
@@ -149,6 +163,9 @@ pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32
         let (old_on_input_players, apply_hook_on_input_players) =
             th19.hook_on_input_players(on_input_players);
         let (old_on_input_menu, apply_hook_on_input_menu) = th19.hook_on_input_menu(on_input_menu);
+        let (old_fn_from_0bed70_00fc, apply_hook_0bed70_00fc) =
+            th19.hook_0bed70_00fc(render_object);
+        let (old_fn_from_0d6e10_0039, apply_hook_0d6e10_0039) = th19.hook_0d6e10_0039(render_text);
         let (old_fn_from_0d7180_0008, apply_hook_0d7180_0008) =
             th19.hook_0d7180_0008(on_render_texts);
         let (old_fn_from_11f870_034c, apply_hook_11f870_034c) =
@@ -168,6 +185,8 @@ pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32
             PROPS = Some(Props {
                 old_on_input_players,
                 old_on_input_menu,
+                old_fn_from_0bed70_00fc,
+                old_fn_from_0d6e10_0039,
                 old_fn_from_0d7180_0008,
                 old_fn_from_11f870_034c,
                 old_fn_from_1243f0_00f9,
@@ -181,6 +200,8 @@ pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32
         let th19 = &mut state_mut().th19_mut();
         apply_hook_on_input_players(th19);
         apply_hook_on_input_menu(th19);
+        apply_hook_0bed70_00fc(th19);
+        apply_hook_0d6e10_0039(th19);
         apply_hook_0d7180_0008(th19);
         apply_hook_11f870_034c(th19);
         apply_hook_1243f0_00f9(th19);

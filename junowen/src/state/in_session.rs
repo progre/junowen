@@ -6,7 +6,7 @@ use crate::session::Session;
 
 use super::State;
 
-pub fn on_render_texts(text_renderer: *const c_void, state: &State, session: &Session) {
+pub fn on_render_texts(session: &Session, state: &State, text_renderer: *const c_void) {
     let th19 = state.th19();
     let mut text = RenderingText::default();
     text.set_text(

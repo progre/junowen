@@ -2,15 +2,18 @@ mod game;
 mod in_session;
 mod prepare;
 mod select;
+mod standby;
 
 use std::{ffi::c_void, sync::mpsc::RecvError};
 
 use anyhow::Result;
 use getset::{Getters, MutGetters};
-use junowen_lib::{Fn10f720, Menu, ScreenId, Th19};
+use junowen_lib::{Fn0b7d40, Fn0d5ae0, Fn10f720, Menu, RenderingText, ScreenId, Th19};
+use tokio::sync::mpsc;
 use tracing::{debug, trace};
 
 use crate::{
+    in_game_lobby::{Lobby, TitleMenuModifier},
     session::{MatchInitial, Session},
     Props,
 };
@@ -36,21 +39,28 @@ enum NetBattleState<'a> {
 
 #[derive(Getters, MutGetters)]
 pub struct State {
+    session_rx: mpsc::Receiver<Session>,
     #[getset(get = "pub", get_mut = "pub")]
     th19: Th19,
     state: u8,
     #[getset(get = "pub")]
     session: Option<Session>,
     match_initial: Option<MatchInitial>,
+    title_menu_modifier: TitleMenuModifier,
+    lobby: Lobby,
 }
 
 impl State {
     pub fn new(th19: Th19) -> Self {
+        let (session_tx, session_rx) = mpsc::channel(1);
         Self {
+            session_rx,
             th19,
             state: 0x00,
             session: None,
             match_initial: None,
+            title_menu_modifier: TitleMenuModifier::new(),
+            lobby: Lobby::new(session_tx),
         }
     }
 
@@ -101,17 +111,23 @@ impl State {
         self.state = 0x00;
         self.session = None;
         self.match_initial = None;
+        self.lobby.reset_depth();
     }
 }
 
 fn update_state(state: &mut State, props: &Props) -> Option<(bool, Option<&'static Menu>)> {
     match state.net_battle_state() {
         NetBattleState::Standby => {
-            let Ok(session) = props.session_receiver.try_recv() else {
-                return None;
+            if let Ok(session) = props.session_receiver.try_recv() {
+                state.start_session(session);
+                return Some((true, None));
+            }
+            if let Ok(session) = state.session_rx.try_recv() {
+                trace!("session received");
+                state.start_session(session);
+                return Some((true, None));
             };
-            state.start_session(session);
-            Some((true, None))
+            None
         }
         NetBattleState::Prepare {
             state: prepare_state,
@@ -183,7 +199,7 @@ pub(crate) fn on_input_players(state: &mut State, props: &Props) {
 
 pub fn on_input_menu(state: &mut State) {
     match state.net_battle_state() {
-        NetBattleState::Standby => {}
+        NetBattleState::Standby => standby::on_input_menu(state),
         NetBattleState::Prepare {
             state: prepare_state,
         } => prepare::update_th19_on_input_menu(&mut state.th19, prepare_state),
@@ -203,9 +219,35 @@ pub fn on_input_menu(state: &mut State) {
     }
 }
 
-pub fn on_render_texts(text_renderer: *const c_void, state: &State) {
+pub fn render_object(
+    state: &mut State,
+    old: Fn0b7d40,
+    obj_renderer: *const c_void,
+    obj: *const c_void,
+) {
+    if matches!(state.net_battle_state(), NetBattleState::Standby) {
+        return standby::render_object(state, old, obj_renderer, obj);
+    }
+    old(obj_renderer, obj);
+}
+
+pub fn render_text(
+    state: &mut State,
+    old: Fn0d5ae0,
+    text_renderer: *const c_void,
+    text: &mut RenderingText,
+) -> u32 {
+    if matches!(state.net_battle_state(), NetBattleState::Standby) {
+        return standby::render_text(state, old, text_renderer, text);
+    }
+    old(text_renderer, text)
+}
+
+pub fn on_render_texts(state: &mut State, text_renderer: *const c_void) {
     if let Some(session) = state.session() {
-        in_session::on_render_texts(text_renderer, state, session)
+        in_session::on_render_texts(session, state, text_renderer);
+    } else {
+        standby::on_render_texts(state, text_renderer);
     }
 }
 

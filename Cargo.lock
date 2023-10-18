@@ -994,8 +994,10 @@ version = "0.4.1"
 dependencies = [
  "anyhow",
  "bytes",
+ "clipboard-win",
  "getset",
  "junowen-lib",
+ "once_cell",
  "rmp-serde",
  "serde",
  "time",
