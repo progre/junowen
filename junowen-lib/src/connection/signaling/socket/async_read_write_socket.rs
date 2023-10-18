@@ -7,7 +7,7 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 use super::{super::CompressedSessionDesc, OfferResponse, SignalingSocket};
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub enum SignalingServerMessage {
     RequestAnswer(CompressedSessionDesc),
     SetAnswerDesc(CompressedSessionDesc),

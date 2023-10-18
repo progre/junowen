@@ -16,9 +16,13 @@ flags! {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct InputValue(FlagSet<InputFlags>);
+pub struct InputValue(pub FlagSet<InputFlags>);
 
 impl InputValue {
+    pub fn full() -> Self {
+        Self(FlagSet::full())
+    }
+
     pub fn empty() -> Self {
         Self(None.into())
     }
@@ -51,7 +55,16 @@ pub struct Input {
     prev: InputValue,
     #[getset(get_copy = "pub")]
     repeat: InputValue,
-    _prev_repeat: InputValue,
+    _repeat2: InputValue,
+    _unknown: [u8; 0x18],
+    #[getset(get_copy = "pub")]
+    up_repeat_count: u32,
+    #[getset(get_copy = "pub")]
+    down_repeat_count: u32,
+    #[getset(get_copy = "pub")]
+    left_repeat_count: u32,
+    #[getset(get_copy = "pub")]
+    right_repeat_count: u32,
     // ambiguous remains...
 }
 
@@ -62,7 +75,7 @@ pub struct InputDevice {
     _unknown1: [u8; 0x010],
     #[getset(get = "pub", get_mut = "pub")]
     input: Input,
-    _unknown2: [u8; 0x2a0],
+    _unknown2: [u8; 0x278],
     _unknown3: [u8; 0x010],
     #[getset(get = "pub")]
     raw_keys: [u8; 0x104],

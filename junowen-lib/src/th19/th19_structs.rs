@@ -206,7 +206,7 @@ impl fmt::Debug for RenderingText {
 }
 
 impl RenderingText {
-    pub fn text(&mut self) -> Result<&CStr, FromBytesUntilNulError> {
+    pub fn text(&self) -> Result<&CStr, FromBytesUntilNulError> {
         CStr::from_bytes_until_nul(&self.raw_text)
     }
 

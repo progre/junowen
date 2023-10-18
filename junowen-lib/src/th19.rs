@@ -21,13 +21,15 @@ pub use app::*;
 pub use inputdevices::*;
 pub use th19_structs::*;
 
-pub type Fn002530 = extern "thiscall" fn(this: *const c_void);
-pub type Fn009fa0 = extern "thiscall" fn(this: *const c_void, arg1: u32) -> u32;
-pub type Fn011560 = extern "thiscall" fn(this: *const Selection) -> u8;
-pub type Fn012480 = extern "thiscall" fn(this: *const c_void, arg1: u32) -> u32;
-pub type Fn0a9000 = extern "thiscall" fn(this: *const c_void);
-pub type Fn0d6e10 = extern "thiscall" fn(this: *const c_void, arg1: *const c_void) -> u32;
-pub type Fn102ff0 = extern "fastcall" fn(arg1: *const c_void);
+pub type Fn002530 = extern "thiscall" fn(*const c_void);
+pub type Fn009fa0 = extern "thiscall" fn(*const c_void, u32) -> u32;
+pub type Fn011560 = extern "thiscall" fn(*const Selection) -> u8;
+pub type Fn012480 = extern "thiscall" fn(*const c_void, u32) -> u32;
+pub type Fn0a9000 = extern "thiscall" fn(*const c_void);
+pub type Fn0b7d40 = extern "thiscall" fn(*const c_void, *const c_void);
+pub type Fn0d5ae0 = extern "thiscall" fn(*const c_void, *mut RenderingText) -> u32;
+pub type Fn0d6e10 = extern "thiscall" fn(*const c_void, *const c_void) -> u32;
+pub type Fn102ff0 = extern "fastcall" fn(*const c_void);
 pub type Fn1049e0 = extern "fastcall" fn();
 pub type Fn10f720 = extern "fastcall" fn();
 
@@ -158,12 +160,30 @@ impl Th19 {
         self.hook_assembly(ADDR, SIZE, dummy_from_0aba30_018e, target)
     }
 
+    /// 01: カード送り
+    /// 02: ピチューン
+    /// 07: 決定
+    /// 08: 決定(重)
+    /// 09: キャンセル
+    /// 0a: 選択
+    /// 10: ブブー
+    /// 11: エクステンド
+    pub fn play_sound(&self, this: *const c_void, id: u32, arg2: u32) {
+        type Fn = extern "thiscall" fn(*const c_void, u32, u32);
+        const ADDR: usize = 0x0aeb20;
+        let ptr = self.hooked_process_memory_accessor().raw_ptr(ADDR);
+        (unsafe { transmute::<_, Fn>(ptr) })(this, id, arg2)
+    }
+
+    hook!(0x0bed70 + 0x00fc, hook_0bed70_00fc, Fn0b7d40);
+
     pub fn render_text(&self, text_renderer: *const c_void, text: &RenderingText) -> u32 {
-        type Fn = extern "thiscall" fn(*const c_void, *const RenderingText) -> u32;
         const ADDR: usize = 0x0d5ae0;
         let ptr = self.hooked_process_memory_accessor().raw_ptr(ADDR);
-        (unsafe { transmute::<_, Fn>(ptr) })(text_renderer, text)
+        (unsafe { transmute::<_, Fn0d5ae0>(ptr) })(text_renderer, text as *const _ as _)
     }
+
+    hook!(0x0d6e10 + 0x0039, hook_0d6e10_0039, Fn0d5ae0);
 
     hook!(0x0d7180 + 0x0008, hook_0d7180_0008, Fn0d6e10);
 
@@ -200,7 +220,7 @@ impl Th19 {
     value_ref!(0x200850, p1_input, Input);
     value_ref!(0x200b10, p2_input, Input);
     value_ref!(0x200dd0, menu_input, menu_input_mut, Input);
-
+    value_ref!(0x201e50, sound_manager, c_void);
     value_ref!(0x207910, selection, selection_mut, Selection);
 
     // 0x208260 Game

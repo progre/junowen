@@ -1,4 +1,5 @@
 pub mod async_read_write_socket;
+pub mod channel_socket;
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
