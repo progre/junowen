@@ -6,17 +6,10 @@ use std::{
 };
 
 use anyhow::{anyhow, bail, Result};
-use junowen_lib::connection::signaling::stdio_signaling_interface::connect_as_offerer;
-use junowen_lib::{
-    connection::signaling::stdio_signaling_interface::connect_as_answerer,
-    hook_utils::InjectDllError,
-};
+use junowen_lib::hook_utils::InjectDllError;
 use junowen_lib::{hook_utils::inject_dll, lang::Lang};
 use serde::{Deserialize, Serialize};
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    net::windows::named_pipe,
-};
+use tokio::{io::AsyncReadExt, net::windows::named_pipe};
 use tokio::{net::windows::named_pipe::NamedPipeClient, time::sleep};
 use tracing::trace;
 
@@ -41,6 +34,7 @@ async fn create_pipe(lang: &Lang) -> Option<NamedPipeClient> {
     trace!("named pipe opening...");
     let mut pipe = if let Ok(pipe) = named_pipe_client_option.open(name) {
         trace!("named pipe opened");
+        lang.println("Module already loaded by th19.exe.");
         pipe
     } else {
         trace!("named pipe opening failed");
@@ -111,101 +105,13 @@ fn read_line() -> String {
     buf.trim().to_owned()
 }
 
-async fn host(pipe: &mut NamedPipeClient, lang: &Lang) -> Result<()> {
-    connect_as_offerer(pipe, lang).await?;
-
-    let delay = 1;
-    pipe.write_all(&rmp_serde::to_vec(&IpcMessageToHook::Delay(delay)).unwrap())
-        .await?;
-
-    loop {
-        let mut buf = [0u8; 4 * 1024];
-        let len = pipe.read(&mut buf).await?;
-        let msg: IpcMessageToCui = rmp_serde::from_slice(&buf[..len])
-            .map_err(|err| anyhow!("parse failed (len={}): {}", len, err))?;
-        match msg {
-            IpcMessageToCui::Version(_) => panic!(),
-            IpcMessageToCui::Connected => {
-                lang.println("Connected with guest.");
-            }
-            IpcMessageToCui::Disconnected => {
-                lang.println("Guest disconnected.");
-                return Ok(());
-            }
-        }
-    }
-}
-
-async fn guest(pipe: &mut NamedPipeClient, lang: &Lang) -> Result<()> {
-    connect_as_answerer(pipe, lang).await?;
-
-    loop {
-        let mut buf = [0u8; 4 * 1024];
-        let len = pipe.read(&mut buf).await?;
-        let msg: IpcMessageToCui = rmp_serde::from_slice(&buf[..len])
-            .map_err(|err| anyhow!("parse failed (len={}): {}", len, err))?;
-        match msg {
-            IpcMessageToCui::Version(_) => panic!(),
-            IpcMessageToCui::Connected => {
-                lang.println("Connected with host.");
-            }
-            IpcMessageToCui::Disconnected => {
-                lang.println("Host disconnected.");
-                return Ok(());
-            }
-        }
-    }
-}
-
 #[allow(unused)]
 pub async fn main_menu(lang: &Lang) -> Result<()> {
-    loop {
-        println!();
-        println!("{} {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
-        println!();
-        lang.println("1) Connect as Host");
-        lang.println("2) Connect as Guest");
-        println!();
-        lang.println("0) Exit");
-        println!();
+    println!("{} {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+    println!();
 
-        let select = loop {
-            lang.print("Select (0-2): ");
-            let buf = read_line();
-            let Ok(select) = buf.trim().parse::<u8>() else {
-                continue;
-            };
-            if !(0..=2).contains(&select) {
-                continue;
-            }
-            break select;
-        };
-
-        if select == 0 {
-            break;
-        }
-
-        let Some(mut pipe) = create_pipe(lang).await else {
-            continue;
-        };
-
-        match select {
-            1 => {
-                if let Err(err) = host(&mut pipe, lang).await {
-                    lang.print("th19 disconnected.");
-                    println!("{}", err);
-                    println!();
-                }
-            }
-            2 => {
-                if let Err(err) = guest(&mut pipe, lang).await {
-                    lang.print("th19 disconnected.");
-                    println!("{}", err);
-                    println!();
-                }
-            }
-            _ => unreachable!(),
-        }
-    }
+    let _ = create_pipe(lang).await;
+    lang.print("Press enter to exit...");
+    read_line();
     Ok(())
 }

@@ -1,17 +1,10 @@
-use std::sync::mpsc;
-
 use anyhow::Result;
-use junowen_lib::connection::signaling::socket::{AsyncReadWriteSocket, SignalingSocket};
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    net::windows::named_pipe,
-};
+use tokio::{io::AsyncWriteExt, net::windows::named_pipe};
 use tracing::error;
 
-use crate::cui::{IpcMessageToCui, IpcMessageToHook};
-use crate::session::{create_session, Session};
+use crate::cui::IpcMessageToCui;
 
-async fn ipc(session_sender: &mpsc::Sender<Session>) -> Result<()> {
+async fn ipc() -> Result<()> {
     // NOTE: NamedPipeServer isn't reusable.
     let mut pipe = named_pipe::ServerOptions::new().create(r"\\.\pipe\junowen")?;
     pipe.connect().await?;
@@ -19,33 +12,11 @@ async fn ipc(session_sender: &mpsc::Sender<Session>) -> Result<()> {
         env!("CARGO_PKG_VERSION").to_owned(),
     ))?)
     .await?;
-
-    let (anserer, conn, data_channel) = AsyncReadWriteSocket::new(&mut pipe)
-        .receive_signaling()
-        .await?;
-    let host = !anserer;
-    pipe.write_all(&rmp_serde::to_vec(&IpcMessageToCui::Connected).unwrap())
-        .await?;
-
-    let delay = if host {
-        let mut buf = [0u8; 4096];
-        let len = pipe.read(&mut buf).await?;
-        let msg: IpcMessageToHook = rmp_serde::from_slice(&buf[..len])?;
-        let IpcMessageToHook::Delay(delay) = msg;
-        Some(delay)
-    } else {
-        None
-    };
-    let session = create_session(conn, data_channel, delay).await?;
-    let mut closed = session.subscribe_closed_receiver();
-    session_sender.send(session)?;
-    closed.recv().await.unwrap();
-    pipe.write_all(&rmp_serde::to_vec(&IpcMessageToCui::Disconnected).unwrap())
-        .await?;
+    let _ = pipe.disconnect();
     Ok(())
 }
 
-pub fn init_interprocess(session_sender: mpsc::Sender<Session>) {
+pub fn init_interprocess() {
     std::thread::spawn(move || {
         tokio::runtime::Builder::new_multi_thread()
             .enable_all()
@@ -53,10 +24,10 @@ pub fn init_interprocess(session_sender: mpsc::Sender<Session>) {
             .unwrap()
             .block_on(async {
                 loop {
-                    match ipc(&session_sender).await {
+                    match ipc().await {
                         Ok(ok) => ok,
                         Err(err) => {
-                            error!("session aborted: {}", err);
+                            error!("ipc aborted: {}", err);
                             continue;
                         }
                     };

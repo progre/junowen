@@ -6,14 +6,13 @@ mod session;
 mod state;
 mod tracing_helper;
 
-use std::{ffi::c_void, path::PathBuf, sync::mpsc};
+use std::{ffi::c_void, path::PathBuf};
 
 use junowen_lib::{
     hook_utils::{calc_th19_hash, WELL_KNOWN_VERSION_HASHES},
     Fn009fa0, Fn011560, Fn0b7d40, Fn0d5ae0, Fn0d6e10, Fn1049e0, Fn10f720, FnOfHookAssembly,
     RenderingText, Selection, Th19,
 };
-use session::Session;
 use state::State;
 use tracing::warn;
 use windows::{
@@ -43,7 +42,6 @@ struct Props {
     old_fn_from_1243f0_0320: Fn011560,
     old_fn_from_13f9d0_0345: Fn10f720,
     old_fn_from_13f9d0_0446: Fn009fa0,
-    session_receiver: mpsc::Receiver<Session>,
 }
 
 fn props() -> &'static Props {
@@ -58,10 +56,9 @@ fn state_mut() -> &'static mut State {
 }
 
 extern "fastcall" fn on_input_players() {
-    let props = props();
-    state::on_input_players(state_mut(), props);
+    state::on_input_players(state_mut());
 
-    if let Some(func) = props.old_on_input_players {
+    if let Some(func) = props().old_on_input_players {
         func()
     }
 }
@@ -69,8 +66,7 @@ extern "fastcall" fn on_input_players() {
 extern "fastcall" fn on_input_menu() {
     state::on_input_menu(state_mut());
 
-    let props = props();
-    if let Some(func) = props.old_on_input_menu {
+    if let Some(func) = props().old_on_input_menu {
         func()
     }
 }
@@ -179,8 +175,7 @@ pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32
         let (old_fn_from_13f9d0_0446, apply_hook_13f9d0_0446) =
             th19.hook_13f9d0_0446(on_loaded_game_settings);
 
-        let (session_sender, session_receiver) = mpsc::channel();
-        init_interprocess(session_sender);
+        init_interprocess();
         unsafe {
             PROPS = Some(Props {
                 old_on_input_players,
@@ -193,7 +188,6 @@ pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32
                 old_fn_from_1243f0_0320,
                 old_fn_from_13f9d0_0345,
                 old_fn_from_13f9d0_0446,
-                session_receiver,
             });
             STATE = Some(State::new(th19));
         }

@@ -10,7 +10,7 @@ use junowen_lib::{
     GameSettings,
 };
 use serde::{Deserialize, Serialize};
-use tokio::{spawn, sync::broadcast};
+use tokio::spawn;
 use tracing::{debug, info};
 
 use self::delayed_inputs::{DelayedInputs, SessionMessage};
@@ -86,14 +86,11 @@ pub async fn create_session(
         };
         (false, delay)
     };
-    let (closed_sender, closed_receiver) = broadcast::channel(1);
     Ok(Session {
         _conn: conn,
         remote_player_name: "".to_owned(),
         host,
         delayed_inputs: DelayedInputs::new(hook_outgoing_tx, hook_incoming_rx, host, delay),
-        closed_sender,
-        closed_receiver,
     })
 }
 
@@ -105,8 +102,6 @@ pub struct Session {
     #[getset(get_copy = "pub")]
     host: bool,
     delayed_inputs: DelayedInputs,
-    closed_sender: broadcast::Sender<()>,
-    closed_receiver: broadcast::Receiver<()>,
 }
 
 unsafe impl Send for Session {}
@@ -115,17 +110,12 @@ unsafe impl Sync for Session {}
 impl Drop for Session {
     fn drop(&mut self) {
         info!("session closed");
-        let _ = self.closed_sender.send(());
     }
 }
 
 impl Session {
     pub fn delay(&self) -> u8 {
         self.delayed_inputs.delay()
-    }
-
-    pub fn subscribe_closed_receiver(&self) -> broadcast::Receiver<()> {
-        self.closed_receiver.resubscribe()
     }
 
     pub fn init_match(

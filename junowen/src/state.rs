@@ -15,7 +15,6 @@ use tracing::{debug, trace};
 use crate::{
     in_game_lobby::{Lobby, TitleMenuModifier},
     session::{MatchInitial, Session},
-    Props,
 };
 
 enum NetBattleState<'a> {
@@ -115,13 +114,9 @@ impl State {
     }
 }
 
-fn update_state(state: &mut State, props: &Props) -> Option<(bool, Option<&'static Menu>)> {
+fn update_state(state: &mut State) -> Option<(bool, Option<&'static Menu>)> {
     match state.net_battle_state() {
         NetBattleState::Standby => {
-            if let Ok(session) = props.session_receiver.try_recv() {
-                state.start_session(session);
-                return Some((true, None));
-            }
             if let Ok(session) = state.session_rx.try_recv() {
                 trace!("session received");
                 state.start_session(session);
@@ -187,8 +182,8 @@ fn update_th19_on_input_players(
     }
 }
 
-pub(crate) fn on_input_players(state: &mut State, props: &Props) {
-    let Some((changed, menu)) = update_state(state, props) else {
+pub fn on_input_players(state: &mut State) {
+    let Some((changed, menu)) = update_state(state) else {
         return;
     };
     if let Err(err) = update_th19_on_input_players(state, changed, menu) {
