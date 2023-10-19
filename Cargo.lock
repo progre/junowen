@@ -1006,6 +1006,7 @@ dependencies = [
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
+ "webrtc",
  "windows 0.51.1",
 ]
 

@@ -53,7 +53,7 @@ impl Root {
                 Some(LobbyScene::Root)
             }
             OnMenuInputResult::Action(MenuAction::SubScene(scene)) => Some(scene),
-            OnMenuInputResult::Action(MenuAction::Action(_)) => unreachable!(),
+            OnMenuInputResult::Action(MenuAction::Action(..)) => unreachable!(),
         }
     }
 

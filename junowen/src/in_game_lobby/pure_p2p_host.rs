@@ -9,6 +9,9 @@ use junowen_lib::{
 };
 use tokio::sync::mpsc;
 use tracing::trace;
+use webrtc::peer_connection::sdp::{
+    sdp_type::RTCSdpType, session_description::RTCSessionDescription,
+};
 
 use crate::session::Session;
 
@@ -39,11 +42,17 @@ impl PureP2pHost {
                 MenuDefine::new(
                     2,
                     vec![
-                        MenuItem::new("Regenerate", MenuContent::Action(MenuAction::Action(0))),
-                        MenuItem::new("Copy your code", MenuContent::Action(MenuAction::Action(1))),
+                        MenuItem::new(
+                            "Regenerate",
+                            MenuContent::Action(MenuAction::Action(0, true)),
+                        ),
+                        MenuItem::new(
+                            "Copy your code",
+                            MenuContent::Action(MenuAction::Action(1, true)),
+                        ),
                         MenuItem::new(
                             "Paste guest's code",
-                            MenuContent::Action(MenuAction::Action(2)),
+                            MenuContent::Action(MenuAction::Action(2, false)),
                         ),
                     ],
                 ),
@@ -85,7 +94,7 @@ impl PureP2pHost {
                 Some(LobbyScene::Root)
             }
             OnMenuInputResult::Action(MenuAction::SubScene(scene)) => Some(scene),
-            OnMenuInputResult::Action(MenuAction::Action(action)) => {
+            OnMenuInputResult::Action(MenuAction::Action(action, _)) => {
                 if action == 0 {
                     self.reset();
                 }
@@ -95,7 +104,17 @@ impl PureP2pHost {
                 }
                 if action == 2 {
                     if let Ok(ok) = clipboard_win::get_clipboard_string() {
-                        self.answer = Some(CompressedSessionDesc(ok.clone()));
+                        let answer = CompressedSessionDesc(ok.clone());
+                        let Ok(RTCSessionDescription {
+                            sdp_type: RTCSdpType::Answer,
+                            ..
+                        }) = answer.decompress()
+                        else {
+                            th19.play_sound(th19.sound_manager(), 0x10, 0);
+                            return None;
+                        };
+                        th19.play_sound(th19.sound_manager(), 0x07, 0);
+                        self.answer = Some(answer);
                         self.signaling
                             .msg_tx_mut()
                             .take()

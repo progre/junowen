@@ -20,7 +20,7 @@ impl From<LobbyScene> for MenuContent {
 
 #[derive(Debug)]
 pub enum MenuAction {
-    Action(u8),
+    Action(u8, bool),
     SubScene(LobbyScene),
 }
 
@@ -169,18 +169,22 @@ impl CommonMenu {
             return OnMenuInputResult::None;
         }
         if pulse(current_input, prev_input, InputFlags::SHOT) {
-            th19.play_sound(th19.sound_manager(), 0x07, 0);
             match menu.items[menu.cursor].content {
                 MenuContent::_SubMenu(_) => {
+                    th19.play_sound(th19.sound_manager(), 0x07, 0);
                     self.decide_count += 1;
                     return OnMenuInputResult::None;
                 }
                 MenuContent::Action(MenuAction::SubScene(_)) => {
+                    th19.play_sound(th19.sound_manager(), 0x07, 0);
                     self.decide_count += 1;
                     return OnMenuInputResult::None;
                 }
-                MenuContent::Action(MenuAction::Action(action)) => {
-                    return OnMenuInputResult::Action(MenuAction::Action(action));
+                MenuContent::Action(MenuAction::Action(action, sound)) => {
+                    if sound {
+                        th19.play_sound(th19.sound_manager(), 0x07, 0);
+                    }
+                    return OnMenuInputResult::Action(MenuAction::Action(action, sound));
                 }
             }
         }
@@ -259,7 +263,7 @@ impl CommonMenu {
                 MenuContent::Action(MenuAction::SubScene(scene)) => {
                     CurrentMenuResult::SubScene(*scene)
                 }
-                MenuContent::Action(MenuAction::Action(_)) => unreachable!(),
+                MenuContent::Action(MenuAction::Action(..)) => unreachable!(),
             },
         )
     }
@@ -296,7 +300,7 @@ impl CommonMenu {
                 MenuContent::Action(MenuAction::SubScene(scene)) => {
                     CurrentMenuMutResult::SubScene(*scene)
                 }
-                MenuContent::Action(MenuAction::Action(_)) => unreachable!(),
+                MenuContent::Action(MenuAction::Action(..)) => unreachable!(),
             },
         )
     }

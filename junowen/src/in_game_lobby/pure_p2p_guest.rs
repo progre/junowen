@@ -37,7 +37,7 @@ impl PureP2pGuest {
                     0,
                     vec![MenuItem::new(
                         "Press SHOT to Paste",
-                        MenuAction::Action(0).into(),
+                        MenuAction::Action(0, true).into(),
                     )],
                 ),
             ),
@@ -71,7 +71,7 @@ impl PureP2pGuest {
                         0,
                         vec![MenuItem::new(
                             "Press SHOT to Copy again",
-                            MenuAction::Action(1).into(),
+                            MenuAction::Action(1, true).into(),
                         )],
                     ),
                 )
@@ -91,7 +91,7 @@ impl PureP2pGuest {
                 Some(LobbyScene::Root)
             }
             OnMenuInputResult::Action(MenuAction::SubScene(_)) => unreachable!(),
-            OnMenuInputResult::Action(MenuAction::Action(action)) => {
+            OnMenuInputResult::Action(MenuAction::Action(action, _)) => {
                 match action {
                     0 => {
                         if let Ok(ok) = clipboard_win::get_clipboard_string() {
