@@ -30,7 +30,7 @@ fn create_default_config() -> RTCConfiguration {
 
 async fn create_default_peer_connection() -> Result<RTCPeerConnection> {
     let mut setting_engine = SettingEngine::default();
-    setting_engine.set_ice_timeouts(None, Some(Duration::from_secs(60)), None);
+    setting_engine.set_ice_timeouts(None, Some(Duration::from_secs(20 * 60)), None);
     Ok(webrtc::api::APIBuilder::new()
         .with_setting_engine(setting_engine)
         .build()
