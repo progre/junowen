@@ -11,7 +11,7 @@ pub fn on_render_texts(session: &Session, state: &State, text_renderer: *const c
     let mut text = RenderingText::default();
     text.set_text(
         format!(
-            "Ju.N.Owen (v{}) Delay: {}",
+            "Ju.N.Owen v{} Delay: {}",
             env!("CARGO_PKG_VERSION"),
             session.delay()
         )
