@@ -59,10 +59,6 @@ pub fn update_th19_on_input_players(
                 seed2: th19.rand_seed2().unwrap(),
                 seed3: th19.rand_seed3().unwrap(),
                 seed4: th19.rand_seed4().unwrap(),
-                seed5: th19.rand_seed5().unwrap(),
-                seed6: th19.rand_seed6().unwrap(),
-                seed7: th19.rand_seed7().unwrap(),
-                seed8: th19.rand_seed8().unwrap(),
             }))?;
             debug_assert!(opt.is_none());
         } else {
@@ -78,10 +74,6 @@ pub fn update_th19_on_input_players(
             th19.set_rand_seed2(init.seed2).unwrap();
             th19.set_rand_seed3(init.seed3).unwrap();
             th19.set_rand_seed4(init.seed4).unwrap();
-            th19.set_rand_seed5(init.seed5).unwrap();
-            th19.set_rand_seed6(init.seed6).unwrap();
-            th19.set_rand_seed7(init.seed7).unwrap();
-            th19.set_rand_seed8(init.seed8).unwrap();
         }
     }
 

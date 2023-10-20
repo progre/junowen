@@ -26,10 +26,6 @@ pub struct RoundInitial {
     pub seed2: u16,
     pub seed3: u16,
     pub seed4: u16,
-    pub seed5: u32,
-    pub seed6: u32,
-    pub seed7: u32,
-    pub seed8: u32,
 }
 
 pub async fn create_session(
