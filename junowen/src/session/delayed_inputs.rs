@@ -35,7 +35,6 @@ impl DelayedInputs {
         remote_sender: mpsc::Sender<SessionMessage>,
         remote_receiver: mpsc::Receiver<SessionMessage>,
         host: bool,
-        default_delay: u8,
     ) -> Self {
         Self {
             host,
@@ -43,7 +42,7 @@ impl DelayedInputs {
             remote_sender,
             remote_receiver,
             remote_round_initial: None,
-            delay: default_delay,
+            delay: 1,
         }
     }
 

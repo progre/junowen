@@ -31,7 +31,7 @@ pub struct RoundInitial {
 pub async fn create_session(
     conn: PeerConnection,
     mut data_channel: DataChannel,
-    delay: Option<u8>,
+    host: bool,
 ) -> Result<Session> {
     let (hook_outgoing_tx, hook_outgoing_rx) = std::sync::mpsc::channel::<SessionMessage>();
     let data_channel_message_sender = data_channel.message_sender.clone();
@@ -72,21 +72,11 @@ pub async fn create_session(
             }
         }
     });
-    let (host, delay) = if let Some(delay) = delay {
-        hook_outgoing_tx.send(SessionMessage::Delay(delay))?;
-        (true, delay)
-    } else {
-        let msg = hook_incoming_rx.recv()?;
-        let SessionMessage::Delay(delay) = msg else {
-            panic!("unexpected message: {:?}", msg);
-        };
-        (false, delay)
-    };
     Ok(Session {
         _conn: conn,
         remote_player_name: "".to_owned(),
         host,
-        delayed_inputs: DelayedInputs::new(hook_outgoing_tx, hook_incoming_rx, host, delay),
+        delayed_inputs: DelayedInputs::new(hook_outgoing_tx, hook_incoming_rx, host),
     })
 }
 

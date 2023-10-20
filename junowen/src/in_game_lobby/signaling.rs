@@ -58,9 +58,7 @@ impl Signaling {
                 };
                 let host = !anserer;
                 tracing::trace!("signaling connected: host={}", host);
-                let session = create_session(conn, dc, if host { Some(1) } else { None })
-                    .await
-                    .unwrap();
+                let session = create_session(conn, dc, host).await.unwrap();
                 tracing::trace!("session created");
                 session_tx.send(session).await.unwrap();
                 connected_tx.send(()).unwrap();
