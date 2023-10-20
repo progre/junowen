@@ -69,7 +69,7 @@ impl Drop for PeerConnection {
     }
 }
 
-const PROTOCOL: &str = "JUNOWEN/0.4.1";
+const PROTOCOL: &str = "JUNOWEN/0.5";
 
 impl PeerConnection {
     pub async fn new() -> Result<Self> {
