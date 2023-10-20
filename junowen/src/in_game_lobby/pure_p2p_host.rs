@@ -28,7 +28,7 @@ pub struct PureP2pHost {
     signaling: Signaling,
     session_tx: mpsc::Sender<Session>,
     answer: Option<CompressedSessionDesc>,
-    /// 0: require generate, 1: copied, 2: already copied
+    /// 0: require generate, 1: copied, 2: already copied, 3: copied again
     copy_state: u8,
 }
 
@@ -100,7 +100,7 @@ impl PureP2pHost {
                 }
                 if action == 1 {
                     set_clipboard_string(&self.signaling.offer().as_ref().unwrap().0).unwrap();
-                    self.copy_state = 1;
+                    self.copy_state = if self.copy_state <= 1 { 1 } else { 3 };
                 }
                 if action == 2 {
                     if let Ok(ok) = clipboard_win::get_clipboard_string() {
@@ -141,7 +141,12 @@ impl PureP2pHost {
                 render_text_line(th19, text_renderer, 0, b"Preparing...");
                 break 'a;
             };
-            render_text_line(th19, text_renderer, line, b"Your signaling code:");
+            let text = if [2, 3].contains(&self.copy_state) {
+                "Your signaling code is already created:"
+            } else {
+                "Your signaling code:"
+            };
+            render_text_line(th19, text_renderer, line, text.as_bytes());
             line += 2;
             let chunks = offer.0.as_bytes().chunks(100);
             let offer_len = (chunks.len() as f64 / 2.0).ceil() as u32;
@@ -149,14 +154,10 @@ impl PureP2pHost {
                 render_small_text_line(th19, text_renderer, line * 2 + i as u32, chunk);
             });
             line += offer_len + 1;
-            if self.copy_state == 1 {
+            if [1, 3].contains(&self.copy_state) {
                 render_text_line(th19, text_renderer, line, b"It was copied to Clipboard.");
-                render_text_line(
-                    th19,
-                    text_renderer,
-                    line + 1,
-                    b"Share your signaling code with guest.",
-                );
+                let text = b"Share your signaling code with guest.";
+                render_text_line(th19, text_renderer, line + 1, text);
             }
             line += 3;
             render_text_line(th19, text_renderer, line, b"Guest's signaling code:");
@@ -170,12 +171,8 @@ impl PureP2pHost {
                 render_small_text_line(th19, text_renderer, line * 2 + i as u32, chunk);
             });
             line += answer_len + 1;
-            render_text_line(
-                th19,
-                text_renderer,
-                line,
-                b"Waiting for guest to connect...",
-            );
+            let text = b"Waiting for guest to connect...";
+            render_text_line(th19, text_renderer, line, text);
         }
         if let Some(err) = self.signaling.error() {
             line += 1;
