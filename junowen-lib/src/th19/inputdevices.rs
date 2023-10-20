@@ -81,14 +81,15 @@ pub struct InputDevice {
     raw_keys: [u8; 0x104],
 }
 
-#[derive(Getters)]
+#[derive(CopyGetters, Getters, Setters)]
 #[repr(C)]
 pub struct InputDevices {
     _unknown1: [u8; 0x20],
     #[getset(get = "pub")]
     input_device_array: [InputDevice; 3 + 9],
     _unknown2: [u8; 0x14],
-    pub p1_idx: u32,
+    #[getset(get_copy = "pub", set = "pub")]
+    p1_idx: u32,
     p2_idx: u32,
     // unknown remains...
 }
@@ -108,7 +109,7 @@ impl InputDevices {
         &mut self.input_device_array[self.p2_idx as usize].input
     }
 
-    pub fn is_conflict_keyboard_full(&self) -> bool {
-        self.p1_idx == 0 && self.p2_idx == 0
+    pub fn is_conflict_input_device(&self) -> bool {
+        self.p1_idx == self.p2_idx
     }
 }

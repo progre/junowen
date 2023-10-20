@@ -261,16 +261,13 @@ pub fn on_rewrite_controller_assignments(old_fn: Fn10f720, state: &mut State) {
         state.state
     );
 
-    let mut old_p1_idx = 0;
-    if !matches!(state.net_battle_state(), NetBattleState::Standby) {
-        old_p1_idx = state.th19.input_devices().p1_idx;
-    }
+    let old_p1_idx = state.th19.input_devices().p1_idx();
     old_fn();
-    if !matches!(state.net_battle_state(), NetBattleState::Standby)
-        && old_p1_idx == 0
-        && state.th19.input_devices().p1_idx != 0
+    if old_p1_idx == 0
+        && state.th19.input_devices().p1_idx() != 0
+        && !matches!(state.net_battle_state(), NetBattleState::Standby)
     {
-        state.th19.input_devices_mut().p1_idx = 0;
+        state.th19.input_devices_mut().set_p1_idx(0);
     }
 }
 

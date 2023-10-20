@@ -11,7 +11,7 @@ pub fn update_state(state: &mut State, prepare_state: u8) -> Option<(bool, Optio
             if menu.screen_id != ScreenId::Title {
                 return Some((false, Some(menu)));
             }
-            state.change_to_prepare(if state.th19.input_devices().is_conflict_keyboard_full() {
+            state.change_to_prepare(if state.th19.input_devices().is_conflict_input_device() {
                 1
             } else {
                 2
@@ -19,7 +19,7 @@ pub fn update_state(state: &mut State, prepare_state: u8) -> Option<(bool, Optio
             Some((true, Some(menu)))
         }
         1 => {
-            if state.th19.input_devices().is_conflict_keyboard_full() {
+            if state.th19.input_devices().is_conflict_input_device() {
                 return Some((false, Some(menu)));
             }
             state.change_to_prepare(0);

@@ -71,7 +71,7 @@ impl AutomaticInputs {
     pub fn on_input_menu(&self, th19: &mut Th19, menu: &mut Menu) -> bool {
         match self {
             Self::TransitionToTitle => transfer_to_title_on_input_menu(th19, menu),
-            Self::ResolveKeyboardFullConflict => resolve_keyboard_full_conflict(th19, menu),
+            Self::ResolveKeyboardFullConflict => resolve_input_device_conflict(th19, menu),
             Self::TransitionToLocalVersusDifficultySelect(target_player_matchup) => {
                 transfer_to_local_versus_difficulty_select(th19, menu, *target_player_matchup)
             }
@@ -160,8 +160,8 @@ fn transfer_to_title_on_input_menu(th19: &mut Th19, menu: &Menu) -> bool {
     true
 }
 
-fn resolve_keyboard_full_conflict(th19: &mut Th19, menu: &mut Menu) -> bool {
-    if !th19.input_devices().is_conflict_keyboard_full() {
+fn resolve_input_device_conflict(th19: &mut Th19, menu: &mut Menu) -> bool {
+    if !th19.input_devices().is_conflict_input_device() {
         return true;
     }
     let menu_input = match (
