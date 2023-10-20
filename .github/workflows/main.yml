@@ -27,6 +27,8 @@ jobs:
           rustup default nightly
           rustup target add i686-pc-windows-msvc
           cargo build --locked --release --workspace
+          cargo install cargo-bundle-licenses
+          cargo bundle-licenses --format yaml --output THIRDPARTY.yml
           mkdir --parents artifact/modules
           mv \
             ./target/i686-pc-windows-msvc/release/th19_*.dll \
@@ -35,7 +37,7 @@ jobs:
             ./target/i686-pc-windows-msvc/release/*.dll \
             ./target/i686-pc-windows-msvc/release/*.exe \
             ./artifact/
-          cp --recursive lang/ LICENSE README.md ./artifact/
+          cp --recursive lang/ LICENSE README.md THIRDPARTY.yml ./artifact/
       - uses: actions/upload-artifact@v3
         with:
           name: artifact
@@ -51,7 +53,7 @@ jobs:
         name: artifact
       - run: |
           cd artifact
-          zip ../out lang/* junowen.exe junowen_hook.dll LICENSE README.md
+          zip ../out lang/* junowen.exe junowen_hook.dll LICENSE README.md THIRDPARTY.yml
       - id: create_release
         uses: actions/create-release@v1
         env:
