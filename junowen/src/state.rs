@@ -215,13 +215,14 @@ pub fn on_input_menu(state: &mut State) {
 }
 
 pub fn render_object(
-    state: &mut State,
+    state: &State,
     old: Fn0b7d40,
     obj_renderer: *const c_void,
     obj: *const c_void,
 ) {
-    if matches!(state.net_battle_state(), NetBattleState::Standby) {
-        return standby::render_object(state, old, obj_renderer, obj);
+    if state.session().is_none() {
+        standby::render_object(state, old, obj_renderer, obj);
+        return;
     }
     old(obj_renderer, obj);
 }
@@ -232,43 +233,36 @@ pub fn render_text(
     text_renderer: *const c_void,
     text: &mut RenderingText,
 ) -> u32 {
-    if matches!(state.net_battle_state(), NetBattleState::Standby) {
+    if state.session().is_none() {
         return standby::render_text(state, old, text_renderer, text);
     }
     old(text_renderer, text)
 }
 
 pub fn on_render_texts(state: &mut State, text_renderer: *const c_void) {
-    if let Some(session) = state.session() {
-        in_session::on_render_texts(session, state, text_renderer);
-    } else {
+    let Some(session) = state.session() else {
         standby::on_render_texts(state, text_renderer);
-    }
+        return;
+    };
+    in_session::on_render_texts(session, state, text_renderer);
 }
 
 pub fn on_round_over(state: &mut State) {
-    if let Some(session) = &mut state.session {
-        if let Err(err) = game::on_round_over(session, &mut state.th19) {
-            debug!("session aborted: {}", err);
-            state.end_session();
-        }
+    let Some(session) = &mut state.session else {
+        return;
+    };
+    if let Err(err) = game::on_round_over(session, &mut state.th19) {
+        debug!("session aborted: {}", err);
+        state.end_session();
     }
 }
 
-pub fn on_rewrite_controller_assignments(old_fn: Fn10f720, state: &mut State) {
-    trace!(
-        "on_rewrite_controller_assignments: state.state={:x}",
-        state.state
-    );
-
-    let old_p1_idx = state.th19.input_devices().p1_idx();
-    old_fn();
-    if old_p1_idx == 0
-        && state.th19.input_devices().p1_idx() != 0
-        && !matches!(state.net_battle_state(), NetBattleState::Standby)
-    {
-        state.th19.input_devices_mut().set_p1_idx(0);
+pub fn on_rewrite_controller_assignments(state: &mut State, old_fn: Fn10f720) {
+    if state.session.is_none() {
+        old_fn();
+        return;
     }
+    in_session::on_rewrite_controller_assignments(state.th19_mut().input_devices_mut(), old_fn);
 }
 
 pub fn on_loaded_game_settings(state: &mut State) {

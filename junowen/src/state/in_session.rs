@@ -1,6 +1,7 @@
 use std::ffi::c_void;
 
-use junowen_lib::RenderingText;
+use junowen_lib::{Fn10f720, InputDevices, RenderingText};
+use tracing::trace;
 
 use crate::session::Session;
 
@@ -48,4 +49,14 @@ pub fn on_render_texts(session: &Session, state: &State, text_renderer: *const c
     text.color = 0xff8080ff;
     text.horizontal_align = 2;
     th19.render_text(text_renderer, &text);
+}
+
+pub fn on_rewrite_controller_assignments(input_devices: &mut InputDevices, old_fn: Fn10f720) {
+    trace!("on_rewrite_controller_assignments",);
+
+    let old_p1_idx = input_devices.p1_idx();
+    old_fn();
+    if old_p1_idx == 0 && input_devices.p1_idx() != 0 {
+        input_devices.set_p1_idx(0);
+    }
 }

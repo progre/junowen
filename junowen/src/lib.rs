@@ -72,7 +72,7 @@ extern "fastcall" fn on_input_menu() {
 }
 
 extern "thiscall" fn render_object(this: *const c_void, obj: *const c_void) {
-    state::render_object(state_mut(), props().old_fn_from_0bed70_00fc, this, obj);
+    state::render_object(state(), props().old_fn_from_0bed70_00fc, this, obj);
 }
 
 extern "thiscall" fn render_text(text_renderer: *const c_void, text: *mut RenderingText) -> u32 {
@@ -112,7 +112,7 @@ extern "thiscall" fn fn_from_1243f0_0320(this: *const Selection) -> u8 {
 }
 
 extern "fastcall" fn on_rewrite_controller_assignments() {
-    state::on_rewrite_controller_assignments(props().old_fn_from_13f9d0_0345, state_mut());
+    state::on_rewrite_controller_assignments(state_mut(), props().old_fn_from_13f9d0_0345);
 }
 
 extern "thiscall" fn on_loaded_game_settings(this: *const c_void, arg1: u32) -> u32 {
