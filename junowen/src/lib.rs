@@ -112,7 +112,11 @@ extern "thiscall" fn fn_from_1243f0_0320(this: *const Selection) -> u8 {
 }
 
 extern "fastcall" fn on_rewrite_controller_assignments() {
-    state::on_rewrite_controller_assignments(state_mut(), props().old_fn_from_13f9d0_0345);
+    // NOTE: old_fn() modifies th19 outside of Rust.
+    //       This reference makes Rust aware of the change.
+    state::on_rewrite_controller_assignments(state_mut(), |_: &mut Th19| {
+        props().old_fn_from_13f9d0_0345
+    });
 }
 
 extern "thiscall" fn on_loaded_game_settings(this: *const c_void, arg1: u32) -> u32 {

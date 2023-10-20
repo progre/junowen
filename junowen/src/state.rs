@@ -257,12 +257,12 @@ pub fn on_round_over(state: &mut State) {
     }
 }
 
-pub fn on_rewrite_controller_assignments(state: &mut State, old_fn: Fn10f720) {
+pub fn on_rewrite_controller_assignments(state: &mut State, old_fn: fn(&mut Th19) -> Fn10f720) {
     if state.session.is_none() {
-        old_fn();
+        old_fn(state.th19_mut())();
         return;
     }
-    in_session::on_rewrite_controller_assignments(state.th19_mut().input_devices_mut(), old_fn);
+    in_session::on_rewrite_controller_assignments(state.th19_mut(), old_fn);
 }
 
 pub fn on_loaded_game_settings(state: &mut State) {
