@@ -120,7 +120,11 @@ impl TitleMenuModifier {
                 rendering_text.font_type = 9;
                 th19.render_text(text_renderer, &rendering_text);
 
-                rendering_text.color = menu_item_color(7, selected_junowen);
+                rendering_text.color = if selected_junowen {
+                    0xffff80e3
+                } else {
+                    0xff806079
+                };
                 rendering_text.font_type = 7;
                 th19.render_text(text_renderer, &rendering_text);
             }
