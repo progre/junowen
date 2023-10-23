@@ -1,8 +1,0 @@
-"Module loaded by th19.exe." = "Modulo ŝarĝita de th19.exe."
-"Module already loaded by th19.exe." = "Modulo jam ŝarĝita de th19.exe."
-"Press enter to exit..." = "Premu enen por eliri..."
-#
-"junowen_hook.dll not found." = "junowen_hook.dll ne trovita."
-"th19.exe process not found: " = "th19.exe procezo ne trovita: "
-"waiting for th19.exe process..." = "atendas la procezon de th19.exe..."
-"Failed to communicate with junowen_hook.dll: " = "Malsukcesis komuniki kun junowen_hook.dll: "

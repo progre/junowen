@@ -1,24 +1,21 @@
-mod cui;
 mod helper;
 mod in_game_lobby;
-mod interprocess;
 mod session;
 mod state;
 mod tracing_helper;
 
-use std::{ffi::c_void, path::PathBuf};
+use std::{ffi::c_void, path::PathBuf, slice};
 
 use junowen_lib::{
-    hook_utils::{calc_th19_hash, WELL_KNOWN_VERSION_HASHES},
-    Fn009fa0, Fn011560, Fn0b7d40, Fn0d5ae0, Fn0d6e10, Fn1049e0, Fn10f720, FnOfHookAssembly,
-    RenderingText, Selection, Th19,
+    hook_utils::WELL_KNOWN_VERSION_HASHES, Fn009fa0, Fn011560, Fn0b7d40, Fn0d5ae0, Fn0d6e10,
+    Fn1049e0, Fn10f720, FnOfHookAssembly, RenderingText, Selection, Th19,
 };
 use state::State;
-use tracing::warn;
 use windows::{
     core::PCWSTR,
     Win32::{
-        Foundation::{HINSTANCE, MAX_PATH},
+        Foundation::{HINSTANCE, HMODULE, MAX_PATH},
+        Graphics::Direct3D9::IDirect3D9,
         System::{
             Console::AllocConsole, LibraryLoader::GetModuleFileNameW,
             SystemServices::DLL_PROCESS_ATTACH,
@@ -26,8 +23,7 @@ use windows::{
     },
 };
 
-use crate::interprocess::init_interprocess;
-
+static mut MODULE: HMODULE = HMODULE(0);
 static mut PROPS: Option<Props> = None;
 static mut STATE: Option<State> = None;
 
@@ -125,87 +121,99 @@ extern "thiscall" fn on_loaded_game_settings(this: *const c_void, arg1: u32) -> 
     (props().old_fn_from_13f9d0_0446)(this, arg1)
 }
 
-fn check_version() -> bool {
-    let hash = calc_th19_hash();
+fn check_version(hash: &[u8]) -> bool {
     WELL_KNOWN_VERSION_HASHES
         .all_v100a()
         .iter()
-        .any(|&valid_hash| valid_hash == &hash[..])
+        .any(|&valid_hash| valid_hash == hash)
+}
+
+fn init(module: HMODULE) {
+    if cfg!(debug_assertions) {
+        let _ = unsafe { AllocConsole() };
+        std::env::set_var("RUST_BACKTRACE", "1");
+    }
+    let dll_path = {
+        let mut buf = [0u16; MAX_PATH as usize];
+        if unsafe { GetModuleFileNameW(module, &mut buf) } == 0 {
+            panic!();
+        }
+        unsafe { PCWSTR::from_raw(buf.as_ptr()).to_string() }.unwrap()
+    };
+    let dll_path = PathBuf::from(dll_path);
+    tracing_helper::init_tracing(
+        dll_path.parent().unwrap().to_string_lossy().as_ref(),
+        &format!("{}.log", dll_path.file_stem().unwrap().to_string_lossy()),
+        false,
+    );
+
+    let mut th19 = Th19::new_hooked_process("th19.exe").unwrap();
+
+    let (old_on_input_players, apply_hook_on_input_players) =
+        th19.hook_on_input_players(on_input_players);
+    let (old_on_input_menu, apply_hook_on_input_menu) = th19.hook_on_input_menu(on_input_menu);
+    let (old_fn_from_0bed70_00fc, apply_hook_0bed70_00fc) = th19.hook_0bed70_00fc(render_object);
+    let (old_fn_from_0d6e10_0039, apply_hook_0d6e10_0039) = th19.hook_0d6e10_0039(render_text);
+    let (old_fn_from_0d7180_0008, apply_hook_0d7180_0008) = th19.hook_0d7180_0008(on_render_texts);
+    let (old_fn_from_11f870_034c, apply_hook_11f870_034c) = th19.hook_11f870_034c(on_round_over);
+    let (old_fn_from_1243f0_00f9, apply_hook_1243f0_00f9) =
+        th19.hook_1243f0_00f9(fn_from_1243f0_00f9);
+    let (old_fn_from_1243f0_0320, apply_hook_1243f0_0320) =
+        th19.hook_1243f0_0320(fn_from_1243f0_0320);
+    let (old_fn_from_13f9d0_0345, apply_hook_13f9d0_0345) =
+        th19.hook_13f9d0_0345(on_rewrite_controller_assignments);
+    let (old_fn_from_13f9d0_0446, apply_hook_13f9d0_0446) =
+        th19.hook_13f9d0_0446(on_loaded_game_settings);
+
+    unsafe {
+        PROPS = Some(Props {
+            old_on_input_players,
+            old_on_input_menu,
+            old_fn_from_0bed70_00fc,
+            old_fn_from_0d6e10_0039,
+            old_fn_from_0d7180_0008,
+            old_fn_from_11f870_034c,
+            old_fn_from_1243f0_00f9,
+            old_fn_from_1243f0_0320,
+            old_fn_from_13f9d0_0345,
+            old_fn_from_13f9d0_0446,
+        });
+        STATE = Some(State::new(th19));
+    }
+    let th19 = &mut state_mut().th19_mut();
+    apply_hook_on_input_players(th19);
+    apply_hook_on_input_menu(th19);
+    apply_hook_0bed70_00fc(th19);
+    apply_hook_0d6e10_0039(th19);
+    apply_hook_0d7180_0008(th19);
+    apply_hook_11f870_034c(th19);
+    apply_hook_1243f0_00f9(th19);
+    apply_hook_1243f0_0320(th19);
+    apply_hook_13f9d0_0345(th19);
+    apply_hook_13f9d0_0446(th19);
 }
 
 #[no_mangle]
 pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32) -> bool {
     if reason == DLL_PROCESS_ATTACH {
-        if cfg!(debug_assertions) {
-            let _ = unsafe { AllocConsole() };
-            std::env::set_var("RUST_BACKTRACE", "1");
-        }
-        let dll_path = {
-            let mut buf = [0u16; MAX_PATH as usize];
-            if unsafe { GetModuleFileNameW(inst_dll, &mut buf) } == 0 {
-                panic!();
-            }
-            unsafe { PCWSTR::from_raw(buf.as_ptr()).to_string() }.unwrap()
-        };
-        let dll_path = PathBuf::from(dll_path);
-        tracing_helper::init_tracing(
-            dll_path.parent().unwrap().to_string_lossy().as_ref(),
-            &format!("{}.log", dll_path.file_stem().unwrap().to_string_lossy()),
-            false,
-        );
-
-        if !check_version() {
-            warn!("version mismatch: {:?}", calc_th19_hash());
-        }
-
-        let mut th19 = Th19::new_hooked_process("th19.exe").unwrap();
-
-        let (old_on_input_players, apply_hook_on_input_players) =
-            th19.hook_on_input_players(on_input_players);
-        let (old_on_input_menu, apply_hook_on_input_menu) = th19.hook_on_input_menu(on_input_menu);
-        let (old_fn_from_0bed70_00fc, apply_hook_0bed70_00fc) =
-            th19.hook_0bed70_00fc(render_object);
-        let (old_fn_from_0d6e10_0039, apply_hook_0d6e10_0039) = th19.hook_0d6e10_0039(render_text);
-        let (old_fn_from_0d7180_0008, apply_hook_0d7180_0008) =
-            th19.hook_0d7180_0008(on_render_texts);
-        let (old_fn_from_11f870_034c, apply_hook_11f870_034c) =
-            th19.hook_11f870_034c(on_round_over);
-        let (old_fn_from_1243f0_00f9, apply_hook_1243f0_00f9) =
-            th19.hook_1243f0_00f9(fn_from_1243f0_00f9);
-        let (old_fn_from_1243f0_0320, apply_hook_1243f0_0320) =
-            th19.hook_1243f0_0320(fn_from_1243f0_0320);
-        let (old_fn_from_13f9d0_0345, apply_hook_13f9d0_0345) =
-            th19.hook_13f9d0_0345(on_rewrite_controller_assignments);
-        let (old_fn_from_13f9d0_0446, apply_hook_13f9d0_0446) =
-            th19.hook_13f9d0_0446(on_loaded_game_settings);
-
-        init_interprocess();
-        unsafe {
-            PROPS = Some(Props {
-                old_on_input_players,
-                old_on_input_menu,
-                old_fn_from_0bed70_00fc,
-                old_fn_from_0d6e10_0039,
-                old_fn_from_0d7180_0008,
-                old_fn_from_11f870_034c,
-                old_fn_from_1243f0_00f9,
-                old_fn_from_1243f0_0320,
-                old_fn_from_13f9d0_0345,
-                old_fn_from_13f9d0_0446,
-            });
-            STATE = Some(State::new(th19));
-        }
-        let th19 = &mut state_mut().th19_mut();
-        apply_hook_on_input_players(th19);
-        apply_hook_on_input_menu(th19);
-        apply_hook_0bed70_00fc(th19);
-        apply_hook_0d6e10_0039(th19);
-        apply_hook_0d7180_0008(th19);
-        apply_hook_11f870_034c(th19);
-        apply_hook_1243f0_00f9(th19);
-        apply_hook_1243f0_0320(th19);
-        apply_hook_13f9d0_0345(th19);
-        apply_hook_13f9d0_0446(th19);
+        unsafe { MODULE = inst_dll.into() };
     }
+    true
+}
+
+/// # Safety
+/// The size allocated by `hash` must be indicated by `length`.
+#[allow(non_snake_case)]
+#[no_mangle]
+pub unsafe extern "C" fn CheckVersion(hash: *const u8, length: usize) -> bool {
+    let hash = unsafe { slice::from_raw_parts(hash, length) };
+    check_version(hash)
+}
+
+#[allow(non_snake_case)]
+#[no_mangle]
+pub extern "C" fn Initialize(_direct_3d: *const IDirect3D9) -> bool {
+    init(unsafe { MODULE });
+
     true
 }

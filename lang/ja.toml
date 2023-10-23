@@ -1,8 +1,0 @@
-"Module loaded by th19.exe." = "th19.exe にモジュールがロードされました。"
-"Module already loaded by th19.exe." = "既に th19.exe にモジュールがロードされています。"
-"Press enter to exit..." = "Enter キーを押すと終了します..."
-#
-"junowen_hook.dll not found." = "junowen_hook.dll が見つかりません。"
-"th19.exe process not found: " = "th19.exe のプロセスが見つかりません。"
-"waiting for th19.exe process..." = "th19.exe のプロセスを待っています..."
-"Failed to communicate with junowen_hook.dll: " = "junowen_hook.dll との疎通に失敗しました: "

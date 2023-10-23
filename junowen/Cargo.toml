@@ -6,7 +6,7 @@ authors.workspace = true
 license.workspace = true
 
 [lib]
-name = "junowen_hook"
+name = "th19_junowen"
 crate-type = ['cdylib']
 
 [dependencies]
