@@ -45,9 +45,6 @@ pub struct PeerConnection {
     data_channel_rx: Option<oneshot::Receiver<DataChannel>>,
 }
 
-unsafe impl Send for PeerConnection {}
-unsafe impl Sync for PeerConnection {}
-
 impl Drop for PeerConnection {
     fn drop(&mut self) {
         trace!("drop connection");

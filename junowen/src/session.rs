@@ -28,11 +28,9 @@ pub struct RoundInitial {
     pub seed4: u16,
 }
 
-pub async fn create_session(
-    conn: PeerConnection,
+fn to_channel(
     mut data_channel: DataChannel,
-    host: bool,
-) -> Result<Session> {
+) -> (mpsc::Sender<SessionMessage>, mpsc::Receiver<SessionMessage>) {
     let (hook_outgoing_tx, hook_outgoing_rx) = std::sync::mpsc::channel::<SessionMessage>();
     let data_channel_message_sender = data_channel.message_sender.clone();
 
@@ -72,12 +70,7 @@ pub async fn create_session(
             }
         }
     });
-    Ok(Session {
-        _conn: conn,
-        remote_player_name: "".to_owned(),
-        host,
-        delayed_inputs: DelayedInputs::new(hook_outgoing_tx, hook_incoming_rx, host),
-    })
+    (hook_outgoing_tx, hook_incoming_rx)
 }
 
 #[derive(CopyGetters, Getters, Setters)]
@@ -90,9 +83,6 @@ pub struct Session {
     delayed_inputs: DelayedInputs,
 }
 
-unsafe impl Send for Session {}
-unsafe impl Sync for Session {}
-
 impl Drop for Session {
     fn drop(&mut self) {
         info!("session closed");
@@ -100,6 +90,16 @@ impl Drop for Session {
 }
 
 impl Session {
+    pub fn new(conn: PeerConnection, data_channel: DataChannel, host: bool) -> Self {
+        let (hook_outgoing_tx, hook_incoming_rx) = to_channel(data_channel);
+        Self {
+            _conn: conn,
+            remote_player_name: "".to_owned(),
+            host,
+            delayed_inputs: DelayedInputs::new(hook_outgoing_tx, hook_incoming_rx, host),
+        }
+    }
+
     pub fn delay(&self) -> u8 {
         self.delayed_inputs.delay()
     }

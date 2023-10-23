@@ -11,7 +11,7 @@ use once_cell::sync::Lazy;
 use tokio::sync::{mpsc, oneshot};
 use tracing::info;
 
-use crate::session::{create_session, Session};
+use crate::session::Session;
 
 static TOKIO_RUNTIME: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
     tokio::runtime::Builder::new_multi_thread()
@@ -58,7 +58,7 @@ impl Signaling {
                 };
                 let host = !anserer;
                 tracing::trace!("signaling connected: host={}", host);
-                let session = create_session(conn, dc, host).await.unwrap();
+                let session = Session::new(conn, dc, host);
                 tracing::trace!("session created");
                 session_tx.send(session).await.unwrap();
                 connected_tx.send(()).unwrap();
