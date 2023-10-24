@@ -19,20 +19,22 @@ use webrtc::peer_connection::sdp::{
 pub struct CompressedSessionDesc(pub String);
 
 impl CompressedSessionDesc {
-    pub fn compress(desc: &RTCSessionDescription) -> Self {
+    pub fn compress(desc: &RTCSessionDescription, is_spectator: bool) -> Self {
         let mut e = DeflateEncoder::new(Vec::new(), Compression::best());
         e.write_all(desc.sdp.as_bytes()).unwrap();
         let compressed_bytes = e.finish().unwrap();
 
         Self(format!(
-            r#"<{}>{}</{}>"#,
+            r#"<{}{}>{}</{}{}>"#,
+            if is_spectator { "s-" } else { "" },
             desc.sdp_type,
             BASE64_STANDARD_NO_PAD.encode(compressed_bytes),
+            if is_spectator { "s-" } else { "" },
             desc.sdp_type,
         ))
     }
 
-    pub fn decompress(&self) -> Result<RTCSessionDescription> {
+    pub fn decompress(&self) -> Result<(RTCSessionDescription, bool)> {
         let captures = Regex::new(r#"<(.+?)>(.+?)</(.+?)>"#)
             .unwrap()
             .captures(&self.0)
@@ -48,13 +50,16 @@ impl CompressedSessionDesc {
         let mut d = DeflateDecoder::new(Vec::new());
         d.write_all(&compressed_bytes)?;
         let sdp = String::from_utf8_lossy(&d.finish()?).to_string();
-        Ok(match RTCSdpType::from(sdp_type) {
-            RTCSdpType::Offer => RTCSessionDescription::offer(sdp),
-            RTCSdpType::Pranswer => RTCSessionDescription::pranswer(sdp),
-            RTCSdpType::Answer => RTCSessionDescription::answer(sdp),
-            RTCSdpType::Unspecified | RTCSdpType::Rollback => {
-                bail!("Failed to parse from {:?}", self.0)
-            }
-        }?)
+        Ok((
+            match RTCSdpType::from(sdp_type.replace("s-", "").as_str()) {
+                RTCSdpType::Offer => RTCSessionDescription::offer(sdp),
+                RTCSdpType::Pranswer => RTCSessionDescription::pranswer(sdp),
+                RTCSdpType::Answer => RTCSessionDescription::answer(sdp),
+                RTCSdpType::Unspecified | RTCSdpType::Rollback => {
+                    bail!("Failed to parse from {:?}", self.0)
+                }
+            }?,
+            self.0.starts_with("<s-offer>") || self.0.starts_with("<s-answer>"),
+        ))
     }
 }

@@ -41,7 +41,7 @@ impl PureP2pGuest {
                     )],
                 ),
             ),
-            signaling: Signaling::new(session_tx.clone()),
+            signaling: Signaling::new(session_tx.clone(), |conn, dc| Session::new(conn, dc, false)),
             session_tx,
             offer: None,
             answer_generated: false,

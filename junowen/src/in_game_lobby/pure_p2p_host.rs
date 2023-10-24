@@ -57,7 +57,7 @@ impl PureP2pHost {
                     ],
                 ),
             ),
-            signaling: Signaling::new(session_tx.clone()),
+            signaling: Signaling::new(session_tx.clone(), |conn, dc| Session::new(conn, dc, true)),
             session_tx,
             answer: None,
             copy_state: 0,
@@ -105,10 +105,13 @@ impl PureP2pHost {
                 if action == 2 {
                     if let Ok(ok) = clipboard_win::get_clipboard_string() {
                         let answer = CompressedSessionDesc(ok.clone());
-                        let Ok(RTCSessionDescription {
-                            sdp_type: RTCSdpType::Answer,
-                            ..
-                        }) = answer.decompress()
+                        let Ok((
+                            RTCSessionDescription {
+                                sdp_type: RTCSdpType::Answer,
+                                ..
+                            },
+                            false,
+                        )) = answer.decompress()
                         else {
                             th19.play_sound(th19.sound_manager(), 0x10, 0);
                             return None;

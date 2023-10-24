@@ -19,12 +19,12 @@ async fn main() -> Result<()> {
 
     let task = spawn(async move {
         let mut socket = AsyncReadWriteSocket::new(server_pipe);
-        socket.receive_signaling().await.unwrap()
+        socket.receive_signaling(false).await.unwrap()
     });
     connect_as_offerer(&mut client_pipe, &Lang::resolve())
         .await
         .unwrap();
-    let (_, _conn, mut dc) = task.await.unwrap();
+    let (_conn, mut dc) = task.await.unwrap();
 
     dc.message_sender
         .send(Bytes::from_iter(b"ping".iter().copied()))

@@ -9,11 +9,12 @@ use junowen_lib::{
     connection::{DataChannel, PeerConnection},
     GameSettings,
 };
+use rmp_serde::decode::Error;
 use serde::{Deserialize, Serialize};
 use tokio::spawn;
 use tracing::{debug, info};
 
-use self::delayed_inputs::{DelayedInputs, SessionMessage};
+use self::delayed_inputs::DelayedInputs;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct MatchInitial {
@@ -28,10 +29,14 @@ pub struct RoundInitial {
     pub seed4: u16,
 }
 
-fn to_channel(
+fn to_channel<T>(
     mut data_channel: DataChannel,
-) -> (mpsc::Sender<SessionMessage>, mpsc::Receiver<SessionMessage>) {
-    let (hook_outgoing_tx, hook_outgoing_rx) = std::sync::mpsc::channel::<SessionMessage>();
+    decode: fn(input: &[u8]) -> Result<T, Error>,
+) -> (mpsc::Sender<T>, mpsc::Receiver<T>)
+where
+    T: Serialize + Send + 'static,
+{
+    let (hook_outgoing_tx, hook_outgoing_rx) = std::sync::mpsc::channel();
     let data_channel_message_sender = data_channel.message_sender.clone();
 
     spawn(async move {
@@ -63,7 +68,7 @@ fn to_channel(
             let Some(data) = data_channel.recv().await else {
                 return;
             };
-            let msg: SessionMessage = rmp_serde::from_slice(&data).unwrap();
+            let msg = decode(&data).unwrap();
             if let Err(err) = hook_incoming_tx.send(msg) {
                 debug!("send hook incoming msg error: {}", err);
                 return;
@@ -91,7 +96,8 @@ impl Drop for Session {
 
 impl Session {
     pub fn new(conn: PeerConnection, data_channel: DataChannel, host: bool) -> Self {
-        let (hook_outgoing_tx, hook_incoming_rx) = to_channel(data_channel);
+        let (hook_outgoing_tx, hook_incoming_rx) =
+            to_channel(data_channel, |input| rmp_serde::from_slice(input));
         Self {
             _conn: conn,
             remote_player_name: "".to_owned(),

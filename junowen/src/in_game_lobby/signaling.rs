@@ -1,17 +1,18 @@
 use anyhow::Error;
 use getset::{CopyGetters, Getters, MutGetters};
-use junowen_lib::connection::signaling::{
-    socket::{
-        async_read_write_socket::SignalingServerMessage, channel_socket::ChannelSocket,
-        SignalingSocket,
+use junowen_lib::connection::{
+    signaling::{
+        socket::{
+            async_read_write_socket::SignalingServerMessage, channel_socket::ChannelSocket,
+            SignalingSocket,
+        },
+        CompressedSessionDesc,
     },
-    CompressedSessionDesc,
+    DataChannel, PeerConnection,
 };
 use once_cell::sync::Lazy;
 use tokio::sync::{mpsc, oneshot};
 use tracing::info;
-
-use crate::session::Session;
 
 static TOKIO_RUNTIME: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
     tokio::runtime::Builder::new_multi_thread()
@@ -39,7 +40,13 @@ pub struct Signaling {
 }
 
 impl Signaling {
-    pub fn new(session_tx: mpsc::Sender<Session>) -> Self {
+    pub fn new<T>(
+        session_tx: mpsc::Sender<T>,
+        create_session: fn(PeerConnection, DataChannel) -> T,
+    ) -> Self
+    where
+        T: Send + 'static,
+    {
         let (offer_tx, offer_rx) = oneshot::channel();
         let (answer_tx, answer_rx) = oneshot::channel();
         let (msg_tx, msg_rx) = oneshot::channel();
@@ -48,7 +55,7 @@ impl Signaling {
         std::thread::spawn(move || {
             TOKIO_RUNTIME.block_on(async move {
                 let mut socket = ChannelSocket::new(offer_tx, answer_tx, msg_rx);
-                let (anserer, conn, dc) = match socket.receive_signaling().await {
+                let (conn, dc) = match socket.receive_signaling(false).await {
                     Ok(ok) => ok,
                     Err(err) => {
                         info!("Signaling failed: {}", err);
@@ -56,11 +63,8 @@ impl Signaling {
                         return;
                     }
                 };
-                let host = !anserer;
-                tracing::trace!("signaling connected: host={}", host);
-                let session = Session::new(conn, dc, host);
-                tracing::trace!("session created");
-                session_tx.send(session).await.unwrap();
+                tracing::trace!("signaling connected");
+                session_tx.send(create_session(conn, dc)).await.unwrap();
                 connected_tx.send(()).unwrap();
             });
         });

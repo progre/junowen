@@ -119,7 +119,7 @@ impl PeerConnection {
         self.rtc.as_ref().unwrap()
     }
 
-    pub async fn start_as_offerer(&mut self) -> Result<CompressedSessionDesc> {
+    pub async fn start_as_offerer(&mut self, spectator: bool) -> Result<CompressedSessionDesc> {
         let rtc_data_channel = self
             .rtc()
             .create_data_channel(
@@ -146,12 +146,13 @@ impl PeerConnection {
             .local_description()
             .await
             .ok_or_else(|| anyhow!("Failed to get local description"))?;
-        Ok(CompressedSessionDesc::compress(&local_desc))
+        Ok(CompressedSessionDesc::compress(&local_desc, spectator))
     }
 
     pub async fn start_as_answerer(
         &mut self,
         offer_desc: CompressedSessionDesc,
+        spectator: bool,
     ) -> Result<CompressedSessionDesc> {
         let (data_channel_tx, data_channel_rx) = oneshot::channel();
         self.data_channel_rx = Some(data_channel_rx);
@@ -166,7 +167,10 @@ impl PeerConnection {
                         .send(DataChannel::new(rtc_data_channel, disconnected_rx).await);
                 })
             }));
-        let offer_desc = offer_desc.decompress()?;
+        let (offer_desc, is_spectator_remote) = offer_desc.decompress()?;
+        if spectator != is_spectator_remote {
+            bail!("spectator mismatch");
+        }
         self.rtc().set_remote_description(offer_desc).await?;
         let offer = self.rtc().create_answer(None).await?;
 
@@ -180,13 +184,19 @@ impl PeerConnection {
             .await
             .ok_or_else(|| anyhow!("Failed to get local description"))?;
 
-        Ok(CompressedSessionDesc::compress(&local_desc))
+        Ok(CompressedSessionDesc::compress(&local_desc, spectator))
     }
 
-    pub async fn set_answer_desc(&self, answer_desc: CompressedSessionDesc) -> Result<()> {
-        self.rtc()
-            .set_remote_description(answer_desc.decompress()?)
-            .await?;
+    pub async fn set_answer_desc(
+        &self,
+        answer_desc: CompressedSessionDesc,
+        spectator: bool,
+    ) -> Result<()> {
+        let (answer_desc, is_spectator_remote) = answer_desc.decompress()?;
+        if spectator != is_spectator_remote {
+            bail!("spectator mismatch");
+        }
+        self.rtc().set_remote_description(answer_desc).await?;
         Ok(())
     }
 
