@@ -5,7 +5,7 @@ use junowen_lib::{th19_helpers::reset_cursors, Menu, ScreenId, Th19};
 
 use crate::{
     helper::inputed_number,
-    session::{MatchInitial, RoundInitial, Session},
+    session::{BattleSession, MatchInitial, RoundInitial},
 };
 
 use super::State;
@@ -32,7 +32,7 @@ pub fn update_state(state: &mut State) -> Option<(bool, Option<&'static Menu>)> 
 
 pub fn update_th19_on_input_players(
     first_time: bool,
-    session: &mut Session,
+    battle_session: &mut BattleSession,
     menu: &Menu,
     th19: &mut Th19,
 ) -> Result<(), RecvError> {
@@ -40,20 +40,20 @@ pub fn update_th19_on_input_players(
         th19.set_no_wait(false);
         reset_cursors(th19);
 
-        if session.host() {
-            if session.match_initial().is_none() {
+        if battle_session.host() {
+            if battle_session.match_initial().is_none() {
                 let init = MatchInitial {
                     game_settings: th19.game_settings_in_menu().unwrap(),
                 };
-                let (remote_player_name, opt) = session.init_match(
+                let (remote_player_name, opt) = battle_session.init_match(
                     th19.player_name().player_name().to_string(),
                     Some(init.clone()),
                 )?;
-                session.set_remote_player_name(remote_player_name);
+                battle_session.set_remote_player_name(remote_player_name);
                 debug_assert!(opt.is_none());
-                session.set_match_initial(Some(init));
+                battle_session.set_match_initial(Some(init));
             }
-            let opt = session.init_round(Some(RoundInitial {
+            let opt = battle_session.init_round(Some(RoundInitial {
                 seed1: th19.rand_seed1().unwrap(),
                 seed2: th19.rand_seed2().unwrap(),
                 seed3: th19.rand_seed3().unwrap(),
@@ -61,14 +61,14 @@ pub fn update_th19_on_input_players(
             }))?;
             debug_assert!(opt.is_none());
         } else {
-            if session.match_initial().is_none() {
-                let (remote_player_name, opt) =
-                    session.init_match(th19.player_name().player_name().to_string(), None)?;
-                session.set_remote_player_name(remote_player_name);
+            if battle_session.match_initial().is_none() {
+                let (remote_player_name, opt) = battle_session
+                    .init_match(th19.player_name().player_name().to_string(), None)?;
+                battle_session.set_remote_player_name(remote_player_name);
                 debug_assert!(opt.is_some());
-                session.set_match_initial(opt);
+                battle_session.set_match_initial(opt);
             }
-            let init = session.init_round(None)?.unwrap();
+            let init = battle_session.init_round(None)?.unwrap();
             th19.set_rand_seed1(init.seed1).unwrap();
             th19.set_rand_seed2(init.seed2).unwrap();
             th19.set_rand_seed3(init.seed3).unwrap();
@@ -81,12 +81,12 @@ pub fn update_th19_on_input_players(
     }
 
     let input_devices = th19.input_devices_mut();
-    let delay = if session.host() {
+    let delay = if battle_session.host() {
         inputed_number(input_devices)
     } else {
         None
     };
-    let (p1, p2) = session
+    let (p1, p2) = battle_session
         .enqueue_input_and_dequeue(input_devices.p1_input().current().bits() as u16, delay)?;
     input_devices
         .p1_input_mut()
@@ -98,7 +98,10 @@ pub fn update_th19_on_input_players(
     Ok(())
 }
 
-pub fn update_th19_on_input_menu(session: &mut Session, th19: &mut Th19) -> Result<(), RecvError> {
+pub fn update_th19_on_input_menu(
+    battle_session: &mut BattleSession,
+    th19: &mut Th19,
+) -> Result<(), RecvError> {
     let menu = th19
         .app_mut()
         .main_loop_tasks_mut()
@@ -108,13 +111,14 @@ pub fn update_th19_on_input_menu(session: &mut Session, th19: &mut Th19) -> Resu
         return Ok(());
     }
 
-    let delay = if session.host() {
+    let delay = if battle_session.host() {
         inputed_number(th19.input_devices())
     } else {
         None
     };
     let menu_input = th19.menu_input_mut();
-    let (p1, p2) = session.enqueue_input_and_dequeue(menu_input.current().bits() as u16, delay)?;
+    let (p1, p2) =
+        battle_session.enqueue_input_and_dequeue(menu_input.current().bits() as u16, delay)?;
     let input = if p1 != 0 { p1 } else { p2 };
     menu_input.set_current((input as u32).try_into().unwrap());
     Ok(())

@@ -13,7 +13,7 @@ use webrtc::peer_connection::sdp::{
     sdp_type::RTCSdpType, session_description::RTCSessionDescription,
 };
 
-use crate::session::Session;
+use crate::session::BattleSession;
 
 use super::{
     common_menu::{
@@ -26,14 +26,14 @@ use super::{
 pub struct PureP2pHost {
     common_menu: CommonMenu,
     signaling: Signaling,
-    session_tx: mpsc::Sender<Session>,
+    session_tx: mpsc::Sender<BattleSession>,
     answer: Option<CompressedSessionDesc>,
     /// 0: require generate, 1: copied, 2: already copied, 3: copied again
     copy_state: u8,
 }
 
 impl PureP2pHost {
-    pub fn new(session_tx: mpsc::Sender<Session>) -> Self {
+    pub fn new(session_tx: mpsc::Sender<BattleSession>) -> Self {
         Self {
             common_menu: CommonMenu::new(
                 "Ju.N.Owen",
@@ -57,7 +57,9 @@ impl PureP2pHost {
                     ],
                 ),
             ),
-            signaling: Signaling::new(session_tx.clone(), |conn, dc| Session::new(conn, dc, true)),
+            signaling: Signaling::new(session_tx.clone(), |conn, dc| {
+                BattleSession::new(conn, dc, true)
+            }),
             session_tx,
             answer: None,
             copy_state: 0,

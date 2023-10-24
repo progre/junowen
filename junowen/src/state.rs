@@ -18,12 +18,12 @@ use tracing::{debug, trace};
 use self::junowen_state::JunowenState;
 use crate::{
     in_game_lobby::{Lobby, TitleMenuModifier},
-    session::Session,
+    session::BattleSession,
 };
 
 #[derive(Getters, MutGetters)]
 pub struct State {
-    session_rx: mpsc::Receiver<Session>,
+    battle_session_rx: mpsc::Receiver<BattleSession>,
     #[getset(get = "pub", get_mut = "pub")]
     th19: Th19,
     title_menu_modifier: TitleMenuModifier,
@@ -33,12 +33,12 @@ pub struct State {
 
 impl State {
     pub fn new(th19: Th19) -> Self {
-        let (session_tx, session_rx) = mpsc::channel(1);
+        let (battle_session_tx, battle_session_rx) = mpsc::channel(1);
         Self {
-            session_rx,
+            battle_session_rx,
             th19,
             title_menu_modifier: TitleMenuModifier::new(),
-            lobby: Lobby::new(session_tx),
+            lobby: Lobby::new(battle_session_tx),
             junowen_state: JunowenState::Standby,
         }
     }
@@ -51,7 +51,7 @@ impl State {
     fn update_state(&mut self) -> Option<(bool, Option<&'static Menu>)> {
         match self.junowen_state {
             JunowenState::Standby => {
-                if let Ok(session) = self.session_rx.try_recv() {
+                if let Ok(session) = self.battle_session_rx.try_recv() {
                     trace!("session received");
                     self.junowen_state.start_session(session);
                     return Some((true, None));
@@ -101,14 +101,16 @@ impl State {
                 prepare::update_th19_on_input_players(&mut self.th19, *prepare_state);
                 Ok(())
             }
-            JunowenState::Select { session } => select::update_th19_on_input_players(
+            JunowenState::Select { battle_session } => select::update_th19_on_input_players(
                 changed,
-                session,
+                battle_session,
                 menu.unwrap(),
                 &mut self.th19,
             ),
             JunowenState::GameLoading { .. } => Ok(()),
-            JunowenState::Game { session } => game::update_th19(session, &mut self.th19),
+            JunowenState::Game { battle_session } => {
+                game::update_th19(battle_session, &mut self.th19)
+            }
             JunowenState::BackToSelect { .. } => Ok(()),
         }
     }
@@ -130,8 +132,9 @@ impl State {
                 state: prepare_state,
                 ..
             } => prepare::update_th19_on_input_menu(&mut self.th19, *prepare_state),
-            JunowenState::Select { session } => {
-                if let Err(err) = select::update_th19_on_input_menu(session, &mut self.th19) {
+            JunowenState::Select { battle_session } => {
+                if let Err(err) = select::update_th19_on_input_menu(battle_session, &mut self.th19)
+                {
                     debug!("session aborted: {}", err);
                     self.end_session();
                 }

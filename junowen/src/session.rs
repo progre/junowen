@@ -79,7 +79,7 @@ where
 }
 
 #[derive(CopyGetters, Getters, Setters)]
-pub struct Session {
+pub struct BattleSession {
     _conn: PeerConnection,
     #[getset(get = "pub", set = "pub")]
     remote_player_name: String,
@@ -90,13 +90,13 @@ pub struct Session {
     match_initial: Option<MatchInitial>,
 }
 
-impl Drop for Session {
+impl Drop for BattleSession {
     fn drop(&mut self) {
         info!("session closed");
     }
 }
 
-impl Session {
+impl BattleSession {
     pub fn new(conn: PeerConnection, data_channel: DataChannel, host: bool) -> Self {
         let (hook_outgoing_tx, hook_incoming_rx) =
             to_channel(data_channel, |input| rmp_serde::from_slice(input));

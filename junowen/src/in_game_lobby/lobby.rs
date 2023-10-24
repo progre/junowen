@@ -3,7 +3,7 @@ use std::ffi::c_void;
 use junowen_lib::{InputFlags, InputValue, Th19};
 use tokio::sync::mpsc;
 
-use crate::session::Session;
+use crate::session::BattleSession;
 
 use super::{
     common_menu::{CommonMenu, LobbyScene, MenuAction, MenuDefine, MenuItem, OnMenuInputResult},
@@ -66,19 +66,19 @@ pub struct Lobby {
     scene: LobbyScene,
     prev_scene: LobbyScene,
     root: Root,
-    session_tx: mpsc::Sender<Session>,
+    battle_session_tx: mpsc::Sender<BattleSession>,
     pure_p2p_host: Option<PureP2pHost>,
     pure_p2p_guest: Option<PureP2pGuest>,
     prev_input: InputValue,
 }
 
 impl Lobby {
-    pub fn new(session_tx: mpsc::Sender<Session>) -> Self {
+    pub fn new(battle_session_tx: mpsc::Sender<BattleSession>) -> Self {
         Self {
             scene: LobbyScene::Root,
             prev_scene: LobbyScene::Root,
             root: Root::new(),
-            session_tx,
+            battle_session_tx,
             pure_p2p_host: None,
             pure_p2p_guest: None,
             prev_input: InputValue::full(),
@@ -101,7 +101,7 @@ impl Lobby {
                 .on_input_menu(current_input, self.prev_input, th19),
             LobbyScene::PureP2pHost => {
                 if self.pure_p2p_host.is_none() {
-                    self.pure_p2p_host = Some(PureP2pHost::new(self.session_tx.clone()));
+                    self.pure_p2p_host = Some(PureP2pHost::new(self.battle_session_tx.clone()));
                     self.pure_p2p_guest = None;
                 }
                 self.pure_p2p_host.as_mut().unwrap().on_input_menu(
@@ -112,7 +112,7 @@ impl Lobby {
             }
             LobbyScene::PureP2pGuest => {
                 if self.pure_p2p_guest.is_none() {
-                    self.pure_p2p_guest = Some(PureP2pGuest::new(self.session_tx.clone()));
+                    self.pure_p2p_guest = Some(PureP2pGuest::new(self.battle_session_tx.clone()));
                     self.pure_p2p_host = None;
                 }
                 self.pure_p2p_guest.as_mut().unwrap().on_input_menu(

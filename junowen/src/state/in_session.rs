@@ -3,18 +3,22 @@ use std::ffi::c_void;
 use junowen_lib::{Fn10f720, RenderingText, Th19};
 use tracing::trace;
 
-use crate::session::Session;
+use crate::session::BattleSession;
 
 use super::State;
 
-pub fn on_render_texts(session: &Session, state: &State, text_renderer: *const c_void) {
+pub fn on_render_texts(
+    battle_session: &BattleSession,
+    state: &State,
+    text_renderer: *const c_void,
+) {
     let th19 = state.th19();
     let mut text = RenderingText::default();
     text.set_text(
         format!(
             "Ju.N.Owen v{} Delay: {}",
             env!("CARGO_PKG_VERSION"),
-            session.delay()
+            battle_session.delay()
         )
         .as_bytes(),
     );
@@ -24,14 +28,14 @@ pub fn on_render_texts(session: &Session, state: &State, text_renderer: *const c
     text.font_type = 1;
     th19.render_text(text_renderer, &text);
 
-    let (p1, p2) = if session.host() {
+    let (p1, p2) = if battle_session.host() {
         (
             th19.player_name().player_name(),
-            session.remote_player_name().into(),
+            battle_session.remote_player_name().into(),
         )
     } else {
         (
-            session.remote_player_name().into(),
+            battle_session.remote_player_name().into(),
             th19.player_name().player_name(),
         )
     };

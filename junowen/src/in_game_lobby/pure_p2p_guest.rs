@@ -9,7 +9,7 @@ use junowen_lib::{
 };
 use tokio::sync::mpsc;
 
-use crate::session::Session;
+use crate::session::BattleSession;
 
 use super::{
     common_menu::{CommonMenu, LobbyScene, MenuAction, MenuDefine, MenuItem, OnMenuInputResult},
@@ -20,14 +20,14 @@ use super::{
 pub struct PureP2pGuest {
     common_menu: CommonMenu,
     signaling: Signaling,
-    session_tx: mpsc::Sender<Session>,
+    battle_session_tx: mpsc::Sender<BattleSession>,
     offer: Option<CompressedSessionDesc>,
     answer_generated: bool,
     error_received: bool,
 }
 
 impl PureP2pGuest {
-    pub fn new(session_tx: mpsc::Sender<Session>) -> Self {
+    pub fn new(battle_session_tx: mpsc::Sender<BattleSession>) -> Self {
         Self {
             common_menu: CommonMenu::new(
                 "Ju.N.Owen",
@@ -41,8 +41,10 @@ impl PureP2pGuest {
                     )],
                 ),
             ),
-            signaling: Signaling::new(session_tx.clone(), |conn, dc| Session::new(conn, dc, false)),
-            session_tx,
+            signaling: Signaling::new(battle_session_tx.clone(), |conn, dc| {
+                BattleSession::new(conn, dc, false)
+            }),
+            battle_session_tx,
             offer: None,
             answer_generated: false,
             error_received: false,
@@ -163,6 +165,6 @@ impl PureP2pGuest {
 
     fn reset(&mut self) {
         self.error_received = false;
-        *self = Self::new(self.session_tx.clone());
+        *self = Self::new(self.battle_session_tx.clone());
     }
 }

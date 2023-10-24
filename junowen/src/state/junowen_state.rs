@@ -3,67 +3,70 @@ use std::mem;
 use junowen_lib::{Fn011560, Fn10f720, Selection, Th19};
 use tracing::debug;
 
-use crate::session::Session;
+use crate::session::BattleSession;
 
 use super::{game, in_session};
 
 pub enum JunowenState {
     Standby,
     Prepare {
-        session: Session,
+        battle_session: BattleSession,
         /// 0: back to title, 1: resolve controller, 2: forward to difficulty select
         state: u8,
     },
     Select {
-        session: Session,
+        battle_session: BattleSession,
     },
     GameLoading {
-        session: Session,
+        battle_session: BattleSession,
     },
     Game {
-        session: Session,
+        battle_session: BattleSession,
     },
     BackToSelect {
-        session: Session,
+        battle_session: BattleSession,
     },
 }
 
 impl JunowenState {
-    pub fn session(&self) -> Option<&Session> {
+    pub fn session(&self) -> Option<&BattleSession> {
         match self {
             JunowenState::Standby => None,
-            JunowenState::Prepare { session, .. }
-            | JunowenState::Select { session }
-            | JunowenState::GameLoading { session }
-            | JunowenState::Game { session }
-            | JunowenState::BackToSelect { session } => Some(session),
+            JunowenState::Prepare { battle_session, .. }
+            | JunowenState::Select { battle_session }
+            | JunowenState::GameLoading { battle_session }
+            | JunowenState::Game { battle_session }
+            | JunowenState::BackToSelect { battle_session } => Some(battle_session),
         }
     }
 
-    pub fn session_mut(&mut self) -> Option<&mut Session> {
+    pub fn session_mut(&mut self) -> Option<&mut BattleSession> {
         match self {
             JunowenState::Standby => None,
-            JunowenState::Prepare { session, .. }
-            | JunowenState::Select { session }
-            | JunowenState::GameLoading { session }
-            | JunowenState::Game { session }
-            | JunowenState::BackToSelect { session } => Some(session),
+            JunowenState::Prepare { battle_session, .. }
+            | JunowenState::Select { battle_session }
+            | JunowenState::GameLoading { battle_session }
+            | JunowenState::Game { battle_session }
+            | JunowenState::BackToSelect { battle_session } => Some(battle_session),
         }
     }
 
-    pub fn inner_session(self) -> Session {
+    pub fn inner_session(self) -> BattleSession {
         match self {
             JunowenState::Standby => unreachable!(),
-            JunowenState::Prepare { session, .. }
-            | JunowenState::Select { session }
-            | JunowenState::GameLoading { session }
-            | JunowenState::Game { session }
-            | JunowenState::BackToSelect { session } => session,
+            JunowenState::Prepare { battle_session, .. }
+            | JunowenState::Select { battle_session }
+            | JunowenState::GameLoading { battle_session }
+            | JunowenState::Game { battle_session }
+            | JunowenState::BackToSelect { battle_session } => battle_session,
         }
     }
 
-    pub fn start_session(&mut self, session: Session) {
-        *self = JunowenState::Prepare { session, state: 0 };
+    pub fn start_session(&mut self, battle_session: BattleSession) {
+        *self = JunowenState::Prepare {
+            battle_session,
+            state: 0,
+        };
     }
 
     pub fn change_to_prepare(&mut self, new_state: u8) {
@@ -76,25 +79,25 @@ impl JunowenState {
     pub fn change_to_select(&mut self) {
         let old = mem::replace(self, JunowenState::Standby);
         *self = JunowenState::Select {
-            session: old.inner_session(),
+            battle_session: old.inner_session(),
         };
     }
     pub fn change_to_game_loading(&mut self) {
         let old = mem::replace(self, JunowenState::Standby);
         *self = JunowenState::GameLoading {
-            session: old.inner_session(),
+            battle_session: old.inner_session(),
         }
     }
     pub fn change_to_game(&mut self) {
         let old = mem::replace(self, JunowenState::Standby);
         *self = JunowenState::Game {
-            session: old.inner_session(),
+            battle_session: old.inner_session(),
         }
     }
     pub fn change_to_back_to_select(&mut self) {
         let old = mem::replace(self, JunowenState::Standby);
         *self = JunowenState::BackToSelect {
-            session: old.inner_session(),
+            battle_session: old.inner_session(),
         }
     }
     pub fn end_session(&mut self) {

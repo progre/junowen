@@ -5,7 +5,7 @@ use junowen_lib::{InputValue, Menu, Th19};
 
 use crate::{
     helper::inputed_number,
-    session::{RoundInitial, Session},
+    session::{BattleSession, RoundInitial},
 };
 
 use super::State;
@@ -18,7 +18,7 @@ pub fn update_state(state: &mut State) -> Option<(bool, Option<&'static Menu>)> 
     Some((true, None))
 }
 
-pub fn update_th19(session: &mut Session, th19: &mut Th19) -> Result<(), RecvError> {
+pub fn update_th19(battle_session: &mut BattleSession, th19: &mut Th19) -> Result<(), RecvError> {
     // -1フレーム目、0フレーム目は複数回呼ばれ、回数が不定なのでスキップする
     if th19.round().unwrap().frame < 1 {
         let input_devices = th19.input_devices_mut();
@@ -30,12 +30,12 @@ pub fn update_th19(session: &mut Session, th19: &mut Th19) -> Result<(), RecvErr
             .set_current(InputValue::empty());
     } else {
         let input_devices = th19.input_devices_mut();
-        let delay = if session.host() {
+        let delay = if battle_session.host() {
             inputed_number(input_devices)
         } else {
             None
         };
-        let (p1, p2) = session
+        let (p1, p2) = battle_session
             .enqueue_input_and_dequeue(input_devices.p1_input().current().bits() as u16, delay)?;
         input_devices
             .p1_input_mut()
@@ -47,9 +47,9 @@ pub fn update_th19(session: &mut Session, th19: &mut Th19) -> Result<(), RecvErr
     Ok(())
 }
 
-pub fn on_round_over(session: &mut Session, th19: &mut Th19) -> Result<(), RecvError> {
-    if session.host() {
-        let init = session.init_round(Some(RoundInitial {
+pub fn on_round_over(battle_session: &mut BattleSession, th19: &mut Th19) -> Result<(), RecvError> {
+    if battle_session.host() {
+        let init = battle_session.init_round(Some(RoundInitial {
             seed1: th19.rand_seed1().unwrap(),
             seed2: th19.rand_seed2().unwrap(),
             seed3: th19.rand_seed3().unwrap(),
@@ -57,7 +57,7 @@ pub fn on_round_over(session: &mut Session, th19: &mut Th19) -> Result<(), RecvE
         }))?;
         assert!(init.is_none());
     } else {
-        let init = session.init_round(None)?.unwrap();
+        let init = battle_session.init_round(None)?.unwrap();
         th19.set_rand_seed1(init.seed1).unwrap();
         th19.set_rand_seed2(init.seed2).unwrap();
         th19.set_rand_seed3(init.seed3).unwrap();
