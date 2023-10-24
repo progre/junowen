@@ -19,7 +19,7 @@ pub fn update_state(state: &mut State) -> Option<(bool, Option<&'static Menu>)> 
         .unwrap();
     match menu.screen_id {
         ScreenId::GameLoading => {
-            state.change_to_game_loading();
+            state.junowen_state.change_to_game_loading();
             Some((true, Some(menu)))
         }
         ScreenId::PlayerMatchupSelect => {
@@ -35,14 +35,13 @@ pub fn update_th19_on_input_players(
     session: &mut Session,
     menu: &Menu,
     th19: &mut Th19,
-    match_initial: &mut Option<MatchInitial>,
 ) -> Result<(), RecvError> {
     if first_time {
         th19.set_no_wait(false);
         reset_cursors(th19);
 
         if session.host() {
-            if match_initial.is_none() {
+            if session.match_initial().is_none() {
                 let init = MatchInitial {
                     game_settings: th19.game_settings_in_menu().unwrap(),
                 };
@@ -52,7 +51,7 @@ pub fn update_th19_on_input_players(
                 )?;
                 session.set_remote_player_name(remote_player_name);
                 debug_assert!(opt.is_none());
-                *match_initial = Some(init);
+                session.set_match_initial(Some(init));
             }
             let opt = session.init_round(Some(RoundInitial {
                 seed1: th19.rand_seed1().unwrap(),
@@ -62,12 +61,12 @@ pub fn update_th19_on_input_players(
             }))?;
             debug_assert!(opt.is_none());
         } else {
-            if match_initial.is_none() {
+            if session.match_initial().is_none() {
                 let (remote_player_name, opt) =
                     session.init_match(th19.player_name().player_name().to_string(), None)?;
                 session.set_remote_player_name(remote_player_name);
                 debug_assert!(opt.is_some());
-                *match_initial = opt;
+                session.set_match_initial(opt);
             }
             let init = session.init_round(None)?.unwrap();
             th19.set_rand_seed1(init.seed1).unwrap();
@@ -119,9 +118,4 @@ pub fn update_th19_on_input_menu(session: &mut Session, th19: &mut Th19) -> Resu
     let input = if p1 != 0 { p1 } else { p2 };
     menu_input.set_current((input as u32).try_into().unwrap());
     Ok(())
-}
-
-pub fn on_loaded_game_settings(match_initial: &MatchInitial, th19: &mut Th19) {
-    th19.put_game_settings_in_game(&match_initial.game_settings)
-        .unwrap();
 }

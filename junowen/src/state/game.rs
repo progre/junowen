@@ -14,7 +14,7 @@ pub fn update_state(state: &mut State) -> Option<(bool, Option<&'static Menu>)> 
     if state.th19.round().is_some() {
         return Some((false, None));
     }
-    state.change_to_back_to_select();
+    state.junowen_state.change_to_back_to_select();
     Some((true, None))
 }
 

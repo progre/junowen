@@ -52,7 +52,7 @@ fn state_mut() -> &'static mut State {
 }
 
 extern "fastcall" fn on_input_players() {
-    state::on_input_players(state_mut());
+    state_mut().on_input_players();
 
     if let Some(func) = props().old_on_input_players {
         func()
@@ -60,7 +60,7 @@ extern "fastcall" fn on_input_players() {
 }
 
 extern "fastcall" fn on_input_menu() {
-    state::on_input_menu(state_mut());
+    state_mut().on_input_menu();
 
     if let Some(func) = props().old_on_input_menu {
         func()
@@ -68,55 +68,44 @@ extern "fastcall" fn on_input_menu() {
 }
 
 extern "thiscall" fn render_object(this: *const c_void, obj: *const c_void) {
-    state::render_object(state(), props().old_fn_from_0bed70_00fc, this, obj);
+    state().render_object(props().old_fn_from_0bed70_00fc, this, obj);
 }
 
 extern "thiscall" fn render_text(text_renderer: *const c_void, text: *mut RenderingText) -> u32 {
-    let old = props().old_fn_from_0d6e10_0039;
     let text = unsafe { text.as_mut().unwrap() };
-    state::render_text(state_mut(), old, text_renderer, text)
+    state_mut().render_text(props().old_fn_from_0d6e10_0039, text_renderer, text)
 }
 
 extern "thiscall" fn on_render_texts(text_renderer: *const c_void, arg: *const c_void) -> u32 {
     let ret = (props().old_fn_from_0d7180_0008)(text_renderer, arg);
-    state::on_render_texts(state_mut(), text_renderer);
+    state_mut().on_render_texts(text_renderer);
     ret
 }
 
 extern "fastcall" fn on_round_over() {
     (props().old_fn_from_11f870_034c)();
 
-    state::on_round_over(state_mut());
-}
-
-fn is_online_vs(this: *const Selection, old: Fn011560) -> u8 {
-    let ret = old(this);
-    if state().session().is_some() {
-        return 1;
-    }
-    ret
+    state_mut().on_round_over();
 }
 
 /// for pause menu online vs view
 extern "thiscall" fn fn_from_1243f0_00f9(this: *const Selection) -> u8 {
-    is_online_vs(this, props().old_fn_from_1243f0_00f9)
+    state().is_online_vs(this, props().old_fn_from_1243f0_00f9)
 }
 
 /// for pause menu online vs view
 extern "thiscall" fn fn_from_1243f0_0320(this: *const Selection) -> u8 {
-    is_online_vs(this, props().old_fn_from_1243f0_0320)
+    state().is_online_vs(this, props().old_fn_from_1243f0_0320)
 }
 
 extern "fastcall" fn on_rewrite_controller_assignments() {
     // NOTE: old_fn() modifies th19 outside of Rust.
     //       This reference makes Rust aware of the change.
-    state::on_rewrite_controller_assignments(state_mut(), |_: &mut Th19| {
-        props().old_fn_from_13f9d0_0345
-    });
+    state_mut().on_rewrite_controller_assignments(|_: &mut Th19| props().old_fn_from_13f9d0_0345);
 }
 
 extern "thiscall" fn on_loaded_game_settings(this: *const c_void, arg1: u32) -> u32 {
-    state::on_loaded_game_settings(state_mut());
+    state_mut().on_loaded_game_settings();
 
     (props().old_fn_from_13f9d0_0446)(this, arg1)
 }

@@ -86,6 +86,8 @@ pub struct Session {
     #[getset(get_copy = "pub")]
     host: bool,
     delayed_inputs: DelayedInputs,
+    #[getset(get = "pub", set = "pub")]
+    match_initial: Option<MatchInitial>,
 }
 
 impl Drop for Session {
@@ -103,6 +105,7 @@ impl Session {
             remote_player_name: "".to_owned(),
             host,
             delayed_inputs: DelayedInputs::new(hook_outgoing_tx, hook_incoming_rx, host),
+            match_initial: None,
         }
     }
 

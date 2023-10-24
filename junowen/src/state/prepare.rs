@@ -11,25 +11,27 @@ pub fn update_state(state: &mut State, prepare_state: u8) -> Option<(bool, Optio
             if menu.screen_id != ScreenId::Title {
                 return Some((false, Some(menu)));
             }
-            state.change_to_prepare(if state.th19.input_devices().is_conflict_input_device() {
-                1
-            } else {
-                2
-            });
+            state.junowen_state.change_to_prepare(
+                if state.th19.input_devices().is_conflict_input_device() {
+                    1
+                } else {
+                    2
+                },
+            );
             Some((true, Some(menu)))
         }
         1 => {
             if state.th19.input_devices().is_conflict_input_device() {
                 return Some((false, Some(menu)));
             }
-            state.change_to_prepare(0);
+            state.junowen_state.change_to_prepare(0);
             Some((true, Some(menu)))
         }
         2 => {
             if menu.screen_id != ScreenId::DifficultySelect {
                 return Some((false, Some(menu)));
             }
-            state.change_to_select();
+            state.junowen_state.change_to_select();
             Some((true, Some(menu)))
         }
         _ => unreachable!(),
