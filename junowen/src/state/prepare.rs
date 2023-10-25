@@ -1,42 +1,8 @@
-use junowen_lib::{th19_helpers::AutomaticInputs, Menu, PlayerMatchup, ScreenId, Th19};
+use derive_new::new;
+use getset::{CopyGetters, Getters, MutGetters, Setters};
+use junowen_lib::{th19_helpers::AutomaticInputs, PlayerMatchup, Th19};
 
-use super::State;
-
-pub fn update_state(state: &mut State, prepare_state: u8) -> Option<(bool, Option<&'static Menu>)> {
-    let Some(menu) = state.th19.app_mut().main_loop_tasks_mut().find_menu_mut() else {
-        return Some((false, None));
-    };
-    match prepare_state {
-        0 => {
-            if menu.screen_id != ScreenId::Title {
-                return Some((false, Some(menu)));
-            }
-            state.junowen_state.change_to_prepare(
-                if state.th19.input_devices().is_conflict_input_device() {
-                    1
-                } else {
-                    2
-                },
-            );
-            Some((true, Some(menu)))
-        }
-        1 => {
-            if state.th19.input_devices().is_conflict_input_device() {
-                return Some((false, Some(menu)));
-            }
-            state.junowen_state.change_to_prepare(0);
-            Some((true, Some(menu)))
-        }
-        2 => {
-            if menu.screen_id != ScreenId::DifficultySelect {
-                return Some((false, Some(menu)));
-            }
-            state.junowen_state.change_to_select();
-            Some((true, Some(menu)))
-        }
-        _ => unreachable!(),
-    }
-}
+use crate::session::BattleSession;
 
 fn to_automatic_inputs(prepare_state: u8) -> AutomaticInputs {
     match prepare_state {
@@ -47,15 +13,30 @@ fn to_automatic_inputs(prepare_state: u8) -> AutomaticInputs {
     }
 }
 
-pub fn update_th19_on_input_players(th19: &mut Th19, prepare_state: u8) {
-    th19.set_no_wait(true);
-    to_automatic_inputs(prepare_state).on_input_players(th19);
+#[derive(new, CopyGetters, Getters, MutGetters, Setters)]
+pub struct Prepare {
+    #[getset(get = "pub", get_mut = "pub")]
+    battle_session: BattleSession,
+    /// 0: back to title, 1: resolve controller, 2: forward to difficulty select
+    #[getset(get_copy = "pub", set = "pub")]
+    state: u8,
 }
 
-pub fn update_th19_on_input_menu(th19: &mut Th19, prepare_state: u8) {
-    let Some(menu) = th19.app_mut().main_loop_tasks_mut().find_menu_mut() else {
-        return;
-    };
-    let no_wait = to_automatic_inputs(prepare_state).on_input_menu(th19, menu);
-    th19.set_no_wait(no_wait);
+impl Prepare {
+    pub fn inner_battle_session(self) -> BattleSession {
+        self.battle_session
+    }
+
+    pub fn update_th19_on_input_players(&self, th19: &mut Th19) {
+        th19.set_no_wait(true);
+        to_automatic_inputs(self.state).on_input_players(th19);
+    }
+
+    pub fn update_th19_on_input_menu(&self, th19: &mut Th19) {
+        let Some(menu) = th19.app_mut().main_loop_tasks_mut().find_menu_mut() else {
+            return;
+        };
+        let no_wait = to_automatic_inputs(self.state).on_input_menu(th19, menu);
+        th19.set_no_wait(no_wait);
+    }
 }

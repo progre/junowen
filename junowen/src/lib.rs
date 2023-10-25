@@ -73,12 +73,12 @@ extern "thiscall" fn render_object(this: *const c_void, obj: *const c_void) {
 
 extern "thiscall" fn render_text(text_renderer: *const c_void, text: *mut RenderingText) -> u32 {
     let text = unsafe { text.as_mut().unwrap() };
-    state_mut().render_text(props().old_fn_from_0d6e10_0039, text_renderer, text)
+    state().render_text(props().old_fn_from_0d6e10_0039, text_renderer, text)
 }
 
 extern "thiscall" fn on_render_texts(text_renderer: *const c_void, arg: *const c_void) -> u32 {
     let ret = (props().old_fn_from_0d7180_0008)(text_renderer, arg);
-    state_mut().on_render_texts(text_renderer);
+    state().on_render_texts(text_renderer);
     ret
 }
 

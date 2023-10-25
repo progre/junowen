@@ -13,6 +13,7 @@ crate-type = ['cdylib']
 anyhow.workspace = true
 bytes = "1.5.0"
 clipboard-win = "4.5.0"
+derive-new = "0.5.9"
 getset = "0.1.2"
 junowen-lib.workspace = true
 once_cell = "1.18.0"

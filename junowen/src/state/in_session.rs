@@ -5,14 +5,7 @@ use tracing::trace;
 
 use crate::session::BattleSession;
 
-use super::State;
-
-pub fn on_render_texts(
-    battle_session: &BattleSession,
-    state: &State,
-    text_renderer: *const c_void,
-) {
-    let th19 = state.th19();
+pub fn on_render_texts(th19: &Th19, battle_session: &BattleSession, text_renderer: *const c_void) {
     let mut text = RenderingText::default();
     text.set_text(
         format!(
