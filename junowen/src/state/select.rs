@@ -54,14 +54,14 @@ fn init_match(th19: &mut Th19, battle_session: &mut BattleSession) -> Result<(),
 #[derive(new, Getters, MutGetters)]
 pub struct Select {
     #[getset(get = "pub", get_mut = "pub")]
-    battle_session: BattleSession,
+    session: BattleSession,
     #[new(value = "true")]
     first_time: bool,
 }
 
 impl Select {
-    pub fn inner_battle_session(self) -> BattleSession {
-        self.battle_session
+    pub fn inner_session(self) -> BattleSession {
+        self.session
     }
 
     pub fn update_th19_on_input_players(
@@ -71,7 +71,7 @@ impl Select {
     ) -> Result<(), RecvError> {
         if self.first_time {
             self.first_time = false;
-            init_match(th19, &mut self.battle_session)?;
+            init_match(th19, &mut self.session)?;
         }
 
         if menu.screen_id == ScreenId::DifficultySelect {
@@ -79,13 +79,13 @@ impl Select {
         }
 
         let input_devices = th19.input_devices_mut();
-        let delay = if self.battle_session.host() {
+        let delay = if self.session.host() {
             inputed_number(input_devices)
         } else {
             None
         };
         let (p1, p2) = self
-            .battle_session
+            .session
             .enqueue_input_and_dequeue(input_devices.p1_input().current().bits() as u16, delay)?;
         input_devices
             .p1_input_mut()
@@ -103,14 +103,14 @@ impl Select {
             return Ok(());
         }
 
-        let delay = if self.battle_session.host() {
+        let delay = if self.session.host() {
             inputed_number(th19.input_devices())
         } else {
             None
         };
         let menu_input = th19.menu_input_mut();
         let (p1, p2) = self
-            .battle_session
+            .session
             .enqueue_input_and_dequeue(menu_input.current().bits() as u16, delay)?;
         let input = if p1 != 0 { p1 } else { p2 };
         menu_input.set_current((input as u32).try_into().unwrap());

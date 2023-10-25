@@ -47,13 +47,13 @@ impl State {
     }
 
     pub fn on_input_players(&mut self) {
-        let has_session = self.junowen_state.session().is_some();
+        let has_session = self.junowen_state.has_session();
         match self
             .junowen_state
             .on_input_players(&mut self.th19, &mut self.battle_session_rx)
         {
             Ok(_) => {
-                if has_session && self.junowen_state.session().is_none() {
+                if has_session && self.junowen_state.has_session() {
                     self.lobby.reset_depth();
                 }
             }

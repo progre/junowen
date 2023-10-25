@@ -1,7 +1,8 @@
 use std::{ffi::c_void, mem, sync::mpsc::RecvError};
 
 use junowen_lib::{
-    Fn011560, Fn0b7d40, Fn0d5ae0, Fn10f720, Menu, RenderingText, ScreenId, Selection, Th19,
+    Fn011560, Fn0b7d40, Fn0d5ae0, Fn10f720, GameSettings, Menu, RenderingText, ScreenId, Selection,
+    Th19,
 };
 use tokio::sync::mpsc::Receiver;
 use tracing::trace;
@@ -15,45 +16,44 @@ use super::{game::Game, in_session, prepare::Prepare, select::Select, standby};
 
 pub enum JunowenState {
     Standby,
-    Prepare(Prepare),
+    Prepare(Prepare<BattleSession>),
     Select(Select),
-    GameLoading { battle_session: BattleSession },
+    GameLoading { session: BattleSession },
     Game(Game),
-    BackToSelect { battle_session: BattleSession },
+    BackToSelect { session: BattleSession },
 }
 
 impl JunowenState {
-    pub fn session(&self) -> Option<&BattleSession> {
+    pub fn game_settings(&self) -> Option<&GameSettings> {
         match self {
             JunowenState::Standby => None,
-            JunowenState::GameLoading { battle_session }
-            | JunowenState::BackToSelect { battle_session } => Some(battle_session),
-            JunowenState::Prepare(inner) => Some(inner.battle_session()),
-            JunowenState::Select(inner) => Some(inner.battle_session()),
-            JunowenState::Game(inner) => Some(inner.battle_session()),
+            JunowenState::GameLoading { session } | JunowenState::BackToSelect { session } => {
+                session.match_initial().map(|x| &x.game_settings)
+            }
+            JunowenState::Prepare(i) => i.session().match_initial().map(|x| &x.game_settings),
+            JunowenState::Select(i) => i.session().match_initial().map(|x| &x.game_settings),
+            JunowenState::Game(i) => i.session().match_initial().map(|x| &x.game_settings),
         }
+    }
+
+    pub fn has_session(&self) -> bool {
+        !matches!(self, JunowenState::Standby)
     }
 
     pub fn inner_session(self) -> BattleSession {
         match self {
             JunowenState::Standby => unreachable!(),
-            JunowenState::GameLoading { battle_session }
-            | JunowenState::BackToSelect { battle_session } => battle_session,
-            JunowenState::Prepare(inner) => inner.inner_battle_session(),
-            JunowenState::Select(inner) => inner.inner_battle_session(),
-            JunowenState::Game(inner) => inner.inner_battle_session(),
+            JunowenState::GameLoading { session } | JunowenState::BackToSelect { session } => {
+                session
+            }
+            JunowenState::Prepare(inner) => inner.inner_session(),
+            JunowenState::Select(inner) => inner.inner_session(),
+            JunowenState::Game(inner) => inner.inner_session(),
         }
     }
 
     pub fn start_session(&mut self, battle_session: BattleSession) {
-        *self = JunowenState::Prepare(Prepare::new(battle_session, 0));
-    }
-
-    pub fn change_to_prepare(&mut self, new_state: u8) {
-        let JunowenState::Prepare(prepare) = self else {
-            unreachable!();
-        };
-        prepare.set_state(new_state);
+        *self = JunowenState::Prepare(Prepare::new(battle_session));
     }
 
     pub fn change_to_select(&mut self) {
@@ -63,7 +63,7 @@ impl JunowenState {
     pub fn change_to_game_loading(&mut self) {
         let old = mem::replace(self, JunowenState::Standby);
         *self = JunowenState::GameLoading {
-            battle_session: old.inner_session(),
+            session: old.inner_session(),
         }
     }
     pub fn change_to_game(&mut self) {
@@ -73,7 +73,7 @@ impl JunowenState {
     pub fn change_to_back_to_select(&mut self) {
         let old = mem::replace(self, JunowenState::Standby);
         *self = JunowenState::BackToSelect {
-            battle_session: old.inner_session(),
+            session: old.inner_session(),
         }
     }
     pub fn end_session(&mut self) {
@@ -85,7 +85,7 @@ impl JunowenState {
         th19: &Th19,
         battle_session_rx: &mut Receiver<BattleSession>,
     ) -> Option<Option<&'static Menu>> {
-        match &self {
+        match self {
             JunowenState::Standby => {
                 if let Ok(session) = battle_session_rx.try_recv() {
                     trace!("session received");
@@ -98,35 +98,10 @@ impl JunowenState {
                 let Some(menu) = th19.app().main_loop_tasks().find_menu() else {
                     return Some(None);
                 };
-                match prepare.state() {
-                    0 => {
-                        if menu.screen_id != ScreenId::Title {
-                            return Some(Some(menu));
-                        }
-                        let new_state = if th19.input_devices().is_conflict_input_device() {
-                            1
-                        } else {
-                            2
-                        };
-                        self.change_to_prepare(new_state);
-                        Some(Some(menu))
-                    }
-                    1 => {
-                        if th19.input_devices().is_conflict_input_device() {
-                            return Some(Some(menu));
-                        }
-                        self.change_to_prepare(0);
-                        Some(Some(menu))
-                    }
-                    2 => {
-                        if menu.screen_id != ScreenId::DifficultySelect {
-                            return Some(Some(menu));
-                        }
-                        self.change_to_select();
-                        Some(Some(menu))
-                    }
-                    _ => unreachable!(),
+                if prepare.update_state(menu, th19) {
+                    self.change_to_select();
                 }
+                Some(Some(menu))
             }
             JunowenState::Select { .. } => {
                 let menu = th19.app().main_loop_tasks().find_menu().unwrap();
@@ -227,7 +202,7 @@ impl JunowenState {
         obj_renderer: *const c_void,
         obj: *const c_void,
     ) {
-        if self.session().is_none() {
+        if !self.has_session() {
             standby::render_object(title_menu_modifier, old, obj_renderer, obj);
             return;
         }
@@ -242,7 +217,7 @@ impl JunowenState {
         text_renderer: *const c_void,
         text: &mut RenderingText,
     ) -> u32 {
-        if self.session().is_none() {
+        if !self.has_session() {
             return standby::render_text(th19, title_menu_modifier, old, text_renderer, text);
         }
         old(text_renderer, text)
@@ -255,11 +230,32 @@ impl JunowenState {
         lobby: &Lobby,
         text_renderer: *const c_void,
     ) {
-        let Some(session) = self.session() else {
-            standby::on_render_texts(th19, title_menu_modifier, lobby, text_renderer);
-            return;
+        let session = {
+            match self {
+                JunowenState::Standby => {
+                    standby::on_render_texts(th19, title_menu_modifier, lobby, text_renderer);
+                    return;
+                }
+                JunowenState::GameLoading { session } | JunowenState::BackToSelect { session } => {
+                    session
+                }
+                JunowenState::Prepare(inner) => inner.session(),
+                JunowenState::Select(inner) => inner.session(),
+                JunowenState::Game(inner) => inner.session(),
+            }
         };
-        in_session::on_render_texts(th19, session, text_renderer);
+        let (p1, p2) = if session.host() {
+            (
+                th19.player_name().player_name(),
+                session.remote_player_name().into(),
+            )
+        } else {
+            (
+                session.remote_player_name().into(),
+                th19.player_name().player_name(),
+            )
+        };
+        in_session::on_render_texts(th19, session.delay(), &p1, &p2, text_renderer);
     }
 
     pub fn on_round_over(&mut self, th19: &mut Th19) -> Result<(), RecvError> {
@@ -271,10 +267,10 @@ impl JunowenState {
 
     pub fn is_online_vs(&self, this: *const Selection, old: Fn011560) -> u8 {
         let ret = old(this);
-        if self.session().is_some() {
-            return 1;
+        if !self.has_session() {
+            return ret;
         }
-        ret
+        1
     }
 
     pub fn on_rewrite_controller_assignments(
@@ -282,7 +278,7 @@ impl JunowenState {
         th19: &mut Th19,
         old_fn: fn(&mut Th19) -> Fn10f720,
     ) {
-        if self.session().is_none() {
+        if !self.has_session() {
             old_fn(th19)();
             return;
         }
@@ -290,9 +286,8 @@ impl JunowenState {
     }
 
     pub fn on_loaded_game_settings(&self, th19: &mut Th19) {
-        if let Some(match_initial) = &self.session().and_then(|x| x.match_initial().as_ref()) {
-            th19.put_game_settings_in_game(&match_initial.game_settings)
-                .unwrap();
+        if let Some(game_settings) = self.game_settings() {
+            th19.put_game_settings_in_game(game_settings).unwrap();
         }
     }
 }

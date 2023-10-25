@@ -86,7 +86,7 @@ pub struct BattleSession {
     #[getset(get_copy = "pub")]
     host: bool,
     delayed_inputs: DelayedInputs,
-    #[getset(get = "pub", set = "pub")]
+    #[getset(set = "pub")]
     match_initial: Option<MatchInitial>,
 }
 
@@ -107,6 +107,10 @@ impl BattleSession {
             delayed_inputs: DelayedInputs::new(hook_outgoing_tx, hook_incoming_rx, host),
             match_initial: None,
         }
+    }
+
+    pub fn match_initial(&self) -> Option<&MatchInitial> {
+        self.match_initial.as_ref()
     }
 
     pub fn delay(&self) -> u8 {
