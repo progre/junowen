@@ -1,3 +1,4 @@
+mod battle_session_state;
 mod game;
 mod in_session;
 mod junowen_state;
