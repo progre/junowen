@@ -3,7 +3,7 @@ use std::ffi::c_void;
 use junowen_lib::{InputFlags, InputValue, Th19};
 use tokio::sync::mpsc;
 
-use crate::session::BattleSession;
+use crate::session::battle::BattleSession;
 
 use super::{
     common_menu::{CommonMenu, LobbyScene, MenuAction, MenuDefine, MenuItem, OnMenuInputResult},

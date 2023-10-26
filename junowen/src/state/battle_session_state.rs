@@ -2,16 +2,16 @@ use std::{ffi::c_void, mem, sync::mpsc::RecvError};
 
 use junowen_lib::{GameSettings, Menu, ScreenId, Th19};
 
-use crate::session::BattleSession;
+use crate::session::battle::BattleSession;
 
-use super::{game::Game, in_session, prepare::Prepare, select::Select};
+use super::{battle_game::BattleGame, battle_select::BattleSelect, in_session, prepare::Prepare};
 
 pub enum BattleSessionState {
     Null,
     Prepare(Prepare<BattleSession>),
-    Select(Select),
+    Select(BattleSelect),
     GameLoading { session: BattleSession },
-    Game(Game),
+    Game(BattleGame),
     BackToSelect { session: BattleSession },
 }
 
@@ -40,7 +40,7 @@ impl BattleSessionState {
 
     pub fn change_to_select(&mut self) {
         let old = mem::replace(self, Self::Null);
-        *self = Self::Select(Select::new(old.inner_battle_session()));
+        *self = Self::Select(BattleSelect::new(old.inner_battle_session()));
     }
     pub fn change_to_game_loading(&mut self) {
         let old = mem::replace(self, Self::Null);
@@ -50,7 +50,7 @@ impl BattleSessionState {
     }
     pub fn change_to_game(&mut self) {
         let old = mem::replace(self, Self::Null);
-        *self = Self::Game(Game::new(old.inner_battle_session()));
+        *self = Self::Game(BattleGame::new(old.inner_battle_session()));
     }
     pub fn change_to_back_to_select(&mut self) {
         let old = mem::replace(self, Self::Null);

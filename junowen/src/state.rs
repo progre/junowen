@@ -1,9 +1,9 @@
+mod battle_game;
+mod battle_select;
 mod battle_session_state;
-mod game;
 mod in_session;
 mod junowen_state;
 mod prepare;
-mod select;
 mod standby;
 
 use std::{ffi::c_void, fmt::Display};
@@ -16,7 +16,7 @@ use tracing::debug;
 use self::junowen_state::JunowenState;
 use crate::{
     in_game_lobby::{Lobby, TitleMenuModifier},
-    session::BattleSession,
+    session::battle::BattleSession,
 };
 
 #[derive(Getters, MutGetters)]

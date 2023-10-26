@@ -13,7 +13,7 @@ use webrtc::peer_connection::sdp::{
     sdp_type::RTCSdpType, session_description::RTCSessionDescription,
 };
 
-use crate::session::BattleSession;
+use crate::session::battle::BattleSession;
 
 use super::{
     common_menu::{

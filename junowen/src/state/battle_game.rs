@@ -7,16 +7,16 @@ use junowen_lib::{InputValue, Th19};
 
 use crate::{
     helper::inputed_number,
-    session::{BattleSession, RoundInitial},
+    session::{battle::BattleSession, RoundInitial},
 };
 
 #[derive(new, Getters, MutGetters)]
-pub struct Game {
+pub struct BattleGame {
     #[getset(get = "pub", get_mut = "pub")]
     session: BattleSession,
 }
 
-impl Game {
+impl BattleGame {
     pub fn inner_session(self) -> BattleSession {
         self.session
     }
@@ -31,24 +31,23 @@ impl Game {
             input_devices
                 .p2_input_mut()
                 .set_current(InputValue::empty());
-        } else {
-            let input_devices = th19.input_devices_mut();
-            let delay = if self.session.host() {
-                inputed_number(input_devices)
-            } else {
-                None
-            };
-            let (p1, p2) = self.session.enqueue_input_and_dequeue(
-                input_devices.p1_input().current().bits() as u16,
-                delay,
-            )?;
-            input_devices
-                .p1_input_mut()
-                .set_current((p1 as u32).try_into().unwrap());
-            input_devices
-                .p2_input_mut()
-                .set_current((p2 as u32).try_into().unwrap());
+            return Ok(());
         }
+        let input_devices = th19.input_devices_mut();
+        let delay = if self.session.host() {
+            inputed_number(input_devices)
+        } else {
+            None
+        };
+        let (p1, p2) = self
+            .session
+            .enqueue_input_and_dequeue(input_devices.p1_input().current().bits() as u16, delay)?;
+        input_devices
+            .p1_input_mut()
+            .set_current((p1 as u32).try_into().unwrap());
+        input_devices
+            .p2_input_mut()
+            .set_current((p2 as u32).try_into().unwrap());
         Ok(())
     }
 

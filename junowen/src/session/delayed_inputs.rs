@@ -8,7 +8,7 @@ use getset::CopyGetters;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, trace};
 
-use super::{MatchInitial, RoundInitial};
+use super::{battle::MatchInitial, RoundInitial};
 
 /** input 以外はホストのみ発行できる */
 #[derive(Debug, Deserialize, Serialize)]

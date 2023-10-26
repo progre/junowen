@@ -9,7 +9,7 @@ use junowen_lib::{
 };
 use tokio::sync::mpsc;
 
-use crate::session::BattleSession;
+use crate::session::battle::BattleSession;
 
 use super::{
     common_menu::{CommonMenu, LobbyScene, MenuAction, MenuDefine, MenuItem, OnMenuInputResult},

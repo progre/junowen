@@ -8,7 +8,7 @@ use tracing::trace;
 
 use crate::{
     in_game_lobby::{Lobby, TitleMenuModifier},
-    session::BattleSession,
+    session::battle::BattleSession,
 };
 
 use super::{battle_session_state::BattleSessionState, in_session, prepare::Prepare, standby};
@@ -96,9 +96,7 @@ impl JunowenState {
             Self::Standby => {
                 standby::update_th19_on_input_menu(th19, title_menu_modifier, lobby);
             }
-            Self::BattleSession(session_state) => {
-                session_state.on_input_menu(th19)?;
-            }
+            Self::BattleSession(session_state) => session_state.on_input_menu(th19)?,
         }
         Ok(())
     }
@@ -143,7 +141,7 @@ impl JunowenState {
                 standby::on_render_texts(th19, title_menu_modifier, lobby, text_renderer);
             }
             Self::BattleSession(session_state) => {
-                session_state.on_render_texts(th19, text_renderer);
+                session_state.on_render_texts(th19, text_renderer)
             }
         }
     }

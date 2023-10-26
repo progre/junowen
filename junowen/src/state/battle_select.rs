@@ -7,7 +7,10 @@ use junowen_lib::{th19_helpers::reset_cursors, Menu, ScreenId, Th19};
 
 use crate::{
     helper::inputed_number,
-    session::{BattleSession, MatchInitial, RoundInitial},
+    session::{
+        battle::{BattleSession, MatchInitial},
+        RoundInitial,
+    },
 };
 
 fn init_match(th19: &mut Th19, battle_session: &mut BattleSession) -> Result<(), RecvError> {
@@ -52,14 +55,14 @@ fn init_match(th19: &mut Th19, battle_session: &mut BattleSession) -> Result<(),
 }
 
 #[derive(new, Getters, MutGetters)]
-pub struct Select {
+pub struct BattleSelect {
     #[getset(get = "pub", get_mut = "pub")]
     session: BattleSession,
     #[new(value = "true")]
     first_time: bool,
 }
 
-impl Select {
+impl BattleSelect {
     pub fn inner_session(self) -> BattleSession {
         self.session
     }
