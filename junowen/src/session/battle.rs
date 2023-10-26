@@ -7,7 +7,7 @@ use junowen_lib::{
     GameSettings,
 };
 use serde::{Deserialize, Serialize};
-use tracing::info;
+use tracing::{info, trace};
 
 use super::{delayed_inputs::DelayedInputs, to_channel, RoundInitial};
 
@@ -76,6 +76,7 @@ impl BattleSession {
         init: Option<RoundInitial>,
     ) -> Result<Option<RoundInitial>, RecvError> {
         debug_assert!(self.host == init.is_some());
+        trace!("init_round");
         self.delayed_inputs.send_init_round(init);
         self.delayed_inputs.recv_init_round()
     }

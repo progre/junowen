@@ -4,6 +4,7 @@ use anyhow::Result;
 use derive_new::new;
 use getset::{Getters, MutGetters};
 use junowen_lib::{th19_helpers::reset_cursors, Menu, ScreenId, Th19};
+use tracing::trace;
 
 use crate::{
     helper::inputed_number,
@@ -14,22 +15,32 @@ use crate::{
 };
 
 fn init_match(th19: &mut Th19, battle_session: &mut BattleSession) -> Result<(), RecvError> {
+    trace!("init_match");
     th19.set_no_wait(false);
     reset_cursors(th19);
-
     if battle_session.host() {
-        if battle_session.match_initial().is_none() {
-            let init = MatchInitial {
-                game_settings: th19.game_settings_in_menu().unwrap(),
-            };
-            let (remote_player_name, opt) = battle_session.init_match(
-                th19.player_name().player_name().to_string(),
-                Some(init.clone()),
-            )?;
-            battle_session.set_remote_player_name(remote_player_name);
-            debug_assert!(opt.is_none());
-            battle_session.set_match_initial(Some(init));
-        }
+        let init = MatchInitial {
+            game_settings: th19.game_settings_in_menu().unwrap(),
+        };
+        let (remote_player_name, opt) = battle_session.init_match(
+            th19.player_name().player_name().to_string(),
+            Some(init.clone()),
+        )?;
+        battle_session.set_remote_player_name(remote_player_name);
+        debug_assert!(opt.is_none());
+        battle_session.set_match_initial(Some(init));
+    } else {
+        let (remote_player_name, opt) =
+            battle_session.init_match(th19.player_name().player_name().to_string(), None)?;
+        battle_session.set_remote_player_name(remote_player_name);
+        debug_assert!(opt.is_some());
+        battle_session.set_match_initial(opt);
+    }
+    Ok(())
+}
+
+fn init_round(th19: &mut Th19, battle_session: &mut BattleSession) -> Result<(), RecvError> {
+    if battle_session.host() {
         let opt = battle_session.init_round(Some(RoundInitial {
             seed1: th19.rand_seed1().unwrap(),
             seed2: th19.rand_seed2().unwrap(),
@@ -38,13 +49,6 @@ fn init_match(th19: &mut Th19, battle_session: &mut BattleSession) -> Result<(),
         }))?;
         debug_assert!(opt.is_none());
     } else {
-        if battle_session.match_initial().is_none() {
-            let (remote_player_name, opt) =
-                battle_session.init_match(th19.player_name().player_name().to_string(), None)?;
-            battle_session.set_remote_player_name(remote_player_name);
-            debug_assert!(opt.is_some());
-            battle_session.set_match_initial(opt);
-        }
         let init = battle_session.init_round(None)?.unwrap();
         th19.set_rand_seed1(init.seed1).unwrap();
         th19.set_rand_seed2(init.seed2).unwrap();
@@ -74,7 +78,10 @@ impl BattleSelect {
     ) -> Result<(), RecvError> {
         if self.first_time {
             self.first_time = false;
-            init_match(th19, &mut self.session)?;
+            if self.session.match_initial().is_none() {
+                init_match(th19, &mut self.session)?;
+            }
+            init_round(th19, &mut self.session)?;
         }
 
         if menu.screen_id == ScreenId::DifficultySelect {
