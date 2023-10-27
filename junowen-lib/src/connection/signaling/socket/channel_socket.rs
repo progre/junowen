@@ -3,20 +3,20 @@ use async_trait::async_trait;
 use tokio::sync::oneshot;
 
 use super::{
-    super::CompressedSessionDesc, async_read_write_socket::SignalingServerMessage, OfferResponse,
+    super::CompressedSdp, async_read_write_socket::SignalingServerMessage, OfferResponse,
     SignalingSocket,
 };
 
 pub struct ChannelSocket {
-    offer_sender: Option<oneshot::Sender<CompressedSessionDesc>>,
-    answer_sender: Option<oneshot::Sender<CompressedSessionDesc>>,
+    offer_sender: Option<oneshot::Sender<CompressedSdp>>,
+    answer_sender: Option<oneshot::Sender<CompressedSdp>>,
     message_receiver: Option<oneshot::Receiver<SignalingServerMessage>>,
 }
 
 impl ChannelSocket {
     pub fn new(
-        offer_sender: oneshot::Sender<CompressedSessionDesc>,
-        answer_sender: oneshot::Sender<CompressedSessionDesc>,
+        offer_sender: oneshot::Sender<CompressedSdp>,
+        answer_sender: oneshot::Sender<CompressedSdp>,
         message_receiver: oneshot::Receiver<SignalingServerMessage>,
     ) -> Self {
         Self {
@@ -29,7 +29,7 @@ impl ChannelSocket {
 
 #[async_trait]
 impl SignalingSocket for ChannelSocket {
-    async fn offer(&mut self, desc: CompressedSessionDesc) -> Result<OfferResponse> {
+    async fn offer(&mut self, desc: CompressedSdp) -> Result<OfferResponse> {
         self.offer_sender.take().unwrap().send(desc).unwrap();
         Ok(match self.message_receiver.take().unwrap().await? {
             SignalingServerMessage::SetAnswerDesc(answer_desc) => {
@@ -39,7 +39,7 @@ impl SignalingSocket for ChannelSocket {
         })
     }
 
-    async fn answer(&mut self, desc: CompressedSessionDesc) -> Result<()> {
+    async fn answer(&mut self, desc: CompressedSdp) -> Result<()> {
         self.answer_sender.take().unwrap().send(desc).unwrap();
         Ok(())
     }

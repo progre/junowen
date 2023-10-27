@@ -19,7 +19,7 @@ async fn main() -> Result<()> {
 
     let task = spawn(async move {
         let mut socket = AsyncReadWriteSocket::new(server_pipe);
-        socket.receive_signaling(false).await.unwrap()
+        socket.receive_signaling().await.unwrap()
     });
     connect_as_answerer(&mut client_pipe, &Lang::resolve())
         .await

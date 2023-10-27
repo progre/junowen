@@ -1,17 +1,15 @@
 use std::ffi::c_void;
 
-use clipboard_win::set_clipboard_string;
+use clipboard_win::{get_clipboard_string, set_clipboard_string};
 use junowen_lib::{
     connection::signaling::{
-        socket::async_read_write_socket::SignalingServerMessage, CompressedSessionDesc,
+        parse_signaling_code, socket::async_read_write_socket::SignalingServerMessage,
+        SignalingCodeType,
     },
     InputValue, Th19,
 };
 use tokio::sync::mpsc;
 use tracing::trace;
-use webrtc::peer_connection::sdp::{
-    sdp_type::RTCSdpType, session_description::RTCSessionDescription,
-};
 
 use crate::session::battle::BattleSession;
 
@@ -27,7 +25,7 @@ pub struct PureP2pHost {
     common_menu: CommonMenu,
     signaling: Signaling,
     session_tx: mpsc::Sender<BattleSession>,
-    answer: Option<CompressedSessionDesc>,
+    answer: Option<String>,
     /// 0: require generate, 1: copied, 2: already copied, 3: copied again
     copy_state: u8,
 }
@@ -79,7 +77,7 @@ impl PureP2pHost {
         if self.copy_state == 0 {
             if let Some(offer) = self.signaling.offer() {
                 trace!("copied");
-                set_clipboard_string(&offer.0).unwrap();
+                set_clipboard_string(&SignalingCodeType::BattleOffer.to_string(offer)).unwrap();
                 self.copy_state = 1;
             }
         }
@@ -101,36 +99,33 @@ impl PureP2pHost {
                     self.reset();
                 }
                 if action == 1 {
-                    set_clipboard_string(&self.signaling.offer().as_ref().unwrap().0).unwrap();
+                    set_clipboard_string(
+                        &SignalingCodeType::BattleOffer
+                            .to_string(self.signaling.offer().as_ref().unwrap()),
+                    )
+                    .unwrap();
                     self.copy_state = if self.copy_state <= 1 { 1 } else { 3 };
                 }
                 if action == 2 {
-                    if let Ok(ok) = clipboard_win::get_clipboard_string() {
-                        let answer = CompressedSessionDesc(ok.clone());
-                        let Ok((
-                            RTCSessionDescription {
-                                sdp_type: RTCSdpType::Answer,
-                                ..
-                            },
-                            false,
-                        )) = answer.decompress()
-                        else {
-                            th19.play_sound(th19.sound_manager(), 0x10, 0);
-                            return None;
-                        };
-                        th19.play_sound(th19.sound_manager(), 0x07, 0);
-                        self.answer = Some(answer);
-                        self.signaling
-                            .msg_tx_mut()
-                            .take()
-                            .unwrap()
-                            .send(SignalingServerMessage::SetAnswerDesc(
-                                CompressedSessionDesc(ok),
-                            ))
-                            .unwrap();
-                        self.common_menu =
-                            CommonMenu::new("Ju.N.Owen", false, 720, MenuDefine::new(0, vec![]))
-                    }
+                    let Ok(ok) = get_clipboard_string() else {
+                        th19.play_sound(th19.sound_manager(), 0x10, 0);
+                        return None;
+                    };
+                    let Ok((SignalingCodeType::BattleAnswer, answer)) = parse_signaling_code(&ok)
+                    else {
+                        th19.play_sound(th19.sound_manager(), 0x10, 0);
+                        return None;
+                    };
+                    th19.play_sound(th19.sound_manager(), 0x07, 0);
+                    self.answer = Some(SignalingCodeType::BattleAnswer.to_string(&answer));
+                    self.signaling
+                        .msg_tx_mut()
+                        .take()
+                        .unwrap()
+                        .send(SignalingServerMessage::SetAnswerDesc(answer))
+                        .unwrap();
+                    self.common_menu =
+                        CommonMenu::new("Ju.N.Owen", false, 720, MenuDefine::new(0, vec![]))
                 }
                 None
             }
@@ -153,7 +148,8 @@ impl PureP2pHost {
             };
             render_text_line(th19, text_renderer, line, text.as_bytes());
             line += 2;
-            let chunks = offer.0.as_bytes().chunks(100);
+            let offer = SignalingCodeType::BattleOffer.to_string(offer);
+            let chunks = offer.as_bytes().chunks(100);
             let offer_len = (chunks.len() as f64 / 2.0).ceil() as u32;
             chunks.enumerate().for_each(|(i, chunk)| {
                 render_small_text_line(th19, text_renderer, line * 2 + i as u32, chunk);
@@ -169,7 +165,7 @@ impl PureP2pHost {
             let Some(answer) = &self.answer else {
                 break 'a;
             };
-            let chunks = answer.0.as_bytes().chunks(100);
+            let chunks = answer.as_bytes().chunks(100);
             let answer_len = (chunks.len() as f64 / 2.0).ceil() as u32;
             line += 2;
             chunks.enumerate().for_each(|(i, chunk)| {

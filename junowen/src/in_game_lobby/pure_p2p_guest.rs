@@ -1,9 +1,10 @@
 use std::ffi::c_void;
 
-use clipboard_win::set_clipboard_string;
+use clipboard_win::{get_clipboard_string, set_clipboard_string};
 use junowen_lib::{
     connection::signaling::{
-        socket::async_read_write_socket::SignalingServerMessage, CompressedSessionDesc,
+        parse_signaling_code, socket::async_read_write_socket::SignalingServerMessage,
+        SignalingCodeType,
     },
     InputValue, Th19,
 };
@@ -21,7 +22,7 @@ pub struct PureP2pGuest {
     common_menu: CommonMenu,
     signaling: Signaling,
     battle_session_tx: mpsc::Sender<BattleSession>,
-    offer: Option<CompressedSessionDesc>,
+    offer: Option<String>,
     answer_generated: bool,
     error_received: bool,
 }
@@ -37,7 +38,7 @@ impl PureP2pGuest {
                     0,
                     vec![MenuItem::new(
                         "Press SHOT to Paste",
-                        MenuAction::Action(0, true).into(),
+                        MenuAction::Action(0, false).into(),
                     )],
                 ),
             ),
@@ -64,7 +65,7 @@ impl PureP2pGuest {
         if !self.answer_generated {
             if let Some(answer) = self.signaling.answer() {
                 self.answer_generated = true;
-                set_clipboard_string(&answer.0).unwrap();
+                set_clipboard_string(&SignalingCodeType::BattleAnswer.to_string(answer)).unwrap();
                 self.common_menu = CommonMenu::new(
                     "Ju.N.Owen",
                     false,
@@ -96,21 +97,32 @@ impl PureP2pGuest {
             OnMenuInputResult::Action(MenuAction::Action(action, _)) => {
                 match action {
                     0 => {
-                        if let Ok(ok) = clipboard_win::get_clipboard_string() {
-                            let offer = CompressedSessionDesc(ok.clone());
-                            self.signaling
-                                .msg_tx_mut()
-                                .take()
-                                .unwrap()
-                                .send(SignalingServerMessage::RequestAnswer(offer))
-                                .unwrap();
-                            self.offer = Some(CompressedSessionDesc(ok));
-                            self.common_menu =
-                                CommonMenu::new("Ju.N.Owen", false, 0, MenuDefine::new(0, vec![]))
-                        }
+                        let Ok(ok) = get_clipboard_string() else {
+                            th19.play_sound(th19.sound_manager(), 0x10, 0);
+                            return None;
+                        };
+                        let Ok((SignalingCodeType::BattleOffer, offer)) = parse_signaling_code(&ok)
+                        else {
+                            th19.play_sound(th19.sound_manager(), 0x10, 0);
+                            return None;
+                        };
+                        th19.play_sound(th19.sound_manager(), 0x07, 0);
+                        self.offer = Some(SignalingCodeType::BattleOffer.to_string(&offer));
+                        self.signaling
+                            .msg_tx_mut()
+                            .take()
+                            .unwrap()
+                            .send(SignalingServerMessage::RequestAnswer(offer))
+                            .unwrap();
+                        self.common_menu =
+                            CommonMenu::new("Ju.N.Owen", false, 0, MenuDefine::new(0, vec![]))
                     }
                     1 => {
-                        set_clipboard_string(&self.signaling.answer().as_ref().unwrap().0).unwrap();
+                        set_clipboard_string(
+                            &SignalingCodeType::BattleAnswer
+                                .to_string(self.signaling.answer().as_ref().unwrap()),
+                        )
+                        .unwrap();
                         self.error_received = true;
                     }
                     _ => unreachable!(),
@@ -130,7 +142,7 @@ impl PureP2pGuest {
             let Some(offer) = self.offer.as_ref() else {
                 break 'a;
             };
-            let chunks = offer.0.as_bytes().chunks(100);
+            let chunks = offer.as_bytes().chunks(100);
             let offer_len = (chunks.len() as f64 / 2.0).ceil() as u32;
             chunks.enumerate().for_each(|(i, chunk)| {
                 render_small_text_line(th19, text_renderer, line * 2 + i as u32, chunk);
@@ -140,7 +152,8 @@ impl PureP2pGuest {
             let Some(answer) = &self.signaling.answer() else {
                 break 'a;
             };
-            let chunks = answer.0.as_bytes().chunks(100);
+            let answer = SignalingCodeType::BattleAnswer.to_string(answer);
+            let chunks = answer.as_bytes().chunks(100);
             let answer_len = (chunks.len() as f64 / 2.0).ceil() as u32;
             line += 2;
             chunks.enumerate().for_each(|(i, chunk)| {

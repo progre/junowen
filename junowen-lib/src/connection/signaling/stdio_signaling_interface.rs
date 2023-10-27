@@ -7,11 +7,11 @@ use tokio::{
     net::windows::named_pipe::NamedPipeClient,
 };
 
-use crate::lang::Lang;
+use crate::{connection::signaling::SignalingCodeType, lang::Lang};
 
 use super::{
     socket::async_read_write_socket::{SignalingClientMessage, SignalingServerMessage},
-    CompressedSessionDesc,
+    CompressedSdp,
 };
 
 fn read_line() -> String {
@@ -30,32 +30,31 @@ fn read_line_loop(lang: &Lang, msg: &str) -> String {
     }
 }
 
-fn offer_desc(lang: &Lang) -> CompressedSessionDesc {
-    CompressedSessionDesc(read_line_loop(lang, "Input host's signaling code:"))
+fn offer_desc(lang: &Lang) -> CompressedSdp {
+    CompressedSdp(read_line_loop(lang, "Input host's signaling code:"))
 }
 
-fn print_offer_desc_and_get_answer_desc(
-    lang: &Lang,
-    offer_desc: CompressedSessionDesc,
-) -> CompressedSessionDesc {
+fn print_offer_desc_and_get_answer_desc(lang: &Lang, offer_desc: CompressedSdp) -> CompressedSdp {
     lang.println("Your signaling code:");
+    let offer_str = SignalingCodeType::BattleOffer.to_string(&offer_desc);
     println!();
-    println!("{}", offer_desc.0);
+    println!("{}", offer_str);
     println!();
-    set_clipboard_string(&offer_desc.0).unwrap();
+    set_clipboard_string(&offer_str).unwrap();
     lang.println("It was copied to your clipboard. Share your signaling code with your guest.");
     println!();
-    let answer_desc = CompressedSessionDesc(read_line_loop(lang, "Input guest's signaling code:"));
+    let answer_desc = CompressedSdp(read_line_loop(lang, "Input guest's signaling code:"));
     lang.println("Waiting for guest to connect...");
     answer_desc
 }
 
-fn print_answer_desc(lang: &Lang, answer_desc: CompressedSessionDesc) {
+fn print_answer_desc(lang: &Lang, answer_desc: CompressedSdp) {
     lang.println("Your signaling code:");
+    let answer_str = SignalingCodeType::BattleAnswer.to_string(&answer_desc);
     println!();
-    println!("{}", answer_desc.0);
+    println!("{}", answer_str);
     println!();
-    set_clipboard_string(&answer_desc.0).unwrap();
+    set_clipboard_string(&answer_str).unwrap();
     lang.println("It was copied to your clipboard. Share your signaling code with your host.");
     println!();
     lang.println("Waiting for host to connect...");

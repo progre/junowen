@@ -12,11 +12,14 @@ use webrtc::{
     ice_transport::ice_server::RTCIceServer,
     peer_connection::{
         configuration::RTCConfiguration, peer_connection_state::RTCPeerConnectionState,
-        RTCPeerConnection,
+        sdp::sdp_type::RTCSdpType, RTCPeerConnection,
     },
 };
 
-use super::{data_channel::DataChannel, signaling::CompressedSessionDesc};
+use super::{
+    data_channel::DataChannel,
+    signaling::{decompress_session_description, CompressedSdp},
+};
 
 fn create_default_config() -> RTCConfiguration {
     RTCConfiguration {
@@ -119,7 +122,7 @@ impl PeerConnection {
         self.rtc.as_ref().unwrap()
     }
 
-    pub async fn start_as_offerer(&mut self, spectator: bool) -> Result<CompressedSessionDesc> {
+    pub async fn start_as_offerer(&mut self) -> Result<CompressedSdp> {
         let rtc_data_channel = self
             .rtc()
             .create_data_channel(
@@ -146,14 +149,10 @@ impl PeerConnection {
             .local_description()
             .await
             .ok_or_else(|| anyhow!("Failed to get local description"))?;
-        Ok(CompressedSessionDesc::compress(&local_desc, spectator))
+        Ok(CompressedSdp::compress(&local_desc))
     }
 
-    pub async fn start_as_answerer(
-        &mut self,
-        offer_desc: CompressedSessionDesc,
-        spectator: bool,
-    ) -> Result<CompressedSessionDesc> {
+    pub async fn start_as_answerer(&mut self, offer_desc: CompressedSdp) -> Result<CompressedSdp> {
         let (data_channel_tx, data_channel_rx) = oneshot::channel();
         self.data_channel_rx = Some(data_channel_rx);
         let mut data_channel_tx = Some(data_channel_tx);
@@ -167,10 +166,7 @@ impl PeerConnection {
                         .send(DataChannel::new(rtc_data_channel, disconnected_rx).await);
                 })
             }));
-        let (offer_desc, is_spectator_remote) = offer_desc.decompress()?;
-        if spectator != is_spectator_remote {
-            bail!("spectator mismatch");
-        }
+        let offer_desc = decompress_session_description(RTCSdpType::Offer, offer_desc)?;
         self.rtc().set_remote_description(offer_desc).await?;
         let offer = self.rtc().create_answer(None).await?;
 
@@ -184,18 +180,11 @@ impl PeerConnection {
             .await
             .ok_or_else(|| anyhow!("Failed to get local description"))?;
 
-        Ok(CompressedSessionDesc::compress(&local_desc, spectator))
+        Ok(CompressedSdp::compress(&local_desc))
     }
 
-    pub async fn set_answer_desc(
-        &self,
-        answer_desc: CompressedSessionDesc,
-        spectator: bool,
-    ) -> Result<()> {
-        let (answer_desc, is_spectator_remote) = answer_desc.decompress()?;
-        if spectator != is_spectator_remote {
-            bail!("spectator mismatch");
-        }
+    pub async fn set_answer_desc(&self, answer_desc: CompressedSdp) -> Result<()> {
+        let answer_desc = decompress_session_description(RTCSdpType::Answer, answer_desc)?;
         self.rtc().set_remote_description(answer_desc).await?;
         Ok(())
     }

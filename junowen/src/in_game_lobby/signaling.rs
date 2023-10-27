@@ -6,7 +6,7 @@ use junowen_lib::connection::{
             async_read_write_socket::SignalingServerMessage, channel_socket::ChannelSocket,
             SignalingSocket,
         },
-        CompressedSessionDesc,
+        CompressedSdp,
     },
     DataChannel, PeerConnection,
 };
@@ -23,14 +23,14 @@ static TOKIO_RUNTIME: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
 
 #[derive(CopyGetters, Getters, MutGetters)]
 pub struct Signaling {
-    offer_rx: oneshot::Receiver<CompressedSessionDesc>,
-    answer_rx: oneshot::Receiver<CompressedSessionDesc>,
+    offer_rx: oneshot::Receiver<CompressedSdp>,
+    answer_rx: oneshot::Receiver<CompressedSdp>,
     #[get_mut = "pub"]
     msg_tx: Option<oneshot::Sender<SignalingServerMessage>>,
     #[get = "pub"]
-    offer: Option<CompressedSessionDesc>,
+    offer: Option<CompressedSdp>,
     #[get = "pub"]
-    answer: Option<CompressedSessionDesc>,
+    answer: Option<CompressedSdp>,
     error_rx: oneshot::Receiver<Error>,
     #[get = "pub"]
     error: Option<Error>,
@@ -55,7 +55,7 @@ impl Signaling {
         std::thread::spawn(move || {
             TOKIO_RUNTIME.block_on(async move {
                 let mut socket = ChannelSocket::new(offer_tx, answer_tx, msg_rx);
-                let (conn, dc) = match socket.receive_signaling(false).await {
+                let (conn, dc) = match socket.receive_signaling().await {
                     Ok(ok) => ok,
                     Err(err) => {
                         info!("Signaling failed: {}", err);

@@ -5,18 +5,18 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
-use super::{super::CompressedSessionDesc, OfferResponse, SignalingSocket};
+use super::{super::CompressedSdp, OfferResponse, SignalingSocket};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum SignalingServerMessage {
-    RequestAnswer(CompressedSessionDesc),
-    SetAnswerDesc(CompressedSessionDesc),
+    RequestAnswer(CompressedSdp),
+    SetAnswerDesc(CompressedSdp),
 }
 
 #[derive(Deserialize, Serialize)]
 pub enum SignalingClientMessage {
-    OfferDesc(CompressedSessionDesc),
-    AnswerDesc(CompressedSessionDesc),
+    OfferDesc(CompressedSdp),
+    AnswerDesc(CompressedSdp),
 }
 
 pub struct AsyncReadWriteSocket<T>
@@ -57,7 +57,7 @@ impl<T> SignalingSocket for AsyncReadWriteSocket<T>
 where
     T: AsyncRead + AsyncWrite + Unpin + Send + Sync,
 {
-    async fn offer(&mut self, desc: CompressedSessionDesc) -> Result<OfferResponse> {
+    async fn offer(&mut self, desc: CompressedSdp) -> Result<OfferResponse> {
         self.send(SignalingClientMessage::OfferDesc(desc)).await?;
         Ok(match self.recv().await? {
             SignalingServerMessage::SetAnswerDesc(answer_desc) => {
@@ -67,7 +67,7 @@ where
         })
     }
 
-    async fn answer(&mut self, desc: CompressedSessionDesc) -> Result<()> {
+    async fn answer(&mut self, desc: CompressedSdp) -> Result<()> {
         Ok(self.send(SignalingClientMessage::AnswerDesc(desc)).await?)
     }
 }
