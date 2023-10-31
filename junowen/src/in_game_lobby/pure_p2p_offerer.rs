@@ -2,9 +2,12 @@ use std::ffi::c_void;
 
 use clipboard_win::{get_clipboard_string, set_clipboard_string};
 use junowen_lib::{
-    connection::signaling::{
-        parse_signaling_code, socket::async_read_write_socket::SignalingServerMessage,
-        SignalingCodeType,
+    connection::{
+        signaling::{
+            parse_signaling_code, socket::async_read_write_socket::SignalingServerMessage,
+            SignalingCodeType,
+        },
+        DataChannel, PeerConnection,
     },
     InputValue, Th19,
 };
@@ -21,18 +24,35 @@ use super::{
     signaling::Signaling,
 };
 
-pub struct PureP2pHost {
+pub struct PureP2pOfferer<T> {
+    offer_type: SignalingCodeType,
+    answer_type: SignalingCodeType,
+    create_session: fn(PeerConnection, DataChannel) -> T,
+    messages: [&'static str; 3],
     common_menu: CommonMenu,
     signaling: Signaling,
-    session_tx: mpsc::Sender<BattleSession>,
+    session_tx: mpsc::Sender<T>,
     answer: Option<String>,
     /// 0: require generate, 1: copied, 2: already copied, 3: copied again
     copy_state: u8,
 }
 
-impl PureP2pHost {
-    pub fn new(session_tx: mpsc::Sender<BattleSession>) -> Self {
+impl<T> PureP2pOfferer<T>
+where
+    T: Send + 'static,
+{
+    pub fn new(
+        offer_type: SignalingCodeType,
+        answer_type: SignalingCodeType,
+        create_session: fn(PeerConnection, DataChannel) -> T,
+        messages: [&'static str; 3],
+        session_tx: mpsc::Sender<T>,
+    ) -> Self {
         Self {
+            offer_type,
+            answer_type,
+            create_session,
+            messages,
             common_menu: CommonMenu::new(
                 "Ju.N.Owen",
                 false,
@@ -55,9 +75,7 @@ impl PureP2pHost {
                     ],
                 ),
             ),
-            signaling: Signaling::new(session_tx.clone(), |conn, dc| {
-                BattleSession::new(conn, dc, true)
-            }),
+            signaling: Signaling::new(session_tx.clone(), create_session),
             session_tx,
             answer: None,
             copy_state: 0,
@@ -77,7 +95,7 @@ impl PureP2pHost {
         if self.copy_state == 0 {
             if let Some(offer) = self.signaling.offer() {
                 trace!("copied");
-                set_clipboard_string(&SignalingCodeType::BattleOffer.to_string(offer)).unwrap();
+                set_clipboard_string(&self.offer_type.to_string(offer)).unwrap();
                 self.copy_state = 1;
             }
         }
@@ -100,7 +118,8 @@ impl PureP2pHost {
                 }
                 if action == 1 {
                     set_clipboard_string(
-                        &SignalingCodeType::BattleOffer
+                        &self
+                            .offer_type
                             .to_string(self.signaling.offer().as_ref().unwrap()),
                     )
                     .unwrap();
@@ -111,13 +130,16 @@ impl PureP2pHost {
                         th19.play_sound(th19.sound_manager(), 0x10, 0);
                         return None;
                     };
-                    let Ok((SignalingCodeType::BattleAnswer, answer)) = parse_signaling_code(&ok)
-                    else {
+                    let Ok((answer_type, answer)) = parse_signaling_code(&ok) else {
                         th19.play_sound(th19.sound_manager(), 0x10, 0);
                         return None;
                     };
+                    if answer_type != self.answer_type {
+                        th19.play_sound(th19.sound_manager(), 0x10, 0);
+                        return None;
+                    }
                     th19.play_sound(th19.sound_manager(), 0x07, 0);
-                    self.answer = Some(SignalingCodeType::BattleAnswer.to_string(&answer));
+                    self.answer = Some(self.answer_type.to_string(&answer));
                     self.signaling
                         .msg_tx_mut()
                         .take()
@@ -148,7 +170,7 @@ impl PureP2pHost {
             };
             render_text_line(th19, text_renderer, line, text.as_bytes());
             line += 2;
-            let offer = SignalingCodeType::BattleOffer.to_string(offer);
+            let offer = self.offer_type.to_string(offer);
             let chunks = offer.as_bytes().chunks(100);
             let offer_len = (chunks.len() as f64 / 2.0).ceil() as u32;
             chunks.enumerate().for_each(|(i, chunk)| {
@@ -157,11 +179,11 @@ impl PureP2pHost {
             line += offer_len + 1;
             if [1, 3].contains(&self.copy_state) {
                 render_text_line(th19, text_renderer, line, b"It was copied to Clipboard.");
-                let text = b"Share your signaling code with guest.";
+                let text = self.messages[0].as_bytes();
                 render_text_line(th19, text_renderer, line + 1, text);
             }
             line += 3;
-            render_text_line(th19, text_renderer, line, b"Guest's signaling code:");
+            render_text_line(th19, text_renderer, line, self.messages[1].as_bytes());
             let Some(answer) = &self.answer else {
                 break 'a;
             };
@@ -172,7 +194,7 @@ impl PureP2pHost {
                 render_small_text_line(th19, text_renderer, line * 2 + i as u32, chunk);
             });
             line += answer_len + 1;
-            let text = b"Waiting for guest to connect...";
+            let text = self.messages[2].as_bytes();
             render_text_line(th19, text_renderer, line, text);
         }
         if let Some(err) = self.signaling.error() {
@@ -182,6 +204,26 @@ impl PureP2pHost {
     }
 
     fn reset(&mut self) {
-        *self = Self::new(self.session_tx.clone());
+        *self = Self::new(
+            self.offer_type,
+            self.answer_type,
+            self.create_session,
+            self.messages,
+            self.session_tx.clone(),
+        );
     }
+}
+
+pub fn pure_p2p_host(session_tx: mpsc::Sender<BattleSession>) -> PureP2pOfferer<BattleSession> {
+    PureP2pOfferer::new(
+        SignalingCodeType::BattleOffer,
+        SignalingCodeType::BattleAnswer,
+        |pc, dc| BattleSession::new(pc, dc, true),
+        [
+            "Share your signaling code with guest.",
+            "Guest's signaling code:",
+            "Waiting for guest to connect...",
+        ],
+        session_tx,
+    )
 }

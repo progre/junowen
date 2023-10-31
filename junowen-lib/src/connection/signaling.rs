@@ -15,6 +15,7 @@ use webrtc::peer_connection::sdp::{
     sdp_type::RTCSdpType, session_description::RTCSessionDescription,
 };
 
+#[derive(Clone, Copy, PartialEq)]
 pub enum SignalingCodeType {
     BattleOffer,
     BattleAnswer,

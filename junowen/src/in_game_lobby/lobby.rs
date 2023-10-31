@@ -8,7 +8,7 @@ use crate::session::battle::BattleSession;
 use super::{
     common_menu::{CommonMenu, LobbyScene, MenuAction, MenuDefine, MenuItem, OnMenuInputResult},
     pure_p2p_guest::PureP2pGuest,
-    pure_p2p_host::PureP2pHost,
+    pure_p2p_offerer::{pure_p2p_host, PureP2pOfferer},
 };
 
 pub struct Root {
@@ -67,7 +67,7 @@ pub struct Lobby {
     prev_scene: LobbyScene,
     root: Root,
     battle_session_tx: mpsc::Sender<BattleSession>,
-    pure_p2p_host: Option<PureP2pHost>,
+    pure_p2p_host: Option<PureP2pOfferer<BattleSession>>,
     pure_p2p_guest: Option<PureP2pGuest>,
     prev_input: InputValue,
 }
@@ -101,7 +101,7 @@ impl Lobby {
                 .on_input_menu(current_input, self.prev_input, th19),
             LobbyScene::PureP2pHost => {
                 if self.pure_p2p_host.is_none() {
-                    self.pure_p2p_host = Some(PureP2pHost::new(self.battle_session_tx.clone()));
+                    self.pure_p2p_host = Some(pure_p2p_host(self.battle_session_tx.clone()));
                     self.pure_p2p_guest = None;
                 }
                 self.pure_p2p_host.as_mut().unwrap().on_input_menu(
