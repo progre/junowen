@@ -37,7 +37,7 @@ jobs:
             ./target/i686-pc-windows-msvc/release/*.dll \
             ./target/i686-pc-windows-msvc/release/*.exe \
             ./artifact/
-          cp --recursive lang/ LICENSE README.md THIRDPARTY.yml ./artifact/
+          cp --recursive LICENSE README.md THIRDPARTY.yml ./artifact/
       - uses: actions/upload-artifact@v3
         with:
           name: artifact
