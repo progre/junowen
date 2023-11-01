@@ -43,6 +43,7 @@ impl State {
 
     fn abort_session(&mut self, err: impl Display) {
         debug!("session aborted: {}", err);
+        self.th19.set_no_wait(false);
         self.junowen_state.end_session();
         self.lobby.reset_depth();
     }

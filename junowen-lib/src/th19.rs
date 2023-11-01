@@ -168,6 +168,9 @@ impl Th19 {
     /// 0a: 選択
     /// 10: ブブー
     /// 11: エクステンド
+    /// 1f: ガシャコン
+    /// 2e: ボム回収効果音
+    /// 57: ガシャコン(重)
     pub fn play_sound(&self, this: *const c_void, id: u32, arg2: u32) {
         type Fn = extern "thiscall" fn(*const c_void, u32, u32);
         const ADDR: usize = 0x0aeb20;

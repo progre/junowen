@@ -161,7 +161,14 @@ impl BattleSessionState {
                 th19.player_name().player_name(),
             )
         };
-        in_session::on_render_texts(th19, session.delay(), &p1, &p2, text_renderer);
+        in_session::on_render_texts(
+            th19,
+            session.host(),
+            session.delay(),
+            &p1,
+            &p2,
+            text_renderer,
+        );
     }
 
     pub fn on_round_over(&mut self, th19: &mut Th19) -> Result<(), RecvError> {
