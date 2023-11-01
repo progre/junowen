@@ -10,6 +10,7 @@ pub enum LobbyScene {
     Root,
     PureP2pHost,
     PureP2pGuest,
+    PureP2pSpectator,
 }
 
 impl From<LobbyScene> for MenuContent {

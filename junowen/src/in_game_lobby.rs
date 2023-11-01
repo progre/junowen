@@ -7,4 +7,5 @@ mod signaling;
 mod title_menu_modifier;
 
 pub use lobby::Lobby;
+pub use signaling::Signaling;
 pub use title_menu_modifier::TitleMenuModifier;

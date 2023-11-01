@@ -10,15 +10,19 @@ use crate::{
     session::{battle::BattleSession, RoundInitial},
 };
 
+use super::spectator_host::SpectatorHostState;
+
 #[derive(new, Getters, MutGetters)]
 pub struct BattleGame {
     #[getset(get = "pub", get_mut = "pub")]
     session: BattleSession,
+    #[getset(get = "pub")]
+    spectator_host_state: SpectatorHostState,
 }
 
 impl BattleGame {
-    pub fn inner_session(self) -> BattleSession {
-        self.session
+    pub fn inner_state(self) -> (BattleSession, SpectatorHostState) {
+        (self.session, self.spectator_host_state)
     }
 
     pub fn update_th19(&mut self, th19: &mut Th19) -> Result<(), RecvError> {
@@ -48,6 +52,10 @@ impl BattleGame {
         input_devices
             .p2_input_mut()
             .set_current((p2 as u32).try_into().unwrap());
+
+        self.spectator_host_state
+            .update(false, None, th19, &self.session, p1, p2);
+
         Ok(())
     }
 

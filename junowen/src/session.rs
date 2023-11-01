@@ -1,5 +1,6 @@
 pub mod battle;
 mod delayed_inputs;
+pub mod spectator;
 
 use std::sync::mpsc;
 

@@ -3,12 +3,12 @@ use std::ffi::c_void;
 use junowen_lib::{InputFlags, InputValue, Th19};
 use tokio::sync::mpsc;
 
-use crate::session::battle::BattleSession;
+use crate::session::{battle::BattleSession, spectator::SpectatorSessionGuest};
 
 use super::{
     common_menu::{CommonMenu, LobbyScene, MenuAction, MenuDefine, MenuItem, OnMenuInputResult},
     pure_p2p_guest::PureP2pGuest,
-    pure_p2p_offerer::{pure_p2p_host, PureP2pOfferer},
+    pure_p2p_offerer::{pure_p2p_host, pure_p2p_spectator, PureP2pOfferer},
 };
 
 pub struct Root {
@@ -28,6 +28,7 @@ impl Root {
             vec![
                 MenuItem::new("Connect as Host", LobbyScene::PureP2pHost.into()),
                 MenuItem::new("Connect as Guest", LobbyScene::PureP2pGuest.into()),
+                MenuItem::new("Connect as Spectator", LobbyScene::PureP2pSpectator.into()),
             ],
             //     ),
             // ],
@@ -67,20 +68,27 @@ pub struct Lobby {
     prev_scene: LobbyScene,
     root: Root,
     battle_session_tx: mpsc::Sender<BattleSession>,
+    spectator_session_tx: mpsc::Sender<SpectatorSessionGuest>,
     pure_p2p_host: Option<PureP2pOfferer<BattleSession>>,
     pure_p2p_guest: Option<PureP2pGuest>,
+    pure_p2p_spectator: Option<PureP2pOfferer<SpectatorSessionGuest>>,
     prev_input: InputValue,
 }
 
 impl Lobby {
-    pub fn new(battle_session_tx: mpsc::Sender<BattleSession>) -> Self {
+    pub fn new(
+        battle_session_tx: mpsc::Sender<BattleSession>,
+        spectator_session_tx: mpsc::Sender<SpectatorSessionGuest>,
+    ) -> Self {
         Self {
             scene: LobbyScene::Root,
             prev_scene: LobbyScene::Root,
             root: Root::new(),
             battle_session_tx,
+            spectator_session_tx,
             pure_p2p_host: None,
             pure_p2p_guest: None,
+            pure_p2p_spectator: None,
             prev_input: InputValue::full(),
         }
     }
@@ -103,6 +111,7 @@ impl Lobby {
                 if self.pure_p2p_host.is_none() {
                     self.pure_p2p_host = Some(pure_p2p_host(self.battle_session_tx.clone()));
                     self.pure_p2p_guest = None;
+                    self.pure_p2p_spectator = None;
                 }
                 self.pure_p2p_host.as_mut().unwrap().on_input_menu(
                     current_input,
@@ -114,8 +123,22 @@ impl Lobby {
                 if self.pure_p2p_guest.is_none() {
                     self.pure_p2p_guest = Some(PureP2pGuest::new(self.battle_session_tx.clone()));
                     self.pure_p2p_host = None;
+                    self.pure_p2p_spectator = None;
                 }
                 self.pure_p2p_guest.as_mut().unwrap().on_input_menu(
+                    current_input,
+                    self.prev_input,
+                    th19,
+                )
+            }
+            LobbyScene::PureP2pSpectator => {
+                if self.pure_p2p_spectator.is_none() {
+                    self.pure_p2p_spectator =
+                        Some(pure_p2p_spectator(self.spectator_session_tx.clone()));
+                    self.pure_p2p_host = None;
+                    self.pure_p2p_guest = None;
+                }
+                self.pure_p2p_spectator.as_mut().unwrap().on_input_menu(
                     current_input,
                     self.prev_input,
                     th19,
@@ -139,6 +162,11 @@ impl Lobby {
                 .on_render_texts(th19, text_renderer),
             LobbyScene::PureP2pGuest => self
                 .pure_p2p_guest
+                .as_ref()
+                .unwrap()
+                .on_render_texts(th19, text_renderer),
+            LobbyScene::PureP2pSpectator => self
+                .pure_p2p_spectator
                 .as_ref()
                 .unwrap()
                 .on_render_texts(th19, text_renderer),

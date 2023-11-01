@@ -6,8 +6,9 @@ use getset::{Getters, MutGetters};
 use junowen_lib::{th19_helpers::reset_cursors, Menu, ScreenId, Th19};
 use tracing::trace;
 
+use super::spectator_host::SpectatorHostState;
 use crate::{
-    helper::inputed_number,
+    helper::{inputed_number, pushed_f1},
     session::{
         battle::{BattleSession, MatchInitial},
         RoundInitial,
@@ -62,13 +63,15 @@ fn init_round(th19: &mut Th19, battle_session: &mut BattleSession) -> Result<(),
 pub struct BattleSelect {
     #[getset(get = "pub", get_mut = "pub")]
     session: BattleSession,
+    #[getset(get = "pub")]
+    spectator_host_state: SpectatorHostState,
     #[new(value = "true")]
     first_time: bool,
 }
 
 impl BattleSelect {
-    pub fn inner_session(self) -> BattleSession {
-        self.session
+    pub fn inner_state(self) -> (BattleSession, SpectatorHostState) {
+        (self.session, self.spectator_host_state)
     }
 
     pub fn update_th19_on_input_players(
@@ -82,6 +85,7 @@ impl BattleSelect {
                 init_match(th19, &mut self.session)?;
             }
             init_round(th19, &mut self.session)?;
+            self.spectator_host_state.send_init_round_if_connected(th19);
         }
 
         if menu.screen_id == ScreenId::DifficultySelect {
@@ -104,6 +108,9 @@ impl BattleSelect {
             .p2_input_mut()
             .set_current((p2 as u32).try_into().unwrap());
 
+        self.spectator_host_state
+            .update(false, Some(menu), th19, &self.session, p1, p2);
+
         Ok(())
     }
 
@@ -113,8 +120,9 @@ impl BattleSelect {
             return Ok(());
         }
 
+        let input_devices = th19.input_devices();
         let delay = if self.session.host() {
-            inputed_number(th19.input_devices())
+            inputed_number(input_devices)
         } else {
             None
         };
@@ -124,6 +132,11 @@ impl BattleSelect {
             .enqueue_input_and_dequeue(menu_input.current().bits() as u16, delay)?;
         let input = if p1 != 0 { p1 } else { p2 };
         menu_input.set_current((input as u32).try_into().unwrap());
+
+        let current_pushed = pushed_f1(input_devices);
+        self.spectator_host_state
+            .update(current_pushed, Some(menu), th19, &self.session, p1, p2);
+
         Ok(())
     }
 }

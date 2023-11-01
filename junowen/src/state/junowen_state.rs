@@ -1,5 +1,6 @@
 use std::{ffi::c_void, sync::mpsc::RecvError};
 
+use anyhow::Result;
 use junowen_lib::{
     Fn011560, Fn0b7d40, Fn0d5ae0, Fn10f720, GameSettings, Menu, RenderingText, Selection, Th19,
 };
@@ -8,14 +9,18 @@ use tracing::trace;
 
 use crate::{
     in_game_lobby::{Lobby, TitleMenuModifier},
-    session::battle::BattleSession,
+    session::{battle::BattleSession, spectator::SpectatorSessionGuest},
 };
 
-use super::{battle_session_state::BattleSessionState, in_session, prepare::Prepare, standby};
+use super::{
+    battle_session_state::BattleSessionState, in_session, prepare::Prepare,
+    spectator_session_state::SpectatorSessionState, standby,
+};
 
 pub enum JunowenState {
     Standby,
     BattleSession(BattleSessionState),
+    SpectatorSession(SpectatorSessionState),
 }
 
 impl JunowenState {
@@ -23,6 +28,7 @@ impl JunowenState {
         match self {
             Self::Standby => None,
             Self::BattleSession(session_state) => session_state.game_settings(),
+            Self::SpectatorSession(session_state) => session_state.game_settings(),
         }
     }
 
@@ -38,10 +44,15 @@ impl JunowenState {
         *self = Self::Standby;
     }
 
+    pub fn start_spectator_session(&mut self, session: SpectatorSessionGuest) {
+        *self = Self::SpectatorSession(SpectatorSessionState::Prepare(Prepare::new(session)));
+    }
+
     fn update_state(
         &mut self,
         th19: &Th19,
         battle_session_rx: &mut Receiver<BattleSession>,
+        spectator_session_guest_rx: &mut Receiver<SpectatorSessionGuest>,
     ) -> Option<Option<&'static Menu>> {
         match self {
             Self::Standby => {
@@ -50,9 +61,21 @@ impl JunowenState {
                     self.start_battle_session(session);
                     return Some(None);
                 };
+                if let Ok(session) = spectator_session_guest_rx.try_recv() {
+                    trace!("session received");
+                    self.start_spectator_session(session);
+                    return Some(None);
+                };
                 None
             }
             Self::BattleSession(session_state) => {
+                let Some(ret) = session_state.update_state(th19) else {
+                    self.end_session();
+                    return None;
+                };
+                Some(ret)
+            }
+            Self::SpectatorSession(session_state) => {
                 let Some(ret) = session_state.update_state(th19) else {
                     self.end_session();
                     return None;
@@ -72,6 +95,9 @@ impl JunowenState {
             Self::BattleSession(session_state) => {
                 session_state.update_th19_on_input_players(menu, th19)
             }
+            Self::SpectatorSession(session_state) => {
+                session_state.update_th19_on_input_players(menu, th19)
+            }
         }
     }
 
@@ -79,8 +105,10 @@ impl JunowenState {
         &mut self,
         th19: &mut Th19,
         battle_session_rx: &mut Receiver<BattleSession>,
+        spectator_session_guest_rx: &mut Receiver<SpectatorSessionGuest>,
     ) -> Result<(), RecvError> {
-        let Some(menu) = self.update_state(th19, battle_session_rx) else {
+        let Some(menu) = self.update_state(th19, battle_session_rx, spectator_session_guest_rx)
+        else {
             return Ok(());
         };
         self.update_th19_on_input_players(menu, th19)
@@ -97,6 +125,11 @@ impl JunowenState {
                 standby::update_th19_on_input_menu(th19, title_menu_modifier, lobby);
             }
             Self::BattleSession(session_state) => session_state.on_input_menu(th19)?,
+            Self::SpectatorSession(session_state) => {
+                if !session_state.on_input_menu(th19)? {
+                    self.end_session();
+                }
+            }
         }
         Ok(())
     }
@@ -143,6 +176,9 @@ impl JunowenState {
             Self::BattleSession(session_state) => {
                 session_state.on_render_texts(th19, text_renderer)
             }
+            Self::SpectatorSession(session_state) => {
+                session_state.on_render_texts(th19, text_renderer)
+            }
         }
     }
 
@@ -150,6 +186,7 @@ impl JunowenState {
         match self {
             Self::Standby => Ok(()),
             Self::BattleSession(session_state) => session_state.on_round_over(th19),
+            Self::SpectatorSession(session_state) => session_state.on_round_over(th19),
         }
     }
 

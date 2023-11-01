@@ -4,6 +4,10 @@ mod battle_session_state;
 mod in_session;
 mod junowen_state;
 mod prepare;
+mod spectator_game;
+mod spectator_host;
+mod spectator_select;
+mod spectator_session_state;
 mod standby;
 
 use std::{ffi::c_void, fmt::Display};
@@ -16,12 +20,13 @@ use tracing::debug;
 use self::junowen_state::JunowenState;
 use crate::{
     in_game_lobby::{Lobby, TitleMenuModifier},
-    session::battle::BattleSession,
+    session::{battle::BattleSession, spectator::SpectatorSessionGuest},
 };
 
 #[derive(Getters, MutGetters)]
 pub struct State {
     battle_session_rx: mpsc::Receiver<BattleSession>,
+    spectator_session_guest_rx: mpsc::Receiver<SpectatorSessionGuest>,
     #[getset(get_mut = "pub")]
     th19: Th19,
     title_menu_modifier: TitleMenuModifier,
@@ -32,11 +37,13 @@ pub struct State {
 impl State {
     pub fn new(th19: Th19) -> Self {
         let (battle_session_tx, battle_session_rx) = mpsc::channel(1);
+        let (spectator_session_guest_tx, spectator_session_guest_rx) = mpsc::channel(1);
         Self {
             battle_session_rx,
+            spectator_session_guest_rx,
             th19,
             title_menu_modifier: TitleMenuModifier::new(),
-            lobby: Lobby::new(battle_session_tx),
+            lobby: Lobby::new(battle_session_tx, spectator_session_guest_tx),
             junowen_state: JunowenState::Standby,
         }
     }
@@ -50,10 +57,11 @@ impl State {
 
     pub fn on_input_players(&mut self) {
         let has_session = self.junowen_state.has_session();
-        match self
-            .junowen_state
-            .on_input_players(&mut self.th19, &mut self.battle_session_rx)
-        {
+        match self.junowen_state.on_input_players(
+            &mut self.th19,
+            &mut self.battle_session_rx,
+            &mut self.spectator_session_guest_rx,
+        ) {
             Ok(_) => {
                 if has_session && self.junowen_state.has_session() {
                     self.lobby.reset_depth();
