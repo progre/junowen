@@ -50,7 +50,7 @@ impl Root {
         {
             OnMenuInputResult::None => None,
             OnMenuInputResult::Cancel => {
-                th19.menu_input_mut().set_current(InputFlags::START.into());
+                th19.menu_input_mut().set_current(InputFlags::PAUSE.into());
                 Some(LobbyScene::Root)
             }
             OnMenuInputResult::Action(MenuAction::SubScene(scene)) => Some(scene),

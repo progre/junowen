@@ -147,7 +147,7 @@ impl CommonMenu {
 
         if pulse(current_input, prev_input, InputFlags::CHARGE)
             || pulse(current_input, prev_input, InputFlags::BOMB)
-            || pulse(current_input, prev_input, InputFlags::START)
+            || pulse(current_input, prev_input, InputFlags::PAUSE)
         {
             if self.depth == 0 && self.instant_exit {
                 return OnMenuInputResult::Cancel;

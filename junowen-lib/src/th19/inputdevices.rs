@@ -11,7 +11,7 @@ flags! {
         DOWN,
         LEFT,
         RIGHT,
-        START,
+        PAUSE,
     }
 }
 

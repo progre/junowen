@@ -80,7 +80,7 @@ impl SpectatorSessionState {
                 match menu.screen_id {
                     ScreenId::PlayerMatchupSelect => None,
                     ScreenId::CharacterSelect => {
-                        if th19.input_devices().p1_input().current().0 & InputFlags::START != None {
+                        if th19.input_devices().p1_input().current().0 & InputFlags::PAUSE != None {
                             return None;
                         }
                         Some(Some(menu))
@@ -103,7 +103,7 @@ impl SpectatorSessionState {
                 Some(None)
             }
             Self::Game { .. } => {
-                if th19.input_devices().p1_input().current().0 & InputFlags::START != None {
+                if th19.input_devices().p1_input().current().0 & InputFlags::PAUSE != None {
                     return None;
                 }
                 if th19.round().is_some() {
@@ -152,7 +152,7 @@ impl SpectatorSessionState {
                     .find_menu_mut()
                     .unwrap();
                 if menu.screen_id == ScreenId::DifficultySelect
-                    && th19.menu_input().current().0 & InputFlags::START != None
+                    && th19.menu_input().current().0 & InputFlags::PAUSE != None
                 {
                     return Ok(false);
                 }

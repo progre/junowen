@@ -13,10 +13,10 @@ pub fn shot_repeatedly(prev: InputValue) -> InputValue {
 }
 
 fn escape_repeatedly(prev: InputValue) -> InputValue {
-    if prev == InputFlags::START.into() {
+    if prev == InputFlags::PAUSE.into() {
         InputValue::empty()
     } else {
-        InputFlags::START.into()
+        InputFlags::PAUSE.into()
     }
 }
 
