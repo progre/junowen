@@ -39,9 +39,12 @@ fn try_start_signaling(th19: &Th19) -> Option<SpectatorHostState> {
         .send(SignalingServerMessage::RequestAnswer(offer))
         .unwrap();
     th19.play_sound(th19.sound_manager(), 0x07, 0);
-    Some(SpectatorHostState::SignalingCodeRecved(
-        signaling, session_rx, true,
-    ))
+    Some(SpectatorHostState::SignalingCodeRecved {
+        signaling,
+        session_rx,
+        ready: false,
+        pushed: true,
+    })
 }
 
 fn create_spectator_initial(
@@ -85,19 +88,59 @@ fn create_spectator_initial(
 }
 
 pub enum SpectatorHostState {
-    /// pushed: bool
-    Standby(bool),
-    /// pushed: bool
-    SignalingCodeRecved(Signaling, mpsc::Receiver<SpectatorSessionHost>, bool),
-    /// pushed: bool
-    SignalingCodeSent(Signaling, mpsc::Receiver<SpectatorSessionHost>, bool),
-    /// pushed: bool
-    Connected(SpectatorSessionHost, bool),
+    Standby {
+        ready: bool,
+        pushed: bool,
+    },
+    SignalingCodeRecved {
+        signaling: Signaling,
+        session_rx: mpsc::Receiver<SpectatorSessionHost>,
+        ready: bool,
+        pushed: bool,
+    },
+    SignalingCodeSent {
+        signaling: Signaling,
+        session_rx: mpsc::Receiver<SpectatorSessionHost>,
+        ready: bool,
+        pushed: bool,
+    },
+    Connected {
+        session: SpectatorSessionHost,
+        pushed: bool,
+    },
 }
 
 impl SpectatorHostState {
+    pub fn standby() -> Self {
+        Self::Standby {
+            ready: false,
+            pushed: false,
+        }
+    }
+
+    fn dummy() -> Self {
+        Self::Standby {
+            ready: false,
+            pushed: false,
+        }
+    }
+
+    fn set_ready(&mut self, value: bool) {
+        match self {
+            Self::Standby { ready, .. }
+            | Self::SignalingCodeRecved { ready, .. }
+            | Self::SignalingCodeSent { ready, .. } => *ready = value,
+            Self::Connected { .. } => unreachable!(),
+        }
+    }
+
     pub fn send_init_round_if_connected(&mut self, th19: &Th19) {
-        let Self::Connected(session, current_pushed) = self else {
+        let Self::Connected {
+            session,
+            pushed: current_pushed,
+            ..
+        } = self
+        else {
             return;
         };
         if let Err(err) = session.send_init_round(RoundInitial {
@@ -107,7 +150,10 @@ impl SpectatorHostState {
             seed4: th19.rand_seed4().unwrap(),
         }) {
             info!("spectator host error: {:?}", err);
-            *self = Self::Standby(*current_pushed);
+            *self = Self::Standby {
+                ready: true,
+                pushed: *current_pushed,
+            };
         }
     }
 
@@ -120,8 +166,18 @@ impl SpectatorHostState {
         p1_input: u16,
         p2_input: u16,
     ) -> Result<()> {
+        let selection = th19.selection();
+        if !matches!(self, Self::Connected { .. }) {
+            self.set_ready(
+                menu.is_some()
+                    && menu.unwrap().screen_id == ScreenId::DifficultySelect
+                    && selection.p1().card == 0
+                    && selection.p2().card == 0,
+            );
+        }
+
         match self {
-            Self::Standby(pushed) => {
+            Self::Standby { pushed, .. } => {
                 let prev_pushed = *pushed;
                 *pushed = current_pushed;
                 if !prev_pushed && current_pushed {
@@ -131,7 +187,9 @@ impl SpectatorHostState {
                 }
                 Ok(())
             }
-            Self::SignalingCodeRecved(signaling, _session_rx, pushed) => {
+            Self::SignalingCodeRecved {
+                signaling, pushed, ..
+            } => {
                 let prev_pushed = *pushed;
                 *pushed = current_pushed;
                 if !prev_pushed && current_pushed {
@@ -148,15 +206,29 @@ impl SpectatorHostState {
                     .unwrap();
                 th19.play_sound(th19.sound_manager(), 0x57, 0);
 
-                let Self::SignalingCodeRecved(signaling, session_rx, pushed) =
-                    mem::replace(self, Self::Standby(false))
+                let Self::SignalingCodeRecved {
+                    signaling,
+                    session_rx,
+                    ready,
+                    pushed,
+                } = mem::replace(self, Self::dummy())
                 else {
                     unreachable!()
                 };
-                *self = Self::SignalingCodeSent(signaling, session_rx, pushed);
+                *self = Self::SignalingCodeSent {
+                    signaling,
+                    session_rx,
+                    ready,
+                    pushed,
+                };
                 Ok(())
             }
-            Self::SignalingCodeSent(_signaling, session_rx, pushed) => {
+            Self::SignalingCodeSent {
+                session_rx,
+                ready,
+                pushed,
+                ..
+            } => {
                 let prev_pushed = *pushed;
                 *pushed = current_pushed;
                 if !prev_pushed && current_pushed {
@@ -169,16 +241,21 @@ impl SpectatorHostState {
                     Ok(session) => {
                         let Some(menu) = menu else {
                             info!("spectator not supported yet.");
-                            *self = Self::Standby(*pushed);
+                            *self = Self::Standby {
+                                ready: *ready,
+                                pushed: *pushed,
+                            };
                             return Ok(());
                         };
-                        let selection = th19.selection();
                         if menu.screen_id != ScreenId::DifficultySelect
                             || selection.p1().card != 0
                             || selection.p2().card != 0
                         {
                             info!("spectator not supported yet.");
-                            *self = Self::Standby(*pushed);
+                            *self = Self::Standby {
+                                ready: *ready,
+                                pushed: *pushed,
+                            };
                             return Ok(());
                         }
                         session.send_init_spectator(create_spectator_initial(
@@ -194,18 +271,26 @@ impl SpectatorHostState {
                             seed4: th19.rand_seed4().unwrap(),
                         })?;
                         session.send_inputs(p1_input, p2_input)?;
-                        *self = Self::Connected(session, *pushed);
+                        *self = Self::Connected {
+                            session,
+                            pushed: *pushed,
+                        };
                         Ok(())
                     }
                     Err(TryRecvError::Empty) => Ok(()),
                     Err(TryRecvError::Disconnected) => {
                         th19.play_sound(th19.sound_manager(), 0x10, 0);
-                        *self = Self::Standby(*pushed);
+                        *self = Self::Standby {
+                            ready: *ready,
+                            pushed: *pushed,
+                        };
                         Ok(())
                     }
                 }
             }
-            Self::Connected(session, pushed) => {
+            Self::Connected {
+                session, pushed, ..
+            } => {
                 let prev_pushed = *pushed;
                 *pushed = current_pushed;
                 if !prev_pushed && current_pushed {
@@ -222,23 +307,20 @@ impl SpectatorHostState {
 
     pub fn update(
         &mut self,
-        current_pushed: bool,
+        pushed: bool,
         menu: Option<&Menu>,
         th19: &Th19,
         battle_session: &BattleSession,
         p1_input: u16,
         p2_input: u16,
     ) {
-        if let Err(err) = self.update_inner(
-            current_pushed,
-            menu,
-            th19,
-            battle_session,
-            p1_input,
-            p2_input,
-        ) {
+        if let Err(err) = self.update_inner(pushed, menu, th19, battle_session, p1_input, p2_input)
+        {
             info!("spectator host error: {:?}", err);
-            *self = Self::Standby(current_pushed);
+            *self = Self::Standby {
+                ready: false,
+                pushed,
+            };
         }
     }
 }

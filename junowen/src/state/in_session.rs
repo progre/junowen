@@ -34,12 +34,15 @@ pub fn on_render_texts(
     let version_blank = (0..version.len()).map(|_| " ").collect::<String>();
     let delay_underline = if host { "_" } else { " " };
     let msg2 = match spectator_host_state {
-        Some(SpectatorHostState::Standby(_)) => "       __                                    ",
-        Some(SpectatorHostState::SignalingCodeRecved(_, _, _)) => "                              ",
-        Some(SpectatorHostState::SignalingCodeSent(_, _, _)) => {
+        Some(SpectatorHostState::Standby { ready: false, .. })
+        | Some(SpectatorHostState::SignalingCodeRecved { ready: false, .. })
+        | Some(SpectatorHostState::SignalingCodeSent { ready: false, .. }) => "",
+        Some(SpectatorHostState::Standby { .. }) => "       __                                    ",
+        Some(SpectatorHostState::SignalingCodeRecved { .. }) => "                              ",
+        Some(SpectatorHostState::SignalingCodeSent { .. }) => {
             "                                                      "
         }
-        Some(SpectatorHostState::Connected(_, _)) => "            ",
+        Some(SpectatorHostState::Connected { .. }) => "            ",
         None => "",
     };
     let mut text = RenderingText::default();
@@ -57,12 +60,15 @@ pub fn on_render_texts(
     th19.render_text(text_renderer, &text);
 
     let msg2 = match spectator_host_state {
-        Some(SpectatorHostState::Standby(_)) => "(Press F1 to accept spectator from clipboard)",
-        Some(SpectatorHostState::SignalingCodeRecved(_, _, _)) => "(Generating signaling code...)",
-        Some(SpectatorHostState::SignalingCodeSent(_, _, _)) => {
+        Some(SpectatorHostState::Standby { ready: false, .. })
+        | Some(SpectatorHostState::SignalingCodeRecved { ready: false, .. })
+        | Some(SpectatorHostState::SignalingCodeSent { ready: false, .. }) => "",
+        Some(SpectatorHostState::Standby { .. }) => "(Press F1 to accept spectator from clipboard)",
+        Some(SpectatorHostState::SignalingCodeRecved { .. }) => "(Generating signaling code...)",
+        Some(SpectatorHostState::SignalingCodeSent { .. }) => {
             "(Your signaling code has been copied to the clipboard)"
         }
-        Some(SpectatorHostState::Connected(_, _)) => "Spectator: 1",
+        Some(SpectatorHostState::Connected { .. }) => "Spectator: 1",
         None => "",
     };
     text.set_text(format!("Ju.N.Owen v{} Delay: {} {}", version, delay, msg2).as_bytes());
