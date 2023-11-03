@@ -16,7 +16,7 @@ default-members = ["junowen"]
 resolver = "2"
 
 [workspace.package]
-version = "0.5.1"
+version = "0.6.0"
 authors = ["Progre"]
 license = "GPL-3.0"
 
