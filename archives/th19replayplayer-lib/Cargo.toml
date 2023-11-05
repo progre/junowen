@@ -1,18 +1,13 @@
 [package]
-name = "th19replayplayer"
+name = "th19replayplayer-lib"
 edition = "2021"
 version.workspace = true
 authors.workspace = true
 license.workspace = true
 
-[lib]
-name = "th19replayplayer_hook"
-crate-type = ['cdylib']
-
 [dependencies]
 anyhow.workspace = true
 bytes = "1.5.0"
 interprocess = "1.2.1"
-junowen-lib = { path = "../junowen-lib" }
-th19replayplayer-lib = { path = "../th19replayplayer-lib" }
+junowen-lib.workspace = true
 windows = "0.51.1"

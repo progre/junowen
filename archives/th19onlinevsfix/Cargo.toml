@@ -11,5 +11,5 @@ name = "th19_onlinevsfix"
 
 [dependencies]
 anyhow.workspace = true
-junowen-lib = { path = "../junowen-lib" }
+junowen-lib.workspace = true
 windows = "0.51.1"

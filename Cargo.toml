@@ -1,16 +1,16 @@
 [workspace]
 members = [
   "archives/th19netdelayemulate",
+  "archives/th19onlinevsfix",
   "archives/th19padlight",
+  "archives/th19replayplayer",
+  "archives/th19replayplayer-lib",
+  "archives/th19replayrecorder",
+  "archives/th19savesettingsseparately",
   "archives/th19seed",
   "junowen",
   "junowen-lib",
   "th19loader",
-  "th19onlinevsfix",
-  "th19replayplayer",
-  "th19replayplayer-lib",
-  "th19replayrecorder",
-  "th19savesettingsseparately",
 ]
 default-members = ["junowen"]
 resolver = "2"

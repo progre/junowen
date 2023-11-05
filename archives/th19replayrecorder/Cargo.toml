@@ -1,5 +1,5 @@
 [package]
-name = "th19savesettingsseparately"
+name = "th19replayrecorder"
 edition = "2021"
 version.workspace = true
 authors.workspace = true
@@ -7,11 +7,14 @@ license.workspace = true
 
 [lib]
 crate-type = ['cdylib']
-name = "th19_savesettingsseparately"
+name = "th19_replayrecorder"
 
 [dependencies]
 anyhow.workspace = true
-junowen-lib = { path = "../junowen-lib" }
+bytes = "1.5.0"
+chrono = "0.4.30"
+junowen-lib.workspace = true
+th19replayplayer-lib = { path = "../th19replayplayer-lib" }
 windows = { version = "0.51.1", features = [
   "Win32_Foundation",
   "Win32_Graphics_Direct3D9",
