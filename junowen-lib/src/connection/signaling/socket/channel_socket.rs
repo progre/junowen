@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use tokio::sync::oneshot;
@@ -29,6 +31,10 @@ impl ChannelSocket {
 
 #[async_trait]
 impl SignalingSocket for ChannelSocket {
+    fn timeout() -> Duration {
+        Duration::from_secs(20 * 60)
+    }
+
     async fn offer(&mut self, desc: CompressedSdp) -> Result<OfferResponse> {
         self.offer_sender.take().unwrap().send(desc).unwrap();
         Ok(match self.message_receiver.take().unwrap().await? {

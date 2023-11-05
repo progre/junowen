@@ -23,7 +23,7 @@ pub enum ScreenId {
     Unknown2,
     DifficultySelect,
     PlayerMatchupSelect,
-    OnlineMenu,
+    OnlineVSMode,
     CharacterSelect,
     Unknown3,
     Unknown4,

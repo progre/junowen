@@ -1,8 +1,8 @@
 use std::ffi::c_void;
 
-use junowen_lib::{Fn0b7d40, Fn0d5ae0, Menu, ScreenId, Th19};
+use junowen_lib::{Fn0b7d40, Fn0d5ae0, Menu, RenderingText, ScreenId, Th19};
 
-use crate::in_game_lobby::{Lobby, TitleMenuModifier};
+use crate::in_game_lobby::{Lobby, MatchStandby, Opponent, TitleMenuModifier};
 
 fn is_title(menu: &Menu) -> bool {
     menu.screen_id == ScreenId::Title
@@ -40,12 +40,35 @@ pub fn render_text(
     title_menu_modifier.render_text(menu, th19, old, text_renderer, text)
 }
 
+fn render_message(text_renderer: *const c_void, th19: &Th19, msg: &str) {
+    let mut text = RenderingText::default();
+    text.set_text(msg.as_bytes());
+    text.x = (16 * th19.screen_width().unwrap() / 1280) as f32;
+    text.y = (4 * th19.screen_height().unwrap() / 1280) as f32;
+    text.color = 0xffc0c0c0;
+    th19.render_text(text_renderer, &text);
+}
+
 pub fn on_render_texts(
     th19: &Th19,
     title_menu_modifier: &TitleMenuModifier,
     lobby: &Lobby,
     text_renderer: *const c_void,
 ) {
+    match lobby.match_standby() {
+        None
+        | Some(MatchStandby::Spectator(_))
+        | Some(MatchStandby::Opponent(Opponent::PureP2p(_))) => {}
+        Some(MatchStandby::Opponent(Opponent::SharedRoom(room))) => render_message(
+            text_renderer,
+            th19,
+            &format!(
+                "Waiting in Shared Room: {} {}",
+                room.room_name(),
+                ".".repeat((room.elapsed().as_secs() % 4) as usize)
+            ),
+        ),
+    }
     let Some(menu) = th19.app().main_loop_tasks().find_menu() else {
         return;
     };

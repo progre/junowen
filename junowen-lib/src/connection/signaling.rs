@@ -1,4 +1,5 @@
 pub mod socket;
+#[cfg(target_os = "windows")]
 pub mod stdio_signaling_interface;
 
 use std::io::Write;

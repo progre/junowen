@@ -4,7 +4,19 @@
 cargo lambda deploy \
   --binary-name junowen-server \
   --enable-function-url \
-  --iam-role ????
+  --env-var ENV=prod \
   --profile $PROFILE \
   junowen-server
 ```
+
+## Dynamo DB definition
+
+* env = dev | prod
+* table_name = Offer | Answer
+
+### {env}.{table_name}
+
+* Partition Key = { name: String }
+* Capacity mode = ondemand
+* delete protection
+* TTL = ttl_sec

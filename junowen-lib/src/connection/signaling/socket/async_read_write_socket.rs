@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, time::Duration};
 
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
@@ -57,6 +57,10 @@ impl<T> SignalingSocket for AsyncReadWriteSocket<T>
 where
     T: AsyncRead + AsyncWrite + Unpin + Send + Sync,
 {
+    fn timeout() -> Duration {
+        Duration::from_secs(20 * 60)
+    }
+
     async fn offer(&mut self, desc: CompressedSdp) -> Result<OfferResponse> {
         self.send(SignalingClientMessage::OfferDesc(desc)).await?;
         Ok(match self.recv().await? {

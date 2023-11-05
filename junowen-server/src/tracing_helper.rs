@@ -31,7 +31,12 @@ fn init_tracing<T: FormatTime + Send + Sync + 'static>(
     customize: fn(MyLayer<SystemTime>) -> MyLayer<T>,
 ) {
     let layer = customize(default_subscriber_builder());
-    let filter = EnvFilter::new(concat!(env!("CARGO_CRATE_NAME"), "=info"));
+    const DIRECTIVES: &str = if cfg!(debug_assertions) {
+        concat!(env!("CARGO_CRATE_NAME"), "=trace")
+    } else {
+        concat!(env!("CARGO_CRATE_NAME"), "=info")
+    };
+    let filter = EnvFilter::new(DIRECTIVES);
     let reg = tracing_subscriber::registry().with(layer.with_filter(filter));
     tracing::subscriber::set_global_default(reg).unwrap();
     panic::set_hook(Box::new(|panic| error!("{}", panic)));

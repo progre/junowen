@@ -1,5 +1,6 @@
 use std::ffi::c_void;
 
+use derive_new::new;
 use getset::{CopyGetters, Setters};
 use junowen_lib::{InputFlags, InputValue, Th19};
 
@@ -8,6 +9,7 @@ use super::helper::{render_menu_item, render_title};
 #[derive(Clone, Copy, Debug)]
 pub enum LobbyScene {
     Root,
+    SharedRoom,
     PureP2pHost,
     PureP2pGuest,
     PureP2pSpectator,
@@ -28,7 +30,7 @@ pub enum MenuAction {
 #[derive(Debug)]
 pub enum MenuContent {
     Action(MenuAction),
-    _SubMenu(MenuDefine),
+    SubMenu(MenuDefine),
 }
 
 impl From<MenuAction> for MenuContent {
@@ -55,19 +57,10 @@ impl MenuItem {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, new)]
 pub struct MenuDefine {
-    items: Vec<MenuItem>,
     cursor: usize,
-}
-
-impl MenuDefine {
-    pub fn new(cursor_default: usize, items: Vec<MenuItem>) -> Self {
-        Self {
-            items,
-            cursor: cursor_default,
-        }
-    }
+    items: Vec<MenuItem>,
 }
 
 fn pulse(current: InputValue, prev: InputValue, flag: InputFlags) -> bool {
@@ -124,7 +117,7 @@ impl CommonMenu {
         if self.decide_count != 0 {
             if self.decide_count > 0 {
                 self.decide_count += 1;
-                if self.decide_count <= 25 {
+                if self.decide_count <= 20 {
                     return OnMenuInputResult::None;
                 }
                 self.decide_count = 0;
@@ -135,7 +128,7 @@ impl CommonMenu {
                 }
             } else {
                 self.decide_count -= 1;
-                if self.decide_count >= -25 {
+                if self.decide_count >= -20 {
                     return OnMenuInputResult::None;
                 }
                 self.decide_count = 0;
@@ -172,7 +165,7 @@ impl CommonMenu {
         }
         if pulse(current_input, prev_input, InputFlags::SHOT) {
             match menu.items[menu.cursor].content {
-                MenuContent::_SubMenu(_) => {
+                MenuContent::SubMenu(_) => {
                     th19.play_sound(th19.sound_manager(), 0x07, 0);
                     self.decide_count += 1;
                     return OnMenuInputResult::None;
@@ -251,7 +244,7 @@ impl CommonMenu {
         let mut label = item.label;
         let mut content = &item.content;
         for _ in 1..self.depth {
-            let MenuContent::_SubMenu(sub_menu) = content else {
+            let MenuContent::SubMenu(sub_menu) = content else {
                 unreachable!()
             };
             let item = &sub_menu.items[sub_menu.cursor];
@@ -261,7 +254,7 @@ impl CommonMenu {
         (
             label,
             match content {
-                MenuContent::_SubMenu(sub_menu) => CurrentMenuResult::MenuDefine(sub_menu),
+                MenuContent::SubMenu(sub_menu) => CurrentMenuResult::MenuDefine(sub_menu),
                 MenuContent::Action(MenuAction::SubScene(scene)) => {
                     CurrentMenuResult::SubScene(*scene)
                 }
@@ -284,7 +277,7 @@ impl CommonMenu {
         let mut label = item.label;
         let mut content = &mut item.content;
         for _ in 1..self.depth {
-            let MenuContent::_SubMenu(sub_menu) = content else {
+            let MenuContent::SubMenu(sub_menu) = content else {
                 unreachable!()
             };
             let item = &mut sub_menu.items[sub_menu.cursor];
@@ -294,7 +287,7 @@ impl CommonMenu {
         (
             label,
             match content {
-                MenuContent::_SubMenu(sub_menu) => CurrentMenuMutResult::MenuDefine(
+                MenuContent::SubMenu(sub_menu) => CurrentMenuMutResult::MenuDefine(
                     sub_menu,
                     &mut self.repeat_up,
                     &mut self.repeat_down,

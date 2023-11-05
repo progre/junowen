@@ -31,10 +31,10 @@ fn create_default_config() -> RTCConfiguration {
     }
 }
 
-async fn create_default_peer_connection() -> Result<RTCPeerConnection> {
+async fn create_default_peer_connection(timeout: Duration) -> Result<RTCPeerConnection> {
     let mut setting_engine = SettingEngine::default();
     // NOTE: The timeout is the time from receiving the opponent's signaling code
-    setting_engine.set_ice_timeouts(None, Some(Duration::from_secs(20 * 60)), None);
+    setting_engine.set_ice_timeouts(None, Some(timeout), None);
     Ok(webrtc::api::APIBuilder::new()
         .with_setting_engine(setting_engine)
         .build()
@@ -73,8 +73,8 @@ impl Drop for PeerConnection {
 const PROTOCOL: &str = "JUNOWEN/0.5";
 
 impl PeerConnection {
-    pub async fn new() -> Result<Self> {
-        let rtc = create_default_peer_connection().await?;
+    pub async fn new(timeout: Duration) -> Result<Self> {
+        let rtc = create_default_peer_connection(timeout).await?;
 
         let (peer_connection_state_failed_tx, peer_connection_state_failed_rx) = oneshot::channel();
         let mut peer_connection_state_failed_tx = Some(peer_connection_state_failed_tx);

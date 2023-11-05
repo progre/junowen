@@ -1,15 +1,18 @@
 use std::ffi::c_void;
 
-use getset::MutGetters;
+use getset::{Getters, MutGetters};
 use junowen_lib::{InputFlags, InputValue, Th19};
 
 use crate::session::{battle::BattleSession, spectator::SpectatorSessionGuest};
 
 use super::{
-    common_menu::{CommonMenu, LobbyScene, MenuAction, MenuDefine, MenuItem, OnMenuInputResult},
-    match_standby::{MatchStandby, PureP2pOpponent, PureP2pSpectator},
+    common_menu::{
+        CommonMenu, LobbyScene, MenuAction, MenuContent, MenuDefine, MenuItem, OnMenuInputResult,
+    },
+    match_standby::{MatchStandby, Opponent, PureP2pOpponent, PureP2pSpectator},
     pure_p2p_guest::PureP2pGuest,
     pure_p2p_offerer::{pure_p2p_host, pure_p2p_spectator, PureP2pOfferer},
+    shared_room::SharedRoom,
 };
 
 pub struct Root {
@@ -19,20 +22,24 @@ pub struct Root {
 impl Root {
     pub fn new() -> Self {
         let menu_define = MenuDefine::new(
-            // vec![
-            //     MenuDefine::new("Room match", vec![]),
-            //     MenuDefine::new("Random match", vec![]),
-            //     MenuDefine::new("Client-Server", vec![]),
-            //     MenuDefine::new(
-            //         "Pure P2P",
             0,
             vec![
-                MenuItem::new("Connect as Host", LobbyScene::PureP2pHost.into()),
-                MenuItem::new("Connect as Guest", LobbyScene::PureP2pGuest.into()),
-                MenuItem::new("Connect as Spectator", LobbyScene::PureP2pSpectator.into()),
+                MenuItem::new("Shared Room", LobbyScene::SharedRoom.into()),
+                MenuItem::new(
+                    "Pure P2P",
+                    MenuContent::SubMenu(MenuDefine::new(
+                        0,
+                        vec![
+                            MenuItem::new("Connect as Host", LobbyScene::PureP2pHost.into()),
+                            MenuItem::new("Connect as Guest", LobbyScene::PureP2pGuest.into()),
+                            MenuItem::new(
+                                "Connect as Spectator",
+                                LobbyScene::PureP2pSpectator.into(),
+                            ),
+                        ],
+                    )),
+                ),
             ],
-            //     ),
-            // ],
         );
         Self {
             common_menu: CommonMenu::new("Ju.N.Owen", true, 240, menu_define),
@@ -64,16 +71,17 @@ impl Root {
     }
 }
 
-#[derive(MutGetters)]
+#[derive(MutGetters, Getters)]
 pub struct Lobby {
     scene: LobbyScene,
     prev_scene: LobbyScene,
     root: Root,
+    private_match: SharedRoom,
     pure_p2p_host: Option<PureP2pOfferer<BattleSession>>,
     pure_p2p_guest: Option<PureP2pGuest>,
     pure_p2p_spectator: Option<PureP2pOfferer<SpectatorSessionGuest>>,
     prev_input: InputValue,
-    #[get_mut = "pub"]
+    #[getset(get = "pub", get_mut = "pub")]
     match_standby: Option<MatchStandby>,
 }
 
@@ -84,6 +92,7 @@ impl Lobby {
             prev_scene: LobbyScene::Root,
             root: Root::new(),
             match_standby: None,
+            private_match: SharedRoom::new(),
             pure_p2p_host: None,
             pure_p2p_guest: None,
             pure_p2p_spectator: None,
@@ -92,7 +101,7 @@ impl Lobby {
     }
 
     pub fn reset_depth(&mut self) {
-        self.scene = LobbyScene::Root;
+        // self.scene = LobbyScene::Root;
         self.prev_input = InputValue::full();
     }
 
@@ -105,6 +114,22 @@ impl Lobby {
             LobbyScene::Root => self
                 .root
                 .on_input_menu(current_input, self.prev_input, th19),
+            LobbyScene::SharedRoom => {
+                let mut private_match_opponent = match self.match_standby.take() {
+                    Some(MatchStandby::Opponent(Opponent::SharedRoom(opponent))) => Some(opponent),
+                    _ => None,
+                };
+                let ret = self.private_match.on_input_menu(
+                    current_input,
+                    self.prev_input,
+                    th19,
+                    &mut private_match_opponent,
+                );
+                self.match_standby = private_match_opponent
+                    .map(Opponent::SharedRoom)
+                    .map(MatchStandby::Opponent);
+                ret
+            }
             LobbyScene::PureP2pHost => {
                 if self.pure_p2p_host.is_none() {
                     self.match_standby = None;
@@ -173,6 +198,18 @@ impl Lobby {
     pub fn on_render_texts(&self, th19: &Th19, text_renderer: *const c_void) {
         match self.prev_scene {
             LobbyScene::Root => self.root.on_render_texts(th19, text_renderer),
+            LobbyScene::SharedRoom => {
+                let private_match = self.match_standby.as_ref().and_then(|x| match x {
+                    MatchStandby::Opponent(Opponent::SharedRoom(private_match)) => {
+                        Some(private_match)
+                    }
+                    MatchStandby::Opponent(Opponent::PureP2p(_)) | MatchStandby::Spectator(_) => {
+                        None
+                    }
+                });
+                self.private_match
+                    .on_render_texts(private_match, th19, text_renderer)
+            }
             LobbyScene::PureP2pHost => self
                 .pure_p2p_host
                 .as_ref()

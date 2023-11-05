@@ -8,14 +8,23 @@ license.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 anyhow.workspace = true
-aws-sdk-dynamodb = "0.35.0"
-lambda_runtime = "0.8.2"
-serde_dynamo = "4.2.5"
+async-trait = "0.1.74"
+aws-config = "*"
+aws-sdk-dynamodb = "*"
+chrono = "0.4.31"
+derive-new = "0.5.9"
+getset = "0.1.2"
+junowen-lib.workspace = true
+lambda_http = "0.8.1"
+regex = "1.10.2"
+serde = { version = "1.0.190", features = ["derive"] }
+serde_dynamo = { version = "4.2.8", features = ["aws-sdk-dynamodb+0_34"] }
 serde_json = "1.0.108"
-time = { version = "0.3.29", features = [] }
+time = "0.3.29"
 tokio = { version = "1.32.0", features = ["rt-multi-thread", "macros", "time"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true
+uuid = "1.5.0"
 
 [target.x86_64-unknown-linux-gnu.dependencies]
 openssl = { version = "0.10", features = ["vendored"] }

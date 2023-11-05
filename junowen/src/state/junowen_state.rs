@@ -2,7 +2,8 @@ use std::{ffi::c_void, sync::mpsc::RecvError};
 
 use anyhow::Result;
 use junowen_lib::{
-    Fn011560, Fn0b7d40, Fn0d5ae0, Fn10f720, GameSettings, Menu, RenderingText, Selection, Th19,
+    Fn011560, Fn0b7d40, Fn0d5ae0, Fn10f720, GameSettings, Menu, RenderingText, ScreenId, Selection,
+    Th19,
 };
 use tracing::trace;
 
@@ -53,35 +54,45 @@ impl JunowenState {
         match_standby: &mut Option<MatchStandby>,
     ) -> Option<&'static Menu> {
         match self {
-            Self::Standby => match match_standby.take() {
-                None => None,
-                Some(MatchStandby::Opponent(opponent)) => {
-                    let result = opponent.try_into_session();
-                    match result {
-                        Ok(session) => {
-                            trace!("session received");
-                            self.start_battle_session(session);
-                            None
+            Self::Standby => {
+                let Some(old_match_standby) = match_standby.take() else {
+                    return None;
+                };
+                if let Some(menu) = th19.app().main_loop_tasks().find_menu() {
+                    if menu.screen_id == ScreenId::OnlineVSMode {
+                        *match_standby = None;
+                        return None;
+                    }
+                }
+                match old_match_standby {
+                    MatchStandby::Opponent(opponent) => {
+                        let result = opponent.try_into_session();
+                        match result {
+                            Ok(session) => {
+                                trace!("session received");
+                                self.start_battle_session(session);
+                                None
+                            }
+                            Err(opponent) => {
+                                *match_standby = Some(MatchStandby::Opponent(opponent));
+                                None
+                            }
                         }
-                        Err(opponent) => {
-                            *match_standby = Some(MatchStandby::Opponent(opponent));
-                            None
+                    }
+                    MatchStandby::Spectator(mut spectator) => {
+                        let result = spectator.try_recv_session();
+                        *match_standby = Some(MatchStandby::Spectator(spectator));
+                        match result {
+                            Ok(session) => {
+                                trace!("session received");
+                                self.start_spectator_session(session);
+                                None
+                            }
+                            Err(_) => None,
                         }
                     }
                 }
-                Some(MatchStandby::Spectator(mut spectator)) => {
-                    let result = spectator.try_recv_session();
-                    *match_standby = Some(MatchStandby::Spectator(spectator));
-                    match result {
-                        Ok(session) => {
-                            trace!("session received");
-                            self.start_spectator_session(session);
-                            None
-                        }
-                        Err(_) => None,
-                    }
-                }
-            },
+            }
             Self::BattleSession(session_state) => {
                 let Some(ret) = session_state.update_state(th19) else {
                     self.end_session();

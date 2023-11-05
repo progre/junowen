@@ -1,45 +1,58 @@
+mod app;
+mod database;
 mod tracing_helper;
 
-async fn app() -> anyhow::Result<()> {
-    tracing::info!("hello world");
-
-    Ok(())
-}
-
 mod local {
-    use anyhow::Result;
+    use std::env::args;
 
-    use crate::tracing_helper;
+    use lambda_http::{
+        http::{request::Builder, Method},
+        Body, IntoResponse, Request,
+    };
+    use tracing::trace;
+
+    use crate::{app::app, database, tracing_helper};
+
+    async fn func(req: Request) -> Result<impl IntoResponse, anyhow::Error> {
+        let db = database::File;
+        app(&req, &db).await
+    }
 
     #[allow(unused)]
-    pub async fn main() -> Result<()> {
+    pub async fn main() -> anyhow::Result<()> {
         tracing_helper::init_local_tracing();
 
-        // app(database::File).await
-        crate::app().await
+        let mut args = args();
+        let method = args.nth(1).unwrap();
+        let uri = args.next().unwrap();
+        let body = args.next().unwrap();
+
+        let req: Request = Builder::new()
+            .method(Method::from_bytes(method.as_bytes()).unwrap())
+            .uri(uri)
+            .body(Body::Text(body))
+            .unwrap();
+        let res = func(req).await?;
+        trace!("{:?}", res.into_response().await);
+        Ok(())
     }
 }
 
 mod lambda {
-    use lambda_runtime::{service_fn, LambdaEvent};
-    use serde_json::Value;
+    use lambda_http::{service_fn, IntoResponse, Request};
 
-    use crate::tracing_helper;
+    use crate::{app::app, database, tracing_helper};
 
-    pub async fn func(_event: LambdaEvent<Value>) -> Result<(), lambda_runtime::Error> {
-        // if let Err(err) = app(database::DynamoDB::new().await).await {
-        //     tracing::error!("{:?}", err);
-        //     return Err(err.into());
-        // }
-        crate::app().await.map_err(|err| err.into())
+    async fn func(req: Request) -> Result<impl IntoResponse, anyhow::Error> {
+        let db = database::DynamoDB::new().await;
+        app(&req, &db).await
     }
 
     #[allow(unused)]
-    pub async fn main() -> Result<(), lambda_runtime::Error> {
+    pub async fn main() -> Result<(), lambda_http::Error> {
         tracing_helper::init_server_tracing();
 
-        let func = service_fn(func);
-        lambda_runtime::run(func).await
+        lambda_http::run(service_fn(func)).await
     }
 }
 
@@ -51,6 +64,6 @@ async fn main() -> anyhow::Result<()> {
 
 #[cfg(target_os = "linux")]
 #[tokio::main]
-async fn main() -> Result<(), lambda_runtime::Error> {
+async fn main() -> Result<(), lambda_http::Error> {
     lambda::main().await
 }
