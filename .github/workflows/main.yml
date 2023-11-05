@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [main]
 jobs:
-  build:
+  build-windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
@@ -26,8 +26,10 @@ jobs:
         run: |
           rustup default nightly
           rustup target add i686-pc-windows-msvc
-          cargo build --locked --release --workspace
           cargo install cargo-bundle-licenses
+      - shell: bash
+        run: |
+          cargo build --locked --release --workspace
           cargo bundle-licenses --format yaml --output THIRDPARTY.yml
           mkdir --parents artifact/modules
           mv \
@@ -40,17 +42,52 @@ jobs:
           cp --recursive LICENSE README.md THIRDPARTY.yml ./artifact/
       - uses: actions/upload-artifact@v3
         with:
-          name: artifact
+          name: artifact-windows
           path: ./artifact
-  release:
-    needs: build
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        with:
+          path: ~/.cargo/git
+          key: cargo-index-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions/cache@v3
+        with:
+          path: target
+          key: cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+      - shell: bash
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          rustup default nightly
+          rustup target add x86_64-unknown-linux-gnu
+          pip3 install cargo-lambda
+          mkdir ~/.aws
+          cat <<EOF > ~/.aws/config
+          [default]
+          aws_access_key_id = $AWS_ACCESS_KEY_ID
+          aws_secret_access_key = $AWS_SECRET_ACCESS_KEY
+          region = ap-northeast-1
+          EOF
+      - shell: bash
+        run: |
+          cargo lambda build --locked --package junowen-server --release
+          cargo lambda deploy --binary-name junowen-server junowen-server-dev
+  release-windows:
+    needs: build-windows
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     env:
       RELEASE_NAME: Ju.N.Owen
     steps:
       - uses: actions/download-artifact@v2
-        name: artifact
+        name: artifact-windows
       - run: |
           cd artifact
           zip ../out d3d9.dll modules/th19_junowen.dll LICENSE README.md THIRDPARTY.yml

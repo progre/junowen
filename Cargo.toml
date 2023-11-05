@@ -10,6 +10,7 @@ members = [
   "archives/th19seed",
   "junowen",
   "junowen-lib",
+  "junowen-server",
   "th19loader",
 ]
 default-members = ["junowen"]
