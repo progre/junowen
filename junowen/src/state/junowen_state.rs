@@ -4,11 +4,11 @@ use anyhow::Result;
 use junowen_lib::{
     Fn011560, Fn0b7d40, Fn0d5ae0, Fn10f720, GameSettings, Menu, RenderingText, Selection, Th19,
 };
-use tokio::sync::mpsc::Receiver;
 use tracing::trace;
 
 use crate::{
     in_game_lobby::{Lobby, TitleMenuModifier},
+    match_standby::MatchStandby,
     session::{battle::BattleSession, spectator::SpectatorSessionGuest},
 };
 
@@ -51,21 +51,31 @@ impl JunowenState {
     fn update_state(
         &mut self,
         th19: &Th19,
-        battle_session_rx: &mut Receiver<BattleSession>,
-        spectator_session_guest_rx: &mut Receiver<SpectatorSessionGuest>,
+        match_standby: Option<&mut MatchStandby>,
     ) -> Option<Option<&'static Menu>> {
         match self {
             Self::Standby => {
-                if let Ok(session) = battle_session_rx.try_recv() {
-                    trace!("session received");
-                    self.start_battle_session(session);
-                    return Some(None);
-                };
-                if let Ok(session) = spectator_session_guest_rx.try_recv() {
-                    trace!("session received");
-                    self.start_spectator_session(session);
-                    return Some(None);
-                };
+                if let Some(match_standby) = match_standby {
+                    match match_standby {
+                        MatchStandby::Opponent(opponent) => {
+                            if let Ok(session) = opponent.battle_session_rx_mut().try_recv() {
+                                trace!("session received");
+                                self.start_battle_session(session);
+                                return Some(None);
+                            }
+                        }
+                        MatchStandby::Spectator(spectator) => {
+                            if let Ok(session) =
+                                spectator.spectator_session_guest_rx_mut().try_recv()
+                            {
+                                trace!("session received");
+                                self.start_spectator_session(session);
+                                return Some(None);
+                            }
+                        }
+                    }
+                }
+
                 None
             }
             Self::BattleSession(session_state) => {
@@ -104,11 +114,9 @@ impl JunowenState {
     pub fn on_input_players(
         &mut self,
         th19: &mut Th19,
-        battle_session_rx: &mut Receiver<BattleSession>,
-        spectator_session_guest_rx: &mut Receiver<SpectatorSessionGuest>,
+        match_standby: Option<&mut MatchStandby>,
     ) -> Result<(), RecvError> {
-        let Some(menu) = self.update_state(th19, battle_session_rx, spectator_session_guest_rx)
-        else {
+        let Some(menu) = self.update_state(th19, match_standby) else {
             return Ok(());
         };
         self.update_th19_on_input_players(menu, th19)

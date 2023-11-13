@@ -1,5 +1,6 @@
 mod helper;
 mod in_game_lobby;
+mod match_standby;
 mod session;
 mod state;
 mod tracing_helper;
