@@ -10,16 +10,10 @@ use junowen_lib::connection::{
     },
     DataChannel, PeerConnection,
 };
-use once_cell::sync::Lazy;
 use tokio::sync::{mpsc, oneshot};
 use tracing::info;
 
-static TOKIO_RUNTIME: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
-    tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .unwrap()
-});
+use crate::TOKIO_RUNTIME;
 
 #[derive(CopyGetters, Getters, MutGetters)]
 pub struct Signaling {
@@ -52,21 +46,19 @@ impl Signaling {
         let (msg_tx, msg_rx) = oneshot::channel();
         let (error_tx, error_rx) = oneshot::channel();
         let (connected_tx, connected_rx) = oneshot::channel();
-        std::thread::spawn(move || {
-            TOKIO_RUNTIME.block_on(async move {
-                let mut socket = ChannelSocket::new(offer_tx, answer_tx, msg_rx);
-                let (conn, dc) = match socket.receive_signaling().await {
-                    Ok(ok) => ok,
-                    Err(err) => {
-                        info!("Signaling failed: {}", err);
-                        let _ = error_tx.send(err);
-                        return;
-                    }
-                };
-                tracing::trace!("signaling connected");
-                session_tx.send(create_session(conn, dc)).await.unwrap();
-                connected_tx.send(()).unwrap();
-            });
+        TOKIO_RUNTIME.spawn(async move {
+            let mut socket = ChannelSocket::new(offer_tx, answer_tx, msg_rx);
+            let (conn, dc) = match socket.receive_signaling().await {
+                Ok(ok) => ok,
+                Err(err) => {
+                    info!("Signaling failed: {}", err);
+                    let _ = error_tx.send(err);
+                    return;
+                }
+            };
+            tracing::trace!("signaling connected");
+            session_tx.send(create_session(conn, dc)).await.unwrap();
+            connected_tx.send(()).unwrap();
         });
         Self {
             offer_rx,

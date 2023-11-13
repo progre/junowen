@@ -11,6 +11,7 @@ use junowen_lib::{
     hook_utils::WELL_KNOWN_VERSION_HASHES, Fn009fa0, Fn011560, Fn0b7d40, Fn0d5ae0, Fn0d6e10,
     Fn1049e0, Fn10f720, FnOfHookAssembly, RenderingText, Selection, Th19,
 };
+use once_cell::sync::Lazy;
 use state::State;
 use windows::{
     core::PCWSTR,
@@ -23,6 +24,13 @@ use windows::{
         },
     },
 };
+
+static TOKIO_RUNTIME: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+});
 
 static mut MODULE: HMODULE = HMODULE(0);
 static mut PROPS: Option<Props> = None;
