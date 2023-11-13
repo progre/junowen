@@ -39,7 +39,7 @@ impl Round {
 }
 
 #[repr(C)]
-pub struct PlayerName {
+pub struct OnlineVSMode {
     _unknown1: [u8; 0x02E868],
     _unknown2: [u8; 0x08],
     _unknown3: [u8; 0x58],
@@ -48,7 +48,7 @@ pub struct PlayerName {
     // unknown remains...
 }
 
-impl PlayerName {
+impl OnlineVSMode {
     pub fn player_name(&self) -> Cow<'_, str> {
         CStr::from_bytes_until_nul(&self.player_name)
             .unwrap_or_default()

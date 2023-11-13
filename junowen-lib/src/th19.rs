@@ -219,7 +219,7 @@ impl Th19 {
     u16_prop!(0x1ae430, rand_seed4, set_rand_seed4);
     // 0x1ae434: u32 increment param
     ptr_opt!(0x_1ae464, round, Round);
-    pointer!(0x_1ae60c, player_name, PlayerName);
+    pointer!(0x_1ae60c, online_vs_mode, OnlineVSMode);
     value_ref!(0x200850, p1_input, Input);
     value_ref!(0x200b10, p2_input, Input);
     value_ref!(0x200dd0, menu_input, menu_input_mut, Input);

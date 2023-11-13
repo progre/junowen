@@ -187,13 +187,13 @@ impl BattleSessionState {
         };
         let (p1, p2) = if session.host() {
             (
-                th19.player_name().player_name(),
+                th19.online_vs_mode().player_name(),
                 session.remote_player_name().into(),
             )
         } else {
             (
                 session.remote_player_name().into(),
-                th19.player_name().player_name(),
+                th19.online_vs_mode().player_name(),
             )
         };
         in_session::on_render_texts(

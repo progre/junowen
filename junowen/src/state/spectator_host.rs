@@ -262,7 +262,7 @@ impl SpectatorHostState {
                             menu.screen_id,
                             selection,
                             battle_session,
-                            th19.player_name().player_name().to_string(),
+                            th19.online_vs_mode().player_name().to_string(),
                         ))?;
                         session.send_init_round(RoundInitial {
                             seed1: th19.rand_seed1().unwrap(),
