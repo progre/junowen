@@ -188,11 +188,11 @@ impl BattleSessionState {
         let (p1, p2) = if session.host() {
             (
                 th19.online_vs_mode().player_name(),
-                session.remote_player_name().into(),
+                session.remote_player_name().as_str(),
             )
         } else {
             (
-                session.remote_player_name().into(),
+                session.remote_player_name().as_str(),
                 th19.online_vs_mode().player_name(),
             )
         };
@@ -200,8 +200,8 @@ impl BattleSessionState {
             th19,
             session.host(),
             session.delay(),
-            &p1,
-            &p2,
+            p1,
+            p2,
             spectator_host_state,
             text_renderer,
         );

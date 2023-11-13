@@ -1,5 +1,4 @@
 use std::{
-    borrow::Cow,
     ffi::{CStr, FromBytesUntilNulError},
     fmt,
     mem::transmute,
@@ -49,16 +48,18 @@ pub struct OnlineVSMode {
 }
 
 impl OnlineVSMode {
-    pub fn player_name(&self) -> Cow<'_, str> {
+    pub fn player_name(&self) -> &str {
         CStr::from_bytes_until_nul(&self.player_name)
             .unwrap_or_default()
-            .to_string_lossy()
+            .to_str()
+            .unwrap()
     }
 
-    pub fn room_name(&self) -> Cow<'_, str> {
+    pub fn room_name(&self) -> &str {
         CStr::from_bytes_until_nul(&self.room_name)
             .unwrap_or_default()
-            .to_string_lossy()
+            .to_str()
+            .unwrap()
     }
 }
 
