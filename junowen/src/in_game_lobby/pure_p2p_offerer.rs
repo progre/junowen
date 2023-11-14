@@ -45,6 +45,7 @@ where
         offer_type: SignalingCodeType,
         answer_type: SignalingCodeType,
         create_session: fn(PeerConnection, DataChannel) -> T,
+        label: &'static str,
         messages: [&'static str; 3],
     ) -> Self {
         let (session_tx, session_rx) = mpsc::channel(1);
@@ -54,7 +55,7 @@ where
             create_session,
             messages,
             common_menu: CommonMenu::new(
-                "Ju.N.Owen",
+                label,
                 false,
                 720,
                 MenuDefine::new(
@@ -148,8 +149,12 @@ where
                         .send(SignalingServerMessage::SetAnswerDesc(answer))
                         .unwrap();
                     *session_rx = self.session_rx.take();
-                    self.common_menu =
-                        CommonMenu::new("Ju.N.Owen", false, 720, MenuDefine::new(0, vec![]))
+                    self.common_menu = CommonMenu::new(
+                        self.common_menu.root_label(),
+                        false,
+                        720,
+                        MenuDefine::new(0, vec![]),
+                    )
                 }
                 None
             }
@@ -210,6 +215,7 @@ where
             self.offer_type,
             self.answer_type,
             self.create_session,
+            self.common_menu.root_label(),
             self.messages,
         );
     }
@@ -220,6 +226,7 @@ pub fn pure_p2p_host() -> PureP2pOfferer<BattleSession> {
         SignalingCodeType::BattleOffer,
         SignalingCodeType::BattleAnswer,
         |pc, dc| BattleSession::new(pc, dc, true),
+        "Connect as Host",
         [
             "Share your signaling code with guest.",
             "Guest's signaling code:",
@@ -233,6 +240,7 @@ pub fn pure_p2p_spectator() -> PureP2pOfferer<SpectatorSessionGuest> {
         SignalingCodeType::SpectatorOffer,
         SignalingCodeType::SpectatorAnswer,
         SpectatorSessionGuest::new,
+        "Connect as Spectator",
         [
             "Share your signaling code with player.",
             "Player's signaling code:",

@@ -32,7 +32,7 @@ impl PureP2pGuest {
         let (session_tx, session_rx) = mpsc::channel(1);
         Self {
             common_menu: CommonMenu::new(
-                "Ju.N.Owen",
+                "Connect as Guest",
                 false,
                 840,
                 MenuDefine::new(
@@ -67,7 +67,7 @@ impl PureP2pGuest {
                 self.answer_generated = true;
                 set_clipboard_string(&SignalingCodeType::BattleAnswer.to_string(answer)).unwrap();
                 self.common_menu = CommonMenu::new(
-                    "Ju.N.Owen",
+                    self.common_menu.root_label(),
                     false,
                     840,
                     MenuDefine::new(
@@ -82,7 +82,12 @@ impl PureP2pGuest {
         }
         if !self.error_received && self.signaling.error().is_some() {
             self.error_received = true;
-            self.common_menu = CommonMenu::new("Ju.N.Owen", false, 0, MenuDefine::new(0, vec![]))
+            self.common_menu = CommonMenu::new(
+                self.common_menu.root_label(),
+                false,
+                0,
+                MenuDefine::new(0, vec![]),
+            )
         }
         match self
             .common_menu
@@ -115,8 +120,12 @@ impl PureP2pGuest {
                             .send(SignalingServerMessage::RequestAnswer(offer))
                             .unwrap();
                         *session_rx = self.session_rx.take();
-                        self.common_menu =
-                            CommonMenu::new("Ju.N.Owen", false, 0, MenuDefine::new(0, vec![]))
+                        self.common_menu = CommonMenu::new(
+                            self.common_menu.root_label(),
+                            false,
+                            0,
+                            MenuDefine::new(0, vec![]),
+                        )
                     }
                     1 => {
                         set_clipboard_string(

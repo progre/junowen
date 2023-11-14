@@ -1,6 +1,6 @@
 use std::ffi::c_void;
 
-use getset::Setters;
+use getset::{CopyGetters, Setters};
 use junowen_lib::{InputFlags, InputValue, Th19};
 
 use super::helper::{render_menu_item, render_title};
@@ -83,8 +83,9 @@ enum CurrentMenuMutResult<'a> {
     SubScene(LobbyScene),
 }
 
-#[derive(Setters)]
+#[derive(Setters, CopyGetters)]
 pub struct CommonMenu {
+    #[get_copy = "pub"]
     root_label: &'static str,
     menu_define: MenuDefine,
     instant_exit: bool,
