@@ -5,7 +5,7 @@ use tracing::{error, Level};
 use tracing_subscriber::{
     fmt::{time::LocalTime, writer::MakeWriterExt},
     prelude::__tracing_subscriber_SubscriberExt,
-    Layer,
+    EnvFilter, Layer,
 };
 
 const MY_CONFIG: iso8601::EncodedConfig = iso8601::Config::DEFAULT
@@ -31,13 +31,21 @@ pub fn init_tracing(dir: &str, file_name: &str, ansi: bool) {
     let layer = default_layer().with_ansi(false).with_writer(writer);
 
     if cfg!(debug_assertions) {
+        let make_filter = || EnvFilter::new(concat!(env!("CARGO_CRATE_NAME"), "=trace"));
         tracing::subscriber::set_global_default(
-            tracing_subscriber::registry().with(layer.and_then(default_layer().with_ansi(ansi))),
+            tracing_subscriber::registry().with(
+                layer
+                    .with_filter(make_filter())
+                    .and_then(default_layer().with_ansi(ansi).with_filter(make_filter())),
+            ),
         )
         .unwrap();
     } else {
-        tracing::subscriber::set_global_default(tracing_subscriber::registry().with(layer))
-            .unwrap();
+        let make_filter = || EnvFilter::new(concat!(env!("CARGO_CRATE_NAME"), "=info"));
+        tracing::subscriber::set_global_default(
+            tracing_subscriber::registry().with(layer.with_filter(make_filter())),
+        )
+        .unwrap();
     }
 
     panic::set_hook(Box::new(|panic| error!("{}", panic)));

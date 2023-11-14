@@ -27,9 +27,9 @@ tokio = { version = "1.32.0", features = [
   "time"
 ] }
 toml = "0.8.0"
-tracing = "0.1.37"
+tracing.workspace = true
 tracing-appender = "0.2.2"
-tracing-subscriber = { version = "0.3.17", features = ["local-time"] }
+tracing-subscriber.workspace = true
 webrtc = "0.9.0"
 windows = { version = "0.51.1", features = [
   "Win32_Foundation",

@@ -23,7 +23,7 @@ sys-locale = "0.3.1"
 thiserror = "1.0.49"
 tokio = "1.32.0"
 toml = "0.8.0"
-tracing = "0.1.37"
+tracing.workspace = true
 webrtc = "0.9.0"
 windows = { version = "0.51.1", features = [
   "Win32_Foundation",
