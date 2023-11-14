@@ -48,7 +48,7 @@ impl Signaling {
         let (connected_tx, connected_rx) = oneshot::channel();
         TOKIO_RUNTIME.spawn(async move {
             let mut socket = ChannelSocket::new(offer_tx, answer_tx, msg_rx);
-            let (conn, dc) = match socket.receive_signaling().await {
+            let (conn, dc, _host) = match socket.receive_signaling().await {
                 Ok(ok) => ok,
                 Err(err) => {
                     info!("Signaling failed: {}", err);

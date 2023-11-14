@@ -24,7 +24,7 @@ async fn main() -> Result<()> {
     connect_as_offerer(&mut client_pipe, &Lang::resolve())
         .await
         .unwrap();
-    let (_conn, mut dc) = task.await.unwrap();
+    let (_conn, mut dc, _host) = task.await.unwrap();
 
     dc.message_sender
         .send(Bytes::from_iter(b"ping".iter().copied()))
