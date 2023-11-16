@@ -1,82 +1,112 @@
-# Ju. N. Owen
+[日本語のドキュメントはこちら](./README.ja.md)
 
-東方獣王園の非公式オンライン対戦ツールです。
+# Ju.N.Owen
 
-非公式のツールです。**自己責任で使用してください。**
+This is an unofficial online battle tool for Touhou Juuouen ~ Unfinished Dream of All Living Ghost (Touhou 19 UDoALG).
 
-公式のオンライン対戦のマッチングや同期機構とは異なる、独自の仕組みでオンライン対戦を実現します。
-adonis や th075caster と同じような仕組みで動作します。
+It is an unofficial tool. **Use at your own risk**.
 
-
-## 特徴
-
-- 公式のオンライン対戦よりもずれにくい
-- ゲーム中にディレイを変更できる
-- サーバーなしで接続できる
-- 観戦ができる
+This tool realizes online battles with its own mechanism, which is different from the matching and synchronization mechanism of official online battles.
+It works in the same way as adonis and th075caster.
 
 
-## 使用方法
+## Features
 
-現在マッチングサーバーは未実装なので、チャットなどで対戦相手と接続情報を交換する必要があります。
-
-1. zip ファイルを展開し、d3d9.dll と、modules フォルダーの中に th19_junowen.dll があることを確認します。
-2. 獣王園のフォルダーに d3d9.dll と modules フォルダーを移動します。
-3. 獣王園を起動します。
-4. 上手くいくと獣王園のタイトル画面の項目に「Ju.N.Owen」が追加されるので、それを選択します。
-5. ホストとして接続を待ち受ける場合は「Connect as Host」を、
-   ゲストとして接続する場合は「Connect as Guset」を選択します。
-    - ホスト
-        1. `<offer>********</offer>` という長い文字列が表示され、自動的にクリップボードにコピーされるので、
-           この文字列を Discord 等を使って対戦相手に送信してください。
-           「Copy your code」を選択すると再度クリップボードにコピーされます。
-        2. 対戦相手から `<answer>********</answer>` という文字列を受け取り、
-           クリップボードにコピーしてください。
-        3. 「Paste guest's code」を選択してください。
-        4. うまくいけば難易度選択に遷移し、対戦が開始されます。
-    - ゲスト
-        1. 対戦相手から `<offer>********</offer>` という文字列を受け取り、クリップボードにコピーしてください。
-        2. 決定ボタンを押すと、クリップボードの内容が入力されます。
-        3. `<answer>********</answer>` という長い文字列が表示され、自動的にクリップボードにコピーされるので、
-           この文字列を Discord 等を使って対戦相手に送信してください。
-           決定ボタンを押すと再度クリップボードにコピーされます。
-        4. うまくいけば難易度選択に遷移し、対戦が開始されます。
-4 ホストはゲーム中に数字キーの0-9でディレイを変更できます。
+* Less likely to be out of alignment than official online battles
+* Delay can be changed during the game
+* Can be connected without a server
+* Can spectate the game
 
 
-### 観戦
+## How to install
 
-- 観戦者
-    1. 「Connect as Spectator」を選択します。
-    2. `<s-offer>********</s-offer>` という長い文字列が表示され、自動的にクリップボードにコピーされるので、
-       この文字列を Discord 等を使ってプレイヤーのどちらかに送信してください。
-       「Copy your code」を選択すると再度クリップボードにコピーされます。
-    3. プレイヤーから `<s-answer>********</s-answer>` という文字列を受け取り、
-       クリップボードにコピーしてください。
-    4. 「Paste guest's code」を選択してください。
-    5. うまくいけば観戦が開始されます。
-    6. ポーズボタンを押すと観戦を中止します。
-- プレイヤー
-    1. Ju.N.Owen の対戦機能で対戦相手と接続し、難易度選択で待機します。
-    2. 観戦者から `<s-offer>********</s-offer>` という文字列を受け取り、クリップボードにコピーしてください。
-    3. F1 キーを押すと、クリップボードの内容が入力されます。
-    4. `<answer>********</answer>` という長い文字列が表示され、自動的にクリップボードにコピーされるので、
-       この文字列を Discord 等を使って対戦相手に送信してください。
-    5. うまくいけば観戦が開始されます。
+1. Extract the zip file and make sure you have d3d9.dll and th19_junowen.dll in the modules folder.
+2. Open the Touhou 19 installation folder.
+3. Move d3d9.dll and the modules folder into Touhou 19 folder.
+4. Start Touhou 19.
+5. If all goes well, "Ju.N.Owen" will be added as an item on the title screen of Touhou 19.
 
 
-### 補足
+## How to use
 
-- ポート開放は必要ありません。開放してあってもそのポートを指定することはできません。
+Two connection methods are currently supported.
+
+### Shared Room
+
+This method connects with users whose room names match.
+
+1. Set the room name in "Online VS Mode".
+2. Select "Ju.N.Owen" -> "Shared Room".
+3. Press the shot button with "Enter" to start waiting for connection.
+    * Pressing the shot button while in the "Leave" state interrupts the connection waiting.
+    * Press the Cancel button to use other functions while waiting for connection.
+
+### Pure P2P
+
+This method does not use a connection server, but exchanges connection information with opponents via chat or other means.
+
+1. Select "Ju.N.Owen" -> "Pure P2P”.
+2. Select "Connect as Host" if you want to wait for a connection as a host,
+   Select "Connect as Guset" to connect as a guest.
+    * Host
+        1. A long string `<offer>********</offer>` will be displayed and automatically copied to the clipboard,
+           Send this string to your opponent using Discord or other means.
+           Select "Copy your code" to copy it to the clipboard again.
+        2. Receive the string `<answer>********</answer>` from your opponent,
+           Copy it to the clipboard.
+        3. Select "Paste guest's code".
+        4. If all goes well, you will be redirected to the difficulty selection and the game will begin.
+    * Guest
+        1. Receive the string `<offer>********</offer>` from your opponent and copy it to the clipboard.
+        2. Press the shot button to enter the clipboard contents.
+        3. Take the long string `<answer>********</answer>` and automatically copy it to the clipboard,
+           Send this string to your opponent via Discord or other means.
+           Press the shot button to copy the string to the clipboard again.
+        4. If all goes well, you will be redirected to the difficulty selection screen and the game will begin.
+
+### After connection
+
+* During the connection, the names of both parties are displayed at the top of the screen. When disconnected, the display will disappear.
+* The host can change the delay value with the number keys 0-9 during the game.
+
+### Spectate
+
+Currently, the game can only be watched via Pure P2P.
+
+* Spectator
+    1. Select “Ju.N.Owen" -> "Pure P2P” -> "Connect as Spectator"
+    2. A long string `<s-offer>********</s-offer>` will be displayed and automatically copied to the clipboard,
+       Send this string to one of the players via Discord or other means.
+       Select "Copy your code" to copy it to the clipboard again.
+    3. Receive the string `<s-answer>********</s-answer>` from the player,
+       copy it to the clipboard.
+    4. Select "Paste guest's code"
+    5. If all goes well, the game will start.
+    6. Press the pause button to stop the spectating.
+* Player
+    1. Connect to the opponent via Ju.N.Owen's match function and wait for the difficulty level selection.
+    2. receive the string `<s-offer>********</s-offer>` from the spectator and copy it to the clipboard
+    3. Press the F1 key to enter the clipboard contents.
+    4. Take the long string `<answer>********</answer>` and automatically copy it to the clipboard,
+       Send this string to your opponent via Discord or other means.
+    5. If all goes well, you can let them spectate the game.
 
 
-## 現在の制約
+## Supplement
 
-- 観戦者の追加はプレイヤーの接続直後のみ可能です。
-- 観戦者の受け入れはプレイヤー一人につき1人のみです。
-- 通信が遅延したり良くないことが起きるとゲームがフレーズすることがあります。
+* No ports need to be open. Even if a port is open, that port cannot be specified.
 
 
-## 配布元
+## Current constraints
+
+* "Online VS Mode" must be released for the game to work properly.
+* Spectators can only be added immediately after a player connects.
+* Only one spectator can be accepted per player.
+* The game may be freeze if communication is delayed or something not good happens.
+
+
+## Author and distributor
+
+[Progre](https://bsky.app/profile/progre.me)
 
 https://github.com/progre/junowen

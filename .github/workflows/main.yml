@@ -22,12 +22,14 @@ jobs:
         with:
           path: target
           key: cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-      - shell: bash
+      - name: Init Rust
+        shell: bash
         run: |
           rustup default nightly
           rustup target add i686-pc-windows-msvc
           cargo install cargo-bundle-licenses
-      - shell: bash
+      - name: Build
+        shell: bash
         run: |
           cargo build --locked --release --workspace
           cargo bundle-licenses --format yaml --output THIRDPARTY.yml
@@ -44,7 +46,29 @@ jobs:
         with:
           name: artifact-windows
           path: ./artifact
-  build-linux:
+  release-windows:
+    needs: build-windows
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    env:
+      FILENAME: ${{ github.event.repository.name }}_${{ github.ref_name }}.zip
+      RELEASE_NAME: Ju.N.Owen
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: artifact-windows
+          path: ./artifact
+      - name: Zip
+        run: |
+          cd artifact
+          zip ../${{ env.FILENAME }} d3d9.dll modules/th19_junowen.dll LICENSE README.md THIRDPARTY.yml
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: ${{ env.RELEASE_NAME }} ${{ github.ref_name }}
+          files: ${{ env.FILENAME }}
+  build-server:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -60,7 +84,7 @@ jobs:
         with:
           path: target
           key: cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-      - shell: bash
+      - name: Init Rust
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -75,34 +99,37 @@ jobs:
           aws_secret_access_key = $AWS_SECRET_ACCESS_KEY
           region = ap-northeast-1
           EOF
-      - shell: bash
+      - name: Build & Deploy dev
         run: |
           cargo lambda build --locked --package junowen-server --release
           cargo lambda deploy --binary-name junowen-server junowen-server-dev
-  release-windows:
-    needs: build-windows
+      - uses: actions/upload-artifact@v3
+        with:
+          name: artifact-server
+          path: ./target/lambda
+  release-server:
+    needs: build-server
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
-    env:
-      RELEASE_NAME: Ju.N.Owen
     steps:
-      - uses: actions/download-artifact@v2
-        name: artifact-windows
-      - run: |
-          cd artifact
-          zip ../out d3d9.dll modules/th19_junowen.dll LICENSE README.md THIRDPARTY.yml
-      - id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
         with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ env.RELEASE_NAME }} ${{ github.ref }}
-      - uses: actions/upload-release-asset@v1
+          name: artifact-server
+          path: ./target/lambda
+      - name: Init Rust
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./out.zip
-          asset_name: ${{ github.event.repository.name }}_${{ github.ref_name }}.zip
-          asset_content_type: application/zip
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          pip3 install cargo-lambda
+          mkdir ~/.aws
+          cat <<EOF > ~/.aws/config
+          [default]
+          aws_access_key_id = $AWS_ACCESS_KEY_ID
+          aws_secret_access_key = $AWS_SECRET_ACCESS_KEY
+          region = ap-northeast-1
+          EOF
+      - name: Deploy
+        run: |
+          cargo lambda deploy --binary-name junowen-server junowen-server
