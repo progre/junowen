@@ -1,15 +1,13 @@
 use std::ffi::c_void;
 
+use getset::MutGetters;
 use junowen_lib::{InputFlags, InputValue, Th19};
-use tokio::sync::mpsc;
 
-use crate::{
-    match_standby::{MatchStandby, PureP2pOpponent, PureP2pSpectator},
-    session::{battle::BattleSession, spectator::SpectatorSessionGuest},
-};
+use crate::session::{battle::BattleSession, spectator::SpectatorSessionGuest};
 
 use super::{
     common_menu::{CommonMenu, LobbyScene, MenuAction, MenuDefine, MenuItem, OnMenuInputResult},
+    match_standby::{MatchStandby, PureP2pOpponent, PureP2pSpectator},
     pure_p2p_guest::PureP2pGuest,
     pure_p2p_offerer::{pure_p2p_host, pure_p2p_spectator, PureP2pOfferer},
 };
@@ -66,6 +64,7 @@ impl Root {
     }
 }
 
+#[derive(MutGetters)]
 pub struct Lobby {
     scene: LobbyScene,
     prev_scene: LobbyScene,
@@ -74,6 +73,7 @@ pub struct Lobby {
     pure_p2p_guest: Option<PureP2pGuest>,
     pure_p2p_spectator: Option<PureP2pOfferer<SpectatorSessionGuest>>,
     prev_input: InputValue,
+    #[get_mut = "pub"]
     match_standby: Option<MatchStandby>,
 }
 
@@ -89,10 +89,6 @@ impl Lobby {
             pure_p2p_spectator: None,
             prev_input: InputValue::full(),
         }
-    }
-
-    pub fn match_standby_mut(&mut self) -> Option<&mut MatchStandby> {
-        self.match_standby.as_mut()
     }
 
     pub fn reset_depth(&mut self) {
@@ -111,46 +107,60 @@ impl Lobby {
                 .on_input_menu(current_input, self.prev_input, th19),
             LobbyScene::PureP2pHost => {
                 if self.pure_p2p_host.is_none() {
-                    let (battle_session_tx, battle_session_rx) = mpsc::channel(1);
-                    self.match_standby = Some(PureP2pOpponent::new(battle_session_rx).into());
-                    self.pure_p2p_host = Some(pure_p2p_host(battle_session_tx));
+                    self.match_standby = None;
+                    self.pure_p2p_host = Some(pure_p2p_host());
                     self.pure_p2p_guest = None;
                     self.pure_p2p_spectator = None;
                 }
-                self.pure_p2p_host.as_mut().unwrap().on_input_menu(
+                let mut session_rx = None;
+                let ret = self.pure_p2p_host.as_mut().unwrap().on_input_menu(
                     current_input,
                     self.prev_input,
                     th19,
-                )
+                    &mut session_rx,
+                );
+                if let Some(session_rx) = session_rx {
+                    self.match_standby = Some(PureP2pOpponent::new(session_rx).into());
+                }
+                ret
             }
             LobbyScene::PureP2pGuest => {
                 if self.pure_p2p_guest.is_none() {
-                    let (battle_session_tx, battle_session_rx) = mpsc::channel(1);
-                    self.match_standby = Some(PureP2pOpponent::new(battle_session_rx).into());
-                    self.pure_p2p_guest = Some(PureP2pGuest::new(battle_session_tx));
+                    self.match_standby = None;
+                    self.pure_p2p_guest = Some(PureP2pGuest::new());
                     self.pure_p2p_host = None;
                     self.pure_p2p_spectator = None;
                 }
-                self.pure_p2p_guest.as_mut().unwrap().on_input_menu(
+                let mut session_rx = None;
+                let ret = self.pure_p2p_guest.as_mut().unwrap().on_input_menu(
                     current_input,
                     self.prev_input,
                     th19,
-                )
+                    &mut session_rx,
+                );
+                if let Some(session_rx) = session_rx {
+                    self.match_standby = Some(PureP2pOpponent::new(session_rx).into());
+                }
+                ret
             }
             LobbyScene::PureP2pSpectator => {
                 if self.pure_p2p_spectator.is_none() {
-                    let (spectator_session_guest_tx, spectator_session_guest_rx) = mpsc::channel(1);
-                    self.match_standby =
-                        Some(PureP2pSpectator::new(spectator_session_guest_rx).into());
-                    self.pure_p2p_spectator = Some(pure_p2p_spectator(spectator_session_guest_tx));
+                    self.match_standby = None;
+                    self.pure_p2p_spectator = Some(pure_p2p_spectator());
                     self.pure_p2p_host = None;
                     self.pure_p2p_guest = None;
                 }
-                self.pure_p2p_spectator.as_mut().unwrap().on_input_menu(
+                let mut session_rx = None;
+                let ret = self.pure_p2p_spectator.as_mut().unwrap().on_input_menu(
                     current_input,
                     self.prev_input,
                     th19,
-                )
+                    &mut session_rx,
+                );
+                if let Some(session_rx) = session_rx {
+                    self.match_standby = Some(PureP2pSpectator::new(session_rx).into());
+                }
+                ret
             }
         } {
             self.scene = scene;

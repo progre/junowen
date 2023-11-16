@@ -1,5 +1,5 @@
 use derive_new::new;
-use tokio::sync::mpsc;
+use tokio::sync::mpsc::{self, error::TryRecvError};
 
 use crate::session::{battle::BattleSession, spectator::SpectatorSessionGuest};
 
@@ -13,9 +13,12 @@ pub enum Opponent {
 }
 
 impl Opponent {
-    pub fn battle_session_rx_mut(&mut self) -> &mut mpsc::Receiver<BattleSession> {
+    pub fn try_into_session(self) -> Result<BattleSession, Self> {
         match self {
-            Self::PureP2p(pure_p2p) => &mut pure_p2p.battle_session_rx,
+            Self::PureP2p(mut pure_p2p) => pure_p2p
+                .battle_session_rx
+                .try_recv()
+                .map_err(|_| Opponent::PureP2p(pure_p2p)),
         }
     }
 }
@@ -30,9 +33,9 @@ pub enum Spectator {
 }
 
 impl Spectator {
-    pub fn spectator_session_guest_rx_mut(&mut self) -> &mut mpsc::Receiver<SpectatorSessionGuest> {
+    pub fn try_recv_session(&mut self) -> Result<SpectatorSessionGuest, TryRecvError> {
         match self {
-            Self::PureP2p(pure_p2p) => &mut pure_p2p.spectator_session_guest_rx,
+            Self::PureP2p(pure_p2p) => pure_p2p.spectator_session_guest_rx.try_recv(),
         }
     }
 }

@@ -31,7 +31,7 @@ pub struct PureP2pOfferer<T> {
     messages: [&'static str; 3],
     common_menu: CommonMenu,
     signaling: Signaling,
-    session_tx: mpsc::Sender<T>,
+    session_rx: Option<mpsc::Receiver<T>>,
     answer: Option<String>,
     /// 0: require generate, 1: copied, 2: already copied, 3: copied again
     copy_state: u8,
@@ -46,8 +46,8 @@ where
         answer_type: SignalingCodeType,
         create_session: fn(PeerConnection, DataChannel) -> T,
         messages: [&'static str; 3],
-        session_tx: mpsc::Sender<T>,
     ) -> Self {
+        let (session_tx, session_rx) = mpsc::channel(1);
         Self {
             offer_type,
             answer_type,
@@ -75,8 +75,8 @@ where
                     ],
                 ),
             ),
-            signaling: Signaling::new(session_tx.clone(), create_session),
-            session_tx,
+            signaling: Signaling::new(session_tx, create_session),
+            session_rx: Some(session_rx),
             answer: None,
             copy_state: 0,
         }
@@ -87,6 +87,7 @@ where
         current_input: InputValue,
         prev_input: InputValue,
         th19: &Th19,
+        session_rx: &mut Option<mpsc::Receiver<T>>,
     ) -> Option<LobbyScene> {
         self.signaling.recv();
         if self.signaling.connected() {
@@ -146,6 +147,7 @@ where
                         .unwrap()
                         .send(SignalingServerMessage::SetAnswerDesc(answer))
                         .unwrap();
+                    *session_rx = self.session_rx.take();
                     self.common_menu =
                         CommonMenu::new("Ju.N.Owen", false, 720, MenuDefine::new(0, vec![]))
                 }
@@ -209,12 +211,11 @@ where
             self.answer_type,
             self.create_session,
             self.messages,
-            self.session_tx.clone(),
         );
     }
 }
 
-pub fn pure_p2p_host(session_tx: mpsc::Sender<BattleSession>) -> PureP2pOfferer<BattleSession> {
+pub fn pure_p2p_host() -> PureP2pOfferer<BattleSession> {
     PureP2pOfferer::new(
         SignalingCodeType::BattleOffer,
         SignalingCodeType::BattleAnswer,
@@ -224,13 +225,10 @@ pub fn pure_p2p_host(session_tx: mpsc::Sender<BattleSession>) -> PureP2pOfferer<
             "Guest's signaling code:",
             "Waiting for guest to connect...",
         ],
-        session_tx,
     )
 }
 
-pub fn pure_p2p_spectator(
-    session_tx: mpsc::Sender<SpectatorSessionGuest>,
-) -> PureP2pOfferer<SpectatorSessionGuest> {
+pub fn pure_p2p_spectator() -> PureP2pOfferer<SpectatorSessionGuest> {
     PureP2pOfferer::new(
         SignalingCodeType::SpectatorOffer,
         SignalingCodeType::SpectatorAnswer,
@@ -240,6 +238,5 @@ pub fn pure_p2p_spectator(
             "Player's signaling code:",
             "Waiting for player to connect...",
         ],
-        session_tx,
     )
 }

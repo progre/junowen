@@ -21,14 +21,15 @@ use super::{
 pub struct PureP2pGuest {
     common_menu: CommonMenu,
     signaling: Signaling,
-    battle_session_tx: mpsc::Sender<BattleSession>,
+    session_rx: Option<mpsc::Receiver<BattleSession>>,
     offer: Option<String>,
     answer_generated: bool,
     error_received: bool,
 }
 
 impl PureP2pGuest {
-    pub fn new(battle_session_tx: mpsc::Sender<BattleSession>) -> Self {
+    pub fn new() -> Self {
+        let (session_tx, session_rx) = mpsc::channel(1);
         Self {
             common_menu: CommonMenu::new(
                 "Ju.N.Owen",
@@ -42,10 +43,8 @@ impl PureP2pGuest {
                     )],
                 ),
             ),
-            signaling: Signaling::new(battle_session_tx.clone(), |conn, dc| {
-                BattleSession::new(conn, dc, false)
-            }),
-            battle_session_tx,
+            signaling: Signaling::new(session_tx, |conn, dc| BattleSession::new(conn, dc, false)),
+            session_rx: Some(session_rx),
             offer: None,
             answer_generated: false,
             error_received: false,
@@ -57,6 +56,7 @@ impl PureP2pGuest {
         current_input: InputValue,
         prev_input: InputValue,
         th19: &Th19,
+        session_rx: &mut Option<mpsc::Receiver<BattleSession>>,
     ) -> Option<LobbyScene> {
         self.signaling.recv();
         if self.signaling.connected() {
@@ -114,6 +114,7 @@ impl PureP2pGuest {
                             .unwrap()
                             .send(SignalingServerMessage::RequestAnswer(offer))
                             .unwrap();
+                        *session_rx = self.session_rx.take();
                         self.common_menu =
                             CommonMenu::new("Ju.N.Owen", false, 0, MenuDefine::new(0, vec![]))
                     }
@@ -178,6 +179,6 @@ impl PureP2pGuest {
 
     fn reset(&mut self) {
         self.error_received = false;
-        *self = Self::new(self.battle_session_tx.clone());
+        *self = Self::new();
     }
 }
