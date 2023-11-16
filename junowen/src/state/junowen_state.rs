@@ -51,7 +51,7 @@ impl JunowenState {
         &mut self,
         th19: &Th19,
         match_standby: &mut Option<MatchStandby>,
-    ) -> Option<Option<&'static Menu>> {
+    ) -> Option<&'static Menu> {
         match self {
             Self::Standby => match match_standby.take() {
                 None => None,
@@ -61,7 +61,7 @@ impl JunowenState {
                         Ok(session) => {
                             trace!("session received");
                             self.start_battle_session(session);
-                            Some(None)
+                            None
                         }
                         Err(opponent) => {
                             *match_standby = Some(MatchStandby::Opponent(opponent));
@@ -76,7 +76,7 @@ impl JunowenState {
                         Ok(session) => {
                             trace!("session received");
                             self.start_spectator_session(session);
-                            Some(None)
+                            None
                         }
                         Err(_) => None,
                     }
@@ -87,14 +87,14 @@ impl JunowenState {
                     self.end_session();
                     return None;
                 };
-                Some(ret)
+                ret
             }
             Self::SpectatorSession(session_state) => {
                 let Some(ret) = session_state.update_state(th19) else {
                     self.end_session();
                     return None;
                 };
-                Some(ret)
+                ret
             }
         }
     }
@@ -105,7 +105,7 @@ impl JunowenState {
         th19: &mut Th19,
     ) -> Result<(), RecvError> {
         match self {
-            Self::Standby => unreachable!(),
+            Self::Standby => Ok(()),
             Self::BattleSession(session_state) => {
                 session_state.update_th19_on_input_players(menu, th19)
             }
@@ -120,10 +120,8 @@ impl JunowenState {
         th19: &mut Th19,
         match_standby: &mut Option<MatchStandby>,
     ) -> Result<(), RecvError> {
-        let Some(menu) = self.update_state(th19, match_standby) else {
-            return Ok(());
-        };
-        self.update_th19_on_input_players(menu, th19)
+        let menu_opt = self.update_state(th19, match_standby);
+        self.update_th19_on_input_players(menu_opt, th19)
     }
 
     pub fn on_input_menu(
