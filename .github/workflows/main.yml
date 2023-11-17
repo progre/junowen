@@ -2,7 +2,7 @@ name: CI
 on:
   push:
     branches: [main]
-    tags: [v*]
+    tags: [junowen-v*, junowen-server-v*]
   pull_request:
     branches: [main]
 jobs:
@@ -48,7 +48,7 @@ jobs:
           path: ./artifact
   release-windows:
     needs: build-windows
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/junowen-v')
     runs-on: ubuntu-latest
     env:
       FILENAME: ${{ github.event.repository.name }}_${{ github.ref_name }}.zip
@@ -109,7 +109,7 @@ jobs:
           path: ./target/lambda
   release-server:
     needs: build-server
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/junowen-server-v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
