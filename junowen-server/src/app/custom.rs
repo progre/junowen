@@ -12,7 +12,7 @@ use lambda_http::{
     Body, Request, Response,
 };
 use regex::Regex;
-use tracing::debug;
+use tracing::{debug, info};
 use uuid::Uuid;
 
 use crate::database::{Answer, Database, Offer, PutError};
@@ -103,6 +103,7 @@ async fn put_offer(
             Err(err) => bail!("{:?}", err),
         }
     }
+    info!("[Shared Room] Created: {}", name);
     let Some(answer) = find_answer_and_remove(db, name.to_owned()).await? else {
         return Ok(PutOfferResponse::created_with_key(
             RETRY_AFTER_INTERVAL_SEC,
@@ -127,6 +128,7 @@ async fn delete_offer_and_answer(
         return Ok(DeleteOfferResponse::BadRequest);
     }
     db.remove_answer(name.to_owned()).await?;
+    info!("[Shared Room] Removed: {}", name);
     Ok(DeleteOfferResponse::NoContent)
 }
 
@@ -163,7 +165,10 @@ async fn post_answer(
 ) -> Result<PostAnswerResponse> {
     let answer = Answer::new(name.to_owned(), body.into_answer(), ttl_sec(now_sec()));
     match db.put_answer(answer).await {
-        Ok(()) => Ok(PostAnswerResponse::Created),
+        Ok(()) => {
+            info!("[Shared Room] Answered: {}", name);
+            Ok(PostAnswerResponse::Created)
+        }
         Err(PutError::Conflict) => Ok(PostAnswerResponse::Conflict),
         Err(PutError::Unknown(err)) => Err(err),
     }
