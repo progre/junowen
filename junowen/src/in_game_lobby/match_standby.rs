@@ -38,7 +38,7 @@ impl SharedRoomOpponent {
         let (session_tx, session_rx) = oneshot::channel();
         let (abort_tx, abort_rx) = oneshot::channel();
 
-        let origin = if cfg!(debug_assersions) {
+        let origin = if cfg!(debug_assertions) {
             "https://qayvs4nki2nl72kf4tn5h5yati0maxpe.lambda-url.ap-northeast-1.on.aws".into()
         } else {
             "https://wxvo3rgklveqwyig4b3q5qupbq0mgvik.lambda-url.ap-northeast-1.on.aws".into()
