@@ -1692,6 +1692,7 @@ dependencies = [
  "getset",
  "junowen-lib",
  "lambda_http",
+ "once_cell",
  "openssl",
  "regex",
  "serde",

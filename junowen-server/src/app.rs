@@ -3,15 +3,45 @@ mod custom;
 use std::hash::{DefaultHasher, Hash, Hasher};
 
 use anyhow::{bail, Result};
+use base_custom::BaseCustom;
 use lambda_http::{
     http::{header::RETRY_AFTER, StatusCode},
     Body, IntoResponse, Request, Response,
 };
-use regex::Regex;
+use once_cell::sync::Lazy;
 use serde::Deserialize;
 use tracing::{info_span, trace, Instrument};
 
 use crate::{app::custom::custom, database::Database};
+
+static BASE_YOTEICHI_MOD: Lazy<BaseCustom<char>> = Lazy::new(|| {
+    const CHARS: &str = concat!(
+        "ー",
+        "あいうえお",
+        "かがきぎくぐけげこご",
+        "さざしじすずせぜそぞ",
+        "ただちぢつづてでとど",
+        "なにぬねの",
+        "はばぱひびぴふぶぷへべぺほぼぽ",
+        "まみむめも",
+        "やゆよ",
+        "らりるれろ",
+        "わゐゑをん",
+        "ゔ",
+    );
+    base_custom::BaseCustom::<char>::new(CHARS.chars().collect())
+});
+
+fn base_yoteichi_mod(input_val: u64) -> String {
+    BASE_YOTEICHI_MOD
+        .gen(input_val)
+        .chars()
+        .collect::<Vec<_>>()
+        .chunks(4)
+        .map(|c| c.iter().collect::<String>())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
 
 fn try_parse<'a, T>(body: &'a Body) -> anyhow::Result<T>
 where
@@ -33,52 +63,6 @@ fn to_response(
         builder = builder.header(RETRY_AFTER, retry_after);
     }
     builder.body(body.into()).unwrap()
-}
-
-fn base_yoteichi_mod(input_val: u64) -> String {
-    let chars = concat!(
-        "あ い う え お ",
-        "か が き ぎ く ぐ け げ こ ご ",
-        "さ ざ し じ す ず せ ぜ そ ぞ ",
-        "た だ ち ぢ つ づ て で と ど ",
-        "な に ぬ ね の ",
-        "は ば ぱ ひ び ぴ ふ ぶ ぷ へ べ ぺ ほ ぼ ぽ ",
-        "ま み む め も ",
-        "や ゆ よ ",
-        "ら り る れ ろ ",
-        "わ ゐ ゑ を ん ",
-        "きゃ きゅ きょ ぎゃ ぎゅ ぎょ ",
-        "しゃ しゅ しょ じゃ じゅ じょ ",
-        "ちゃ ちゅ ちょ ぢゃ ぢゅ ぢょ ",
-        "にゃ にゅ にょ ",
-        "ひゃ ひゅ ひょ びゃ びゅ びょ ぴゃ ぴゅ ぴょ ",
-        "みゃ みゅ みょ ",
-        "りゃ りゅ りょ ",
-        "っか っき っきゃ っきゅ っきょ っく っけ っこ ",
-        "っさ っし っしゃ っしゅ っしょ っす っせ っそ ",
-        "った っち っちゃ っちゅ っちょ っつ って っと っど ",
-        "っぱ っぴ っぴゃ っぴゅ っぴょ っぷ っぺ っぽ ",
-        "うぃ うぇ うぉ ",
-        "ゔぁ ゔぃ ゔ ゔぇ ゔぉ ",
-        "しぇ じぇ ちぇ びぇ ぴぇ りぇ ",
-        "つぁ つぃ つぇ つぉ ",
-        "てぃ でぃ とぅ どぅ ",
-        "ふぁ ふぃ ふぇ ふぉ ふゅ ",
-        "ー"
-    );
-    let base = base_custom::BaseCustom::<String>::new(chars, Some(' '));
-    let mut encoded = base.gen(input_val).replace(' ', "");
-    if Regex::new(r"^お(:?[っー])").unwrap().is_match(&encoded) {
-        encoded = format!("お{}", encoded);
-    }
-    let encoded = Regex::new(r"^っ")
-        .unwrap()
-        .replace(&encoded, "おっ")
-        .to_string();
-    Regex::new(r"^ー")
-        .unwrap()
-        .replace(&encoded, "おー")
-        .to_string()
 }
 
 fn ip_hash(req: &Request) -> u64 {
