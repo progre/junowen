@@ -11,6 +11,7 @@ anyhow.workspace = true
 async-trait = "0.1.74"
 aws-config = "*"
 aws-sdk-dynamodb = "*"
+base_custom = "0.2.0"
 chrono = "0.4.31"
 derive-new = "0.5.9"
 getset = "0.1.2"
