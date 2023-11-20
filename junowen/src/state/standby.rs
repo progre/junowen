@@ -40,12 +40,12 @@ pub fn render_text(
     title_menu_modifier.render_text(menu, th19, old, text_renderer, text)
 }
 
-fn render_message(text_renderer: *const c_void, th19: &Th19, msg: &str) {
+fn render_message(text_renderer: *const c_void, th19: &Th19, msg: &str, color: u32) {
     let mut text = RenderingText::default();
     text.set_text(msg.as_bytes());
     text.x = (16 * th19.screen_width().unwrap() / 1280) as f32;
     text.y = (4 * th19.screen_height().unwrap() / 1280) as f32;
-    text.color = 0xffc0c0c0;
+    text.color = color;
     th19.render_text(text_renderer, &text);
 }
 
@@ -59,15 +59,24 @@ pub fn on_render_texts(
         None
         | Some(MatchStandby::Spectator(_))
         | Some(MatchStandby::Opponent(Opponent::PureP2p(_))) => {}
-        Some(MatchStandby::Opponent(Opponent::SharedRoom(room))) => render_message(
-            text_renderer,
-            th19,
-            &format!(
-                "Waiting in Shared Room: {} {}",
-                room.room_name(),
-                ".".repeat((room.elapsed().as_secs() % 4) as usize)
-            ),
-        ),
+        Some(MatchStandby::Opponent(Opponent::SharedRoom(room))) => {
+            let (msg, color) = if room.error().is_some() {
+                (
+                    format!("Waiting in Shared Room: {} Failed", room.room_name()),
+                    0xffff2800,
+                )
+            } else {
+                (
+                    format!(
+                        "Waiting in Shared Room: {} {}",
+                        room.room_name(),
+                        ".".repeat((room.elapsed().as_secs() % 4) as usize)
+                    ),
+                    0xffc0c0c0,
+                )
+            };
+            render_message(text_renderer, th19, &msg, color);
+        }
     }
     let Some(menu) = th19.app().main_loop_tasks().find_menu() else {
         return;
