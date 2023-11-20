@@ -1,6 +1,6 @@
-[日本語のドキュメントはこちら](./README.ja.md)
-
 # Ju.N.Owen
+
+[日本語のドキュメントはこちら](./README.ja.md)
 
 This is an unofficial online battle tool for Touhou Juuouen ~ Unfinished Dream of All Living Ghost (Touhou 19 UDoALG).
 
@@ -9,14 +9,12 @@ It is an unofficial tool. **Use at your own risk**.
 This tool realizes online battles with its own mechanism, which is different from the matching and synchronization mechanism of official online battles.
 It works in the same way as adonis and th075caster.
 
-
 ## Features
 
-* Less likely to be out of alignment than official online battles
-* Delay can be changed during the game
-* Can be connected without a server
-* Can spectate the game
-
+- Less likely to be out of alignment than official online battles
+- Delay can be changed during the game
+- Can be connected without a server
+- Can spectate the game
 
 ## How to install
 
@@ -25,7 +23,6 @@ It works in the same way as adonis and th075caster.
 3. Move d3d9.dll and the modules folder into Touhou 19 folder.
 4. Start Touhou 19.
 5. If all goes well, "Ju.N.Owen" will be added as an item on the title screen of Touhou 19.
-
 
 ## How to use
 
@@ -38,8 +35,8 @@ This method connects with users whose room names match.
 1. Set the room name in "Online VS Mode".
 2. Select "Ju.N.Owen" -> "Shared Room".
 3. Press the shot button with "Enter" to start waiting for connection.
-    * Pressing the shot button while in the "Leave" state interrupts the connection waiting.
-    * Press the Cancel button to use other functions while waiting for connection.
+    - Pressing the shot button while in the "Leave" state interrupts the connection waiting.
+    - Press the Cancel button to use other functions while waiting for connection.
 
 ### Pure P2P
 
@@ -48,7 +45,7 @@ This method does not use a connection server, but exchanges connection informati
 1. Select "Ju.N.Owen" -> "Pure P2P”.
 2. Select "Connect as Host" if you want to wait for a connection as a host,
    Select "Connect as Guset" to connect as a guest.
-    * Host
+    - Host
         1. A long string `<offer>********</offer>` will be displayed and automatically copied to the clipboard,
            Send this string to your opponent using Discord or other means.
            Select "Copy your code" to copy it to the clipboard again.
@@ -56,7 +53,7 @@ This method does not use a connection server, but exchanges connection informati
            Copy it to the clipboard.
         3. Select "Paste guest's code".
         4. If all goes well, you will be redirected to the difficulty selection and the game will begin.
-    * Guest
+    - Guest
         1. Receive the string `<offer>********</offer>` from your opponent and copy it to the clipboard.
         2. Press the shot button to enter the clipboard contents.
         3. Take the long string `<answer>********</answer>` and automatically copy it to the clipboard,
@@ -66,14 +63,14 @@ This method does not use a connection server, but exchanges connection informati
 
 ### After connection
 
-* During the connection, the names of both parties are displayed at the top of the screen. When disconnected, the display will disappear.
-* The host can change the delay value with the number keys 0-9 during the game.
+- During the connection, the names of both parties are displayed at the top of the screen. When disconnected, the display will disappear.
+- The host can change the delay value with the number keys 0-9 during the game.
 
 ### Spectate
 
 Currently, the game can only be watched via Pure P2P.
 
-* Spectator
+- Spectator
     1. Select “Ju.N.Owen" -> "Pure P2P” -> "Connect as Spectator"
     2. A long string `<s-offer>********</s-offer>` will be displayed and automatically copied to the clipboard,
        Send this string to one of the players via Discord or other means.
@@ -83,7 +80,7 @@ Currently, the game can only be watched via Pure P2P.
     4. Select "Paste guest's code"
     5. If all goes well, the game will start.
     6. Press the pause button to stop the spectating.
-* Player
+- Player
     1. Connect to the opponent via Ju.N.Owen's match function and wait for the difficulty level selection.
     2. receive the string `<s-offer>********</s-offer>` from the spectator and copy it to the clipboard
     3. Press the F1 key to enter the clipboard contents.
@@ -91,22 +88,20 @@ Currently, the game can only be watched via Pure P2P.
        Send this string to your opponent via Discord or other means.
     5. If all goes well, you can let them spectate the game.
 
-
 ## Supplement
 
-* No ports need to be open. Even if a port is open, that port cannot be specified.
-
+- No ports need to be open. Even if a port is open, that port cannot be specified.
 
 ## Current constraints
 
-* "Online VS Mode" must be released for the game to work properly.
-* Spectators can only be added immediately after a player connects.
-* Only one spectator can be accepted per player.
-* The game may be freeze if communication is delayed or something not good happens.
-
+- "Online VS Mode" must be released for the game to work properly.
+- Ju.N.Owen menu cannot be operated with the enter key
+- Spectators can only be added immediately after a player connects.
+- Only one spectator can be accepted per player.
+- The game may be freeze if communication is delayed or something not good happens.
 
 ## Author and distributor
 
 [Progre](https://bsky.app/profile/progre.me)
 
-https://github.com/progre/junowen
+<https://github.com/progre/junowen>
