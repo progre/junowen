@@ -241,14 +241,11 @@ impl SharedRoom {
 
         if let Some(private_match_opponent) = private_match_opponent {
             let elapsed = private_match_opponent.elapsed();
-            let progress = if let Some(error) = private_match_opponent.error() {
+            render_progress(th19, text_renderer, elapsed.as_secs_f64() / 4.0);
+            for (i, error) in private_match_opponent.errors().iter().rev().enumerate() {
                 let error_msg = format!("Failed: {}", error);
-                render_text_line(th19, text_renderer, 13, error_msg.as_bytes());
-                0.0
-            } else {
-                elapsed.as_secs_f64() / 4.0
-            };
-            render_progress(th19, text_renderer, progress);
+                render_text_line(th19, text_renderer, 13 + i as u32, error_msg.as_bytes());
+            }
         }
     }
 }

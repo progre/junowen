@@ -7,7 +7,7 @@ use junowen_lib::connection::signaling::socket::SignalingSocket;
 use tokio::{
     sync::{
         mpsc::{self, error::TryRecvError},
-        oneshot,
+        oneshot, watch,
     },
     task::JoinHandle,
     time::sleep,
@@ -26,33 +26,43 @@ pub struct SharedRoomOpponent {
     handle: JoinHandle<()>,
     room_name: String,
     created_at: Instant,
-    error: Option<Error>,
-    error_rx: oneshot::Receiver<Error>,
+    errors: Vec<Error>,
+    error_rx: mpsc::Receiver<Error>,
     session_rx: oneshot::Receiver<BattleSession>,
-    abort_tx: Option<oneshot::Sender<()>>,
+    abort_tx: watch::Sender<bool>,
 }
 
 impl SharedRoomOpponent {
     pub fn new(room_name: String) -> Self {
-        let (error_tx, error_rx) = oneshot::channel();
+        let (error_tx, error_rx) = mpsc::channel(1);
         let (session_tx, session_rx) = oneshot::channel();
-        let (abort_tx, abort_rx) = oneshot::channel();
+        let (abort_tx, abort_rx) = watch::channel(false);
 
-        let origin = if cfg!(debug_assertions) {
-            "https://qayvs4nki2nl72kf4tn5h5yati0maxpe.lambda-url.ap-northeast-1.on.aws".into()
-        } else {
-            "https://wxvo3rgklveqwyig4b3q5qupbq0mgvik.lambda-url.ap-northeast-1.on.aws".into()
-        };
         let handle = {
-            let room_name = room_name.clone();
+            let mut room_name = room_name.clone();
             TOKIO_RUNTIME.spawn(async move {
-                let mut socket = SignalingServerSocket::new(origin, room_name, abort_rx);
-                let (conn, dc, host) = match socket.receive_signaling().await {
-                    Ok(ok) => ok,
-                    Err(err) => {
-                        info!("Signaling failed: {}", err);
-                        let _ = error_tx.send(err);
-                        return;
+                let mut origin = if cfg!(debug_assertions) {
+                    "https://qayvs4nki2nl72kf4tn5h5yati0maxpe.lambda-url.ap-northeast-1.on.aws"
+                        .into()
+                } else {
+                    "https://wxvo3rgklveqwyig4b3q5qupbq0mgvik.lambda-url.ap-northeast-1.on.aws"
+                        .into()
+                };
+                let (conn, dc, host) = loop {
+                    let mut socket =
+                        SignalingServerSocket::new(origin, room_name.clone(), abort_rx.clone());
+                    match socket.receive_signaling().await {
+                        Ok(ok) => break ok,
+                        Err(err) => {
+                            if *abort_rx.borrow() {
+                                info!("canceled");
+                                return;
+                            }
+                            info!("Signaling failed: {}", err);
+                            let _ = error_tx.send(err).await;
+                            sleep(Duration::from_secs(3)).await;
+                            (origin, room_name) = socket.into_inner();
+                        }
                     }
                 };
                 info!("Signaling succeeded");
@@ -65,10 +75,10 @@ impl SharedRoomOpponent {
             handle,
             room_name,
             created_at: Instant::now(),
-            error: None,
+            errors: vec![],
             error_rx,
             session_rx,
-            abort_tx: Some(abort_tx),
+            abort_tx,
         }
     }
 
@@ -82,12 +92,12 @@ impl SharedRoomOpponent {
 
     pub fn recv(&mut self) {
         if let Ok(error) = self.error_rx.try_recv() {
-            self.error = Some(error);
+            self.errors.push(error);
         }
     }
 
-    pub fn error(&self) -> Option<&Error> {
-        self.error.as_ref()
+    pub fn errors(&self) -> &[Error] {
+        &self.errors
     }
 
     pub fn try_into_session(mut self) -> Result<BattleSession, Self> {
@@ -97,7 +107,7 @@ impl SharedRoomOpponent {
 
 impl Drop for SharedRoomOpponent {
     fn drop(&mut self) {
-        let _ = self.abort_tx.take().unwrap().send(());
+        let _ = self.abort_tx.send(true);
         if self.handle.is_finished() {
             return;
         }

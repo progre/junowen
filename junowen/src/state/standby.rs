@@ -60,22 +60,20 @@ pub fn on_render_texts(
         | Some(MatchStandby::Spectator(_))
         | Some(MatchStandby::Opponent(Opponent::PureP2p(_))) => {}
         Some(MatchStandby::Opponent(Opponent::SharedRoom(room))) => {
-            let (msg, color) = if room.error().is_some() {
-                (
-                    format!("Waiting in Shared Room: {} Failed", room.room_name()),
-                    0xffff2800,
-                )
-            } else {
-                (
-                    format!(
-                        "Waiting in Shared Room: {} {}",
-                        room.room_name(),
-                        ".".repeat((room.elapsed().as_secs() % 4) as usize)
-                    ),
-                    0xffc0c0c0,
-                )
-            };
-            render_message(text_renderer, th19, &msg, color);
+            let msg = format!(
+                "Waiting in Shared Room: {} {:<3}",
+                room.room_name(),
+                ".".repeat((room.elapsed().as_secs() % 4) as usize)
+            );
+            render_message(text_renderer, th19, &msg, 0xffc0c0c0);
+            if !room.errors().is_empty() {
+                let msg = format!(
+                    "{} E({})",
+                    " ".repeat(msg.chars().count()),
+                    room.errors().len()
+                );
+                render_message(text_renderer, th19, &msg, 0xffff2800);
+            }
         }
     }
     let Some(menu) = th19.app().main_loop_tasks().find_menu() else {

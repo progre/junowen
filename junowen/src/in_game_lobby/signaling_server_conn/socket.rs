@@ -14,11 +14,7 @@ use junowen_lib::{
     },
 };
 use reqwest::{header::RETRY_AFTER, Response};
-use tokio::{
-    spawn,
-    sync::{mpsc, oneshot},
-    time::sleep,
-};
+use tokio::{sync::watch, time::sleep};
 use tracing::info;
 
 fn retry_after(res: &Response) -> Option<u32> {
@@ -32,22 +28,21 @@ pub struct SignalingServerSocket {
     client: reqwest::Client,
     origin: String,
     room_name: String,
-    abort_rx: mpsc::Receiver<()>,
+    abort_rx: watch::Receiver<bool>,
 }
 
 impl SignalingServerSocket {
-    pub fn new(origin: String, room_name: String, oneshot_abort_rx: oneshot::Receiver<()>) -> Self {
-        let (abort_tx, abort_rx) = mpsc::channel(1);
-        spawn(async move {
-            let _ = oneshot_abort_rx.await;
-            let _ = abort_tx.send(()).await;
-        });
+    pub fn new(origin: String, room_name: String, abort_rx: watch::Receiver<bool>) -> Self {
         Self {
             client: reqwest::Client::new(),
             origin,
             room_name,
             abort_rx,
         }
+    }
+
+    pub fn into_inner(self) -> (String, String) {
+        (self.origin, self.room_name)
     }
 
     async fn delete(&self, body: &DeleteOfferRequestBody) -> Result<()> {
@@ -63,13 +58,14 @@ impl SignalingServerSocket {
         body: &DeleteOfferRequestBody,
         retry_after: u32,
     ) -> Result<()> {
+        let task1 = sleep(Duration::from_secs(retry_after as u64));
+        let task2 = self.abort_rx.wait_for(|&val| val);
         tokio::select! {
-            _ = sleep(Duration::from_secs(retry_after as u64)) => Ok(()),
-            _ = self.abort_rx.recv() =>  {
-                self.delete(body).await?;
-                bail!("abort");
-            }
-        }
+            _ = task1 => return Ok(()),
+            _ = task2 => {},
+        };
+        self.delete(body).await?;
+        bail!("abort");
     }
 }
 
