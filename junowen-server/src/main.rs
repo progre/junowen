@@ -1,5 +1,5 @@
-mod app;
 mod database;
+mod routes;
 mod tracing_helper;
 
 mod local {
@@ -11,11 +11,11 @@ mod local {
     };
     use tracing::trace;
 
-    use crate::{app::app, database, tracing_helper};
+    use crate::{database, routes::routes, tracing_helper};
 
     async fn func(req: Request) -> Result<impl IntoResponse, anyhow::Error> {
         let db = database::File;
-        app(&req, &db).await
+        routes(&req, &db).await
     }
 
     #[allow(unused)]
@@ -41,11 +41,11 @@ mod local {
 mod lambda {
     use lambda_http::{service_fn, IntoResponse, Request};
 
-    use crate::{app::app, database, tracing_helper};
+    use crate::{database, routes::routes, tracing_helper};
 
     async fn func(req: Request) -> Result<impl IntoResponse, anyhow::Error> {
         let db = database::DynamoDB::new().await;
-        app(&req, &db).await
+        routes(&req, &db).await
     }
 
     #[allow(unused)]

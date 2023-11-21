@@ -22,8 +22,10 @@ use super::{to_response, try_parse};
 const OFFER_TTL_DURATION_SEC: u64 = 10;
 const RETRY_AFTER_INTERVAL_SEC: u32 = 3;
 
-fn from_put_offer_response(value: PutOfferResponse) -> Body {
-    match value {
+fn from_put_offer_response(value: PutOfferResponse) -> Response<Body> {
+    let status_code = value.status_code();
+    let retry_after = Some(value.retry_after());
+    let body = match value {
         PutOfferResponse::CreatedWithKey { body, .. } => {
             Body::Text(serde_json::to_string(&body).unwrap())
         }
@@ -33,19 +35,23 @@ fn from_put_offer_response(value: PutOfferResponse) -> Body {
         PutOfferResponse::Conflict { body, .. } => {
             Body::Text(serde_json::to_string(&body).unwrap())
         }
-    }
+    };
+    to_response(status_code, retry_after, body)
 }
 
-fn from_post_offer_keep_response(value: PostOfferKeepResponse) -> Body {
-    match value {
+fn from_post_offer_keep_response(value: PostOfferKeepResponse) -> Response<Body> {
+    let status_code = value.status_code();
+    let retry_after = value.retry_after();
+    let body = match value {
         PostOfferKeepResponse::BadRequest => Body::Empty,
         PostOfferKeepResponse::NoContent { .. } => Body::Empty,
         PostOfferKeepResponse::Ok(body) => Body::Text(serde_json::to_string(&body).unwrap()),
-    }
+    };
+    to_response(status_code, retry_after, body)
 }
 
-fn from_post_answer_response(_: PostAnswerResponse) -> Body {
-    Body::Empty
+fn from_post_answer_response(value: PostAnswerResponse) -> Response<Body> {
+    to_response(value.status_code(), None, Body::Empty)
 }
 
 fn now_sec() -> u64 {
@@ -179,7 +185,8 @@ pub async fn custom(
     req: &Request,
     db: &impl Database,
 ) -> Result<Response<Body>> {
-    if let Some(c) = Regex::new(r"^([^/]+)$").unwrap().captures(relative_uri) {
+    let regex = Regex::new(r"^([^/]+)$").unwrap();
+    if let Some(c) = regex.captures(relative_uri) {
         return Ok(match *req.method() {
             Method::PUT => match try_parse(req.body()) {
                 Err(err) => {
@@ -188,11 +195,7 @@ pub async fn custom(
                 }
                 Ok(body) => {
                     let res = put_offer(db, &c[1], body).await?;
-                    to_response(
-                        res.status_code(),
-                        Some(res.retry_after()),
-                        from_put_offer_response(res),
-                    )
+                    from_put_offer_response(res)
                 }
             },
             Method::DELETE => match try_parse(req.body()) {
@@ -208,52 +211,36 @@ pub async fn custom(
             _ => to_response(StatusCode::METHOD_NOT_ALLOWED, None, Body::Empty),
         });
     }
-    if let Some(c) = Regex::new(r"^([^/]+)/join$")
-        .unwrap()
-        .captures(relative_uri)
-    {
-        if req.method() != "POST" {
-            return Ok(to_response(
-                StatusCode::METHOD_NOT_ALLOWED,
-                None,
-                Body::Empty,
-            ));
-        }
-        return Ok(match try_parse(req.body()) {
-            Err(err) => {
-                debug!("{:?}", err);
-                to_response(StatusCode::BAD_REQUEST, None, Body::Empty)
-            }
-            Ok(body) => {
-                let res = post_answer(db, &c[1], body).await?;
-                to_response(res.status_code(), None, from_post_answer_response(res))
-            }
+    let regex = Regex::new(r"^([^/]+)/join$").unwrap();
+    if let Some(c) = regex.captures(relative_uri) {
+        return Ok(match *req.method() {
+            Method::POST => match try_parse(req.body()) {
+                Err(err) => {
+                    debug!("{:?}", err);
+                    to_response(StatusCode::BAD_REQUEST, None, Body::Empty)
+                }
+                Ok(body) => {
+                    let res = post_answer(db, &c[1], body).await?;
+                    from_post_answer_response(res)
+                }
+            },
+            _ => to_response(StatusCode::METHOD_NOT_ALLOWED, None, Body::Empty),
         });
     }
-    if let Some(c) = Regex::new(r"^([^/]+)/keep$")
-        .unwrap()
-        .captures(relative_uri)
-    {
-        if req.method() != "POST" {
-            return Ok(to_response(
-                StatusCode::METHOD_NOT_ALLOWED,
-                None,
-                Body::Empty,
-            ));
-        }
-        return Ok(match try_parse(req.body()) {
-            Err(err) => {
-                debug!("{:?}", err);
-                to_response(StatusCode::BAD_REQUEST, None, Body::Empty)
-            }
-            Ok(body) => {
-                let res = post_offer_keep(db, &c[1], body).await?;
-                to_response(
-                    res.status_code(),
-                    res.retry_after(),
-                    from_post_offer_keep_response(res),
-                )
-            }
+    let regex = Regex::new(r"^([^/]+)/keep$").unwrap();
+    if let Some(c) = regex.captures(relative_uri) {
+        return Ok(match *req.method() {
+            Method::POST => match try_parse(req.body()) {
+                Err(err) => {
+                    debug!("{:?}", err);
+                    to_response(StatusCode::BAD_REQUEST, None, Body::Empty)
+                }
+                Ok(body) => {
+                    let res = post_offer_keep(db, &c[1], body).await?;
+                    from_post_offer_keep_response(res)
+                }
+            },
+            _ => to_response(StatusCode::METHOD_NOT_ALLOWED, None, Body::Empty),
         });
     }
     Ok(to_response(StatusCode::NOT_FOUND, None, Body::Empty))

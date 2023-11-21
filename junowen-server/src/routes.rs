@@ -12,7 +12,7 @@ use once_cell::sync::Lazy;
 use serde::Deserialize;
 use tracing::{info_span, trace, Instrument};
 
-use crate::{app::custom::custom, database::Database};
+use crate::{database::Database, routes::custom::custom};
 
 static BASE_YOTEICHI_MOD: Lazy<BaseCustom<char>> = Lazy::new(|| {
     const CHARS: &str = concat!(
@@ -76,7 +76,7 @@ fn ip_hash(req: &Request) -> u64 {
     s.finish()
 }
 
-pub async fn app(req: &Request, db: &impl Database) -> Result<impl IntoResponse> {
+pub async fn routes(req: &Request, db: &impl Database) -> Result<impl IntoResponse> {
     trace!("{:?}", req);
 
     if let Some(relative_uri) = req.uri().path().strip_prefix("/custom/") {
