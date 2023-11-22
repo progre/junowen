@@ -6,11 +6,11 @@ use junowen_lib::{InputFlags, InputValue, Th19};
 use crate::session::{battle::BattleSession, spectator::SpectatorSessionGuest};
 
 use super::{
+    super::match_standby::{
+        MatchStandby, WaitingForOpponent, WaitingForPureP2pOpponent, WaitingForPureP2pSpectator,
+    },
     common_menu::{
         CommonMenu, LobbyScene, MenuAction, MenuContent, MenuDefine, MenuItem, OnMenuInputResult,
-    },
-    match_standby::{
-        MatchStandby, WaitingForOpponent, WaitingForPureP2pOpponent, WaitingForPureP2pSpectator,
     },
     pure_p2p_guest::PureP2pGuest,
     pure_p2p_offerer::{pure_p2p_host, pure_p2p_spectator, PureP2pOfferer},

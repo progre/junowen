@@ -3,9 +3,9 @@ use std::{f64::consts::PI, ffi::c_void};
 use junowen_lib::{InputValue, RenderingText, Th19};
 
 use super::{
+    super::match_standby::WaitingInSharedRoom,
     common_menu::{CommonMenu, LobbyScene, MenuAction, MenuDefine, MenuItem, OnMenuInputResult},
     helper::render_text_line,
-    match_standby::WaitingInSharedRoom,
 };
 
 fn make_enter_menu() -> (u8, CommonMenu) {

@@ -17,11 +17,11 @@ use tracing::trace;
 use crate::session::{battle::BattleSession, spectator::SpectatorSessionGuest};
 
 use super::{
+    super::signaling::Signaling,
     common_menu::{
         CommonMenu, LobbyScene, MenuAction, MenuContent, MenuDefine, MenuItem, OnMenuInputResult,
     },
     helper::{render_small_text_line, render_text_line},
-    signaling::Signaling,
 };
 
 pub struct PureP2pOfferer<T> {

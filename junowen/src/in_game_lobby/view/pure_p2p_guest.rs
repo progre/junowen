@@ -13,9 +13,9 @@ use tokio::sync::mpsc;
 use crate::session::battle::BattleSession;
 
 use super::{
+    super::signaling::Signaling,
     common_menu::{CommonMenu, LobbyScene, MenuAction, MenuDefine, MenuItem, OnMenuInputResult},
     helper::{render_small_text_line, render_text_line},
-    signaling::Signaling,
 };
 
 pub struct PureP2pGuest {
