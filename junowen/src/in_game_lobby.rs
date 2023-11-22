@@ -10,6 +10,6 @@ mod signaling_server_conn;
 mod title_menu_modifier;
 
 pub use lobby::Lobby;
-pub use match_standby::{MatchStandby, Opponent};
+pub use match_standby::{MatchStandby, WaitingForOpponent};
 pub use signaling::Signaling;
 pub use title_menu_modifier::TitleMenuModifier;

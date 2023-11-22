@@ -9,7 +9,9 @@ use super::{
     common_menu::{
         CommonMenu, LobbyScene, MenuAction, MenuContent, MenuDefine, MenuItem, OnMenuInputResult,
     },
-    match_standby::{MatchStandby, Opponent, PureP2pOpponent, PureP2pSpectator},
+    match_standby::{
+        MatchStandby, WaitingForOpponent, WaitingForPureP2pOpponent, WaitingForPureP2pSpectator,
+    },
     pure_p2p_guest::PureP2pGuest,
     pure_p2p_offerer::{pure_p2p_host, pure_p2p_spectator, PureP2pOfferer},
     shared_room::SharedRoom,
@@ -76,7 +78,7 @@ pub struct Lobby {
     scene: LobbyScene,
     prev_scene: LobbyScene,
     root: Root,
-    private_match: SharedRoom,
+    shared_room: SharedRoom,
     pure_p2p_host: Option<PureP2pOfferer<BattleSession>>,
     pure_p2p_guest: Option<PureP2pGuest>,
     pure_p2p_spectator: Option<PureP2pOfferer<SpectatorSessionGuest>>,
@@ -92,7 +94,7 @@ impl Lobby {
             prev_scene: LobbyScene::Root,
             root: Root::new(),
             match_standby: None,
-            private_match: SharedRoom::new(),
+            shared_room: SharedRoom::new(),
             pure_p2p_host: None,
             pure_p2p_guest: None,
             pure_p2p_spectator: None,
@@ -115,18 +117,20 @@ impl Lobby {
                 .root
                 .on_input_menu(current_input, self.prev_input, th19),
             LobbyScene::SharedRoom => {
-                let mut private_match_opponent = match self.match_standby.take() {
-                    Some(MatchStandby::Opponent(Opponent::SharedRoom(opponent))) => Some(opponent),
+                let mut opponent = match self.match_standby.take() {
+                    Some(MatchStandby::Opponent(WaitingForOpponent::SharedRoom(waiting))) => {
+                        Some(waiting)
+                    }
                     _ => None,
                 };
-                let ret = self.private_match.on_input_menu(
+                let ret = self.shared_room.on_input_menu(
                     current_input,
                     self.prev_input,
                     th19,
-                    &mut private_match_opponent,
+                    &mut opponent,
                 );
-                self.match_standby = private_match_opponent
-                    .map(Opponent::SharedRoom)
+                self.match_standby = opponent
+                    .map(WaitingForOpponent::SharedRoom)
                     .map(MatchStandby::Opponent);
                 ret
             }
@@ -145,7 +149,7 @@ impl Lobby {
                     &mut session_rx,
                 );
                 if let Some(session_rx) = session_rx {
-                    self.match_standby = Some(PureP2pOpponent::new(session_rx).into());
+                    self.match_standby = Some(WaitingForPureP2pOpponent::new(session_rx).into());
                 }
                 ret
             }
@@ -164,7 +168,7 @@ impl Lobby {
                     &mut session_rx,
                 );
                 if let Some(session_rx) = session_rx {
-                    self.match_standby = Some(PureP2pOpponent::new(session_rx).into());
+                    self.match_standby = Some(WaitingForPureP2pOpponent::new(session_rx).into());
                 }
                 ret
             }
@@ -183,7 +187,7 @@ impl Lobby {
                     &mut session_rx,
                 );
                 if let Some(session_rx) = session_rx {
-                    self.match_standby = Some(PureP2pSpectator::new(session_rx).into());
+                    self.match_standby = Some(WaitingForPureP2pSpectator::new(session_rx).into());
                 }
                 ret
             }
@@ -199,16 +203,15 @@ impl Lobby {
         match self.prev_scene {
             LobbyScene::Root => self.root.on_render_texts(th19, text_renderer),
             LobbyScene::SharedRoom => {
-                let private_match = self.match_standby.as_ref().and_then(|x| match x {
-                    MatchStandby::Opponent(Opponent::SharedRoom(private_match)) => {
-                        Some(private_match)
+                let waiting = self.match_standby.as_ref().and_then(|x| match x {
+                    MatchStandby::Opponent(WaitingForOpponent::SharedRoom(waiting)) => {
+                        Some(waiting)
                     }
-                    MatchStandby::Opponent(Opponent::PureP2p(_)) | MatchStandby::Spectator(_) => {
-                        None
-                    }
+                    MatchStandby::Opponent(WaitingForOpponent::PureP2p(_))
+                    | MatchStandby::Spectator(_) => None,
                 });
-                self.private_match
-                    .on_render_texts(private_match, th19, text_renderer)
+                self.shared_room
+                    .on_render_texts(waiting, th19, text_renderer)
             }
             LobbyScene::PureP2pHost => self
                 .pure_p2p_host

@@ -22,7 +22,7 @@ use crate::{
 use super::signaling_server_conn::SignalingServerSocket;
 
 #[derive(Getters)]
-pub struct SharedRoomOpponent {
+pub struct WaitingInSharedRoom {
     handle: JoinHandle<()>,
     room_name: String,
     created_at: Instant,
@@ -32,7 +32,7 @@ pub struct SharedRoomOpponent {
     abort_tx: watch::Sender<bool>,
 }
 
-impl SharedRoomOpponent {
+impl WaitingInSharedRoom {
     pub fn new(room_name: String) -> Self {
         let (error_tx, error_rx) = mpsc::channel(1);
         let (session_tx, session_rx) = oneshot::channel();
@@ -105,7 +105,7 @@ impl SharedRoomOpponent {
     }
 }
 
-impl Drop for SharedRoomOpponent {
+impl Drop for WaitingInSharedRoom {
     fn drop(&mut self) {
         let _ = self.abort_tx.send(true);
         if self.handle.is_finished() {
@@ -126,39 +126,39 @@ impl Drop for SharedRoomOpponent {
 }
 
 #[derive(new)]
-pub struct PureP2pOpponent {
+pub struct WaitingForPureP2pOpponent {
     battle_session_rx: mpsc::Receiver<BattleSession>,
 }
 
-pub enum Opponent {
-    SharedRoom(SharedRoomOpponent),
-    PureP2p(PureP2pOpponent),
+pub enum WaitingForOpponent {
+    SharedRoom(WaitingInSharedRoom),
+    PureP2p(WaitingForPureP2pOpponent),
 }
 
-impl Opponent {
+impl WaitingForOpponent {
     pub fn try_into_session(self) -> Result<BattleSession, Self> {
         match self {
-            Self::SharedRoom(private_match) => private_match
+            Self::SharedRoom(room) => room
                 .try_into_session()
-                .map_err(Opponent::SharedRoom),
+                .map_err(WaitingForOpponent::SharedRoom),
             Self::PureP2p(mut pure_p2p) => pure_p2p
                 .battle_session_rx
                 .try_recv()
-                .map_err(|_| Opponent::PureP2p(pure_p2p)),
+                .map_err(|_| WaitingForOpponent::PureP2p(pure_p2p)),
         }
     }
 }
 
 #[derive(new)]
-pub struct PureP2pSpectator {
+pub struct WaitingForPureP2pSpectator {
     spectator_session_guest_rx: mpsc::Receiver<SpectatorSessionGuest>,
 }
 
-pub enum Spectator {
-    PureP2p(PureP2pSpectator),
+pub enum WaitingForSpectator {
+    PureP2p(WaitingForPureP2pSpectator),
 }
 
-impl Spectator {
+impl WaitingForSpectator {
     pub fn try_recv_session(&mut self) -> Result<SpectatorSessionGuest, TryRecvError> {
         match self {
             Self::PureP2p(pure_p2p) => pure_p2p.spectator_session_guest_rx.try_recv(),
@@ -167,18 +167,18 @@ impl Spectator {
 }
 
 pub enum MatchStandby {
-    Opponent(Opponent),
-    Spectator(Spectator),
+    Opponent(WaitingForOpponent),
+    Spectator(WaitingForSpectator),
 }
 
-impl From<PureP2pOpponent> for MatchStandby {
-    fn from(value: PureP2pOpponent) -> Self {
-        MatchStandby::Opponent(Opponent::PureP2p(value))
+impl From<WaitingForPureP2pOpponent> for MatchStandby {
+    fn from(value: WaitingForPureP2pOpponent) -> Self {
+        MatchStandby::Opponent(WaitingForOpponent::PureP2p(value))
     }
 }
 
-impl From<PureP2pSpectator> for MatchStandby {
-    fn from(value: PureP2pSpectator) -> Self {
-        MatchStandby::Spectator(Spectator::PureP2p(value))
+impl From<WaitingForPureP2pSpectator> for MatchStandby {
+    fn from(value: WaitingForPureP2pSpectator) -> Self {
+        MatchStandby::Spectator(WaitingForSpectator::PureP2p(value))
     }
 }

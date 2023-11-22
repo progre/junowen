@@ -5,7 +5,7 @@ use junowen_lib::{InputValue, RenderingText, Th19};
 use super::{
     common_menu::{CommonMenu, LobbyScene, MenuAction, MenuDefine, MenuItem, OnMenuInputResult},
     helper::render_text_line,
-    match_standby::SharedRoomOpponent,
+    match_standby::WaitingInSharedRoom,
 };
 
 fn make_enter_menu() -> (u8, CommonMenu) {
@@ -187,14 +187,14 @@ impl SharedRoom {
         current_input: InputValue,
         prev_input: InputValue,
         th19: &Th19,
-        private_match_opponent: &mut Option<SharedRoomOpponent>,
+        waiting: &mut Option<WaitingInSharedRoom>,
     ) -> Option<LobbyScene> {
-        if let Some(private_match_opponent) = private_match_opponent {
-            private_match_opponent.recv();
+        if let Some(waiting) = waiting {
+            waiting.recv();
         }
         match self.menu.on_input_menu(current_input, prev_input, th19) {
             OnMenuInputResult::None => {
-                if private_match_opponent.is_none() {
+                if waiting.is_none() {
                     if self.menu_id != 0 {
                         (self.menu_id, self.menu) = make_enter_menu();
                     }
@@ -210,14 +210,14 @@ impl SharedRoom {
             OnMenuInputResult::Action(MenuAction::SubScene(_)) => unreachable!(),
             OnMenuInputResult::Action(MenuAction::Action(action, _)) => match action {
                 0 => {
-                    *private_match_opponent = Some(SharedRoomOpponent::new(
+                    *waiting = Some(WaitingInSharedRoom::new(
                         th19.online_vs_mode().room_name().to_owned(),
                     ));
                     (self.menu_id, self.menu) = make_leave_menu();
                     None
                 }
                 1 => {
-                    *private_match_opponent = None;
+                    *waiting = None;
                     (self.menu_id, self.menu) = make_enter_menu();
                     None
                 }
@@ -228,21 +228,21 @@ impl SharedRoom {
 
     pub fn on_render_texts(
         &self,
-        private_match_opponent: Option<&SharedRoomOpponent>,
+        waiting: Option<&WaitingInSharedRoom>,
         th19: &Th19,
         text_renderer: *const c_void,
     ) {
         self.menu.on_render_texts(th19, text_renderer);
 
-        if private_match_opponent.is_none() {
+        if waiting.is_none() {
             let room_name = th19.online_vs_mode().room_name();
             render_room_name(th19, text_renderer, room_name);
         }
 
-        if let Some(private_match_opponent) = private_match_opponent {
-            let elapsed = private_match_opponent.elapsed();
+        if let Some(waiting) = waiting {
+            let elapsed = waiting.elapsed();
             render_progress(th19, text_renderer, elapsed.as_secs_f64() / 4.0);
-            for (i, error) in private_match_opponent.errors().iter().rev().enumerate() {
+            for (i, error) in waiting.errors().iter().rev().enumerate() {
                 let error_msg = format!("Failed: {}", error);
                 render_text_line(th19, text_renderer, 13 + i as u32, error_msg.as_bytes());
             }

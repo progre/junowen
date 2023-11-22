@@ -65,23 +65,23 @@ impl JunowenState {
                     }
                 }
                 match old_match_standby {
-                    MatchStandby::Opponent(opponent) => {
-                        let result = opponent.try_into_session();
+                    MatchStandby::Opponent(waiting) => {
+                        let result = waiting.try_into_session();
                         match result {
                             Ok(session) => {
                                 trace!("session received");
                                 self.start_battle_session(session);
                                 None
                             }
-                            Err(opponent) => {
-                                *match_standby = Some(MatchStandby::Opponent(opponent));
+                            Err(waiting) => {
+                                *match_standby = Some(MatchStandby::Opponent(waiting));
                                 None
                             }
                         }
                     }
-                    MatchStandby::Spectator(mut spectator) => {
-                        let result = spectator.try_recv_session();
-                        *match_standby = Some(MatchStandby::Spectator(spectator));
+                    MatchStandby::Spectator(mut waiting) => {
+                        let result = waiting.try_recv_session();
+                        *match_standby = Some(MatchStandby::Spectator(waiting));
                         match result {
                             Ok(session) => {
                                 trace!("session received");

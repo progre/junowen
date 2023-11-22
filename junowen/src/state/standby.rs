@@ -2,7 +2,7 @@ use std::ffi::c_void;
 
 use junowen_lib::{Fn0b7d40, Fn0d5ae0, Menu, RenderingText, ScreenId, Th19};
 
-use crate::in_game_lobby::{Lobby, MatchStandby, Opponent, TitleMenuModifier};
+use crate::in_game_lobby::{Lobby, MatchStandby, TitleMenuModifier, WaitingForOpponent};
 
 fn is_title(menu: &Menu) -> bool {
     menu.screen_id == ScreenId::Title
@@ -58,8 +58,8 @@ pub fn on_render_texts(
     match lobby.match_standby() {
         None
         | Some(MatchStandby::Spectator(_))
-        | Some(MatchStandby::Opponent(Opponent::PureP2p(_))) => {}
-        Some(MatchStandby::Opponent(Opponent::SharedRoom(room))) => {
+        | Some(MatchStandby::Opponent(WaitingForOpponent::PureP2p(_))) => {}
+        Some(MatchStandby::Opponent(WaitingForOpponent::SharedRoom(room))) => {
             let msg = format!(
                 "Waiting in Shared Room: {} {:<3}",
                 room.room_name(),
