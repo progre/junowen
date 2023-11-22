@@ -213,22 +213,30 @@ impl PostAnswerRequestBody {
 }
 
 pub enum PostAnswerResponse {
-    Created,
+    Ok,
     Conflict,
 }
 
 impl PostAnswerResponse {
     pub fn parse(status: StatusCode) -> Result<Self> {
         match status {
-            StatusCode::CREATED => Ok(Self::Created),
+            StatusCode::OK => Ok(Self::Ok),
+            StatusCode::CREATED => Ok(Self::Ok),
             StatusCode::CONFLICT => Ok(Self::Conflict),
             _ => bail!("invalid response"),
         }
     }
 
+    pub fn status_code_old(&self) -> StatusCode {
+        match self {
+            PostAnswerResponse::Ok => StatusCode::CREATED,
+            PostAnswerResponse::Conflict => StatusCode::CONFLICT,
+        }
+    }
+
     pub fn status_code(&self) -> StatusCode {
         match self {
-            PostAnswerResponse::Created => StatusCode::CREATED,
+            PostAnswerResponse::Ok => StatusCode::OK,
             PostAnswerResponse::Conflict => StatusCode::CONFLICT,
         }
     }

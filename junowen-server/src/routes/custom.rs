@@ -50,10 +50,6 @@ fn from_post_offer_keep_response(value: PostOfferKeepResponse) -> Response<Body>
     to_response(status_code, retry_after, body)
 }
 
-fn from_post_answer_response(value: PostAnswerResponse) -> Response<Body> {
-    to_response(value.status_code(), None, Body::Empty)
-}
-
 fn now_sec() -> u64 {
     let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     now.as_secs()
@@ -173,7 +169,7 @@ async fn post_answer(
     match db.put_answer(answer).await {
         Ok(()) => {
             info!("[Shared Room] Answered: {}", name);
-            Ok(PostAnswerResponse::Created)
+            Ok(PostAnswerResponse::Ok)
         }
         Err(PutError::Conflict) => Ok(PostAnswerResponse::Conflict),
         Err(PutError::Unknown(err)) => Err(err),
@@ -221,7 +217,7 @@ pub async fn custom(
                 }
                 Ok(body) => {
                     let res = post_answer(db, &c[1], body).await?;
-                    from_post_answer_response(res)
+                    to_response(res.status_code_old(), None, Body::Empty)
                 }
             },
             _ => to_response(StatusCode::METHOD_NOT_ALLOWED, None, Body::Empty),

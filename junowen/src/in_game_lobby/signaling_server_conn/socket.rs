@@ -136,7 +136,7 @@ impl SignalingSocket for SignalingServerSocket {
             .await?;
         let res = PostAnswerResponse::parse(res.status())?;
         match res {
-            PostAnswerResponse::Created => Ok(()),
+            PostAnswerResponse::Ok => Ok(()),
             PostAnswerResponse::Conflict => bail!("room is full"),
         }
     }
