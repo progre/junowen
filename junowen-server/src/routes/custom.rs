@@ -2,10 +2,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{bail, Result};
 use junowen_lib::signaling_server::custom::{
-    DeleteOfferRequestBody, DeleteOfferResponse, FindAnswerResponseAnswerBody,
-    FindAnswerResponseWaitingBody, PostAnswerRequestBody, PostAnswerResponse,
-    PostOfferKeepRequestBody, PostOfferKeepResponse, PutOfferRequestBody, PutOfferResponse,
-    PutOfferResponseConflictBody,
+    DeleteRoomRequestBody, DeleteRoomResponse, PostRoomJoinRequestBody, PostRoomJoinResponse,
+    PostRoomKeepRequestBody, PostRoomKeepResponse, PutRoomRequestBody, PutRoomResponse,
+    PutRoomResponseAnswerBody, PutRoomResponseConflictBody, PutRoomResponseWaitingBody,
 };
 use lambda_http::{
     http::{Method, StatusCode},
@@ -22,30 +21,28 @@ use super::{to_response, try_parse};
 const OFFER_TTL_DURATION_SEC: u64 = 10;
 const RETRY_AFTER_INTERVAL_SEC: u32 = 3;
 
-fn from_put_offer_response(value: PutOfferResponse) -> Response<Body> {
+fn from_put_room_response(value: PutRoomResponse) -> Response<Body> {
     let status_code = value.status_code();
     let retry_after = Some(value.retry_after());
     let body = match value {
-        PutOfferResponse::CreatedWithKey { body, .. } => {
+        PutRoomResponse::CreatedWithKey { body, .. } => {
             Body::Text(serde_json::to_string(&body).unwrap())
         }
-        PutOfferResponse::CreatedWithAnswer { body, .. } => {
+        PutRoomResponse::CreatedWithAnswer { body, .. } => {
             Body::Text(serde_json::to_string(&body).unwrap())
         }
-        PutOfferResponse::Conflict { body, .. } => {
-            Body::Text(serde_json::to_string(&body).unwrap())
-        }
+        PutRoomResponse::Conflict { body, .. } => Body::Text(serde_json::to_string(&body).unwrap()),
     };
     to_response(status_code, retry_after, body)
 }
 
-fn from_post_offer_keep_response(value: PostOfferKeepResponse) -> Response<Body> {
+fn from_post_room_keep_response(value: PostRoomKeepResponse) -> Response<Body> {
     let status_code = value.status_code();
     let retry_after = value.retry_after();
     let body = match value {
-        PostOfferKeepResponse::BadRequest => Body::Empty,
-        PostOfferKeepResponse::NoContent { .. } => Body::Empty,
-        PostOfferKeepResponse::Ok(body) => Body::Text(serde_json::to_string(&body).unwrap()),
+        PostRoomKeepResponse::BadRequest => Body::Empty,
+        PostRoomKeepResponse::NoContent { .. } => Body::Empty,
+        PostRoomKeepResponse::Ok(body) => Body::Text(serde_json::to_string(&body).unwrap()),
     };
     to_response(status_code, retry_after, body)
 }
@@ -69,20 +66,20 @@ async fn find_answer_and_remove(db: &impl Database, name: String) -> Result<Opti
     Ok(Some(answer))
 }
 
-async fn put_offer(
+async fn put_room(
     db: &impl Database,
     name: &str,
-    body: PutOfferRequestBody,
-) -> Result<PutOfferResponse> {
+    body: PutRoomRequestBody,
+) -> Result<PutRoomResponse> {
     let now_sec = now_sec();
     let key = Uuid::new_v4().to_string();
     for retry in 0.. {
         let offer: Option<Offer> = db.find_offer(name.to_owned()).await?;
         if let Some(offer) = offer {
             if !offer.is_expired(now_sec) {
-                return Ok(PutOfferResponse::conflict(
+                return Ok(PutRoomResponse::conflict(
                     RETRY_AFTER_INTERVAL_SEC,
-                    PutOfferResponseConflictBody::new(offer.into_sdp()),
+                    PutRoomResponseConflictBody::new(offer.into_sdp()),
                 ));
             }
             db.remove_offer(offer.name().clone()).await?;
@@ -107,71 +104,71 @@ async fn put_offer(
     }
     info!("[Shared Room] Created: {}", name);
     let Some(answer) = find_answer_and_remove(db, name.to_owned()).await? else {
-        return Ok(PutOfferResponse::created_with_key(
+        return Ok(PutRoomResponse::created_with_key(
             RETRY_AFTER_INTERVAL_SEC,
-            FindAnswerResponseWaitingBody::new(key),
+            PutRoomResponseWaitingBody::new(key),
         ));
     };
-    Ok(PutOfferResponse::created_with_answer(
+    Ok(PutRoomResponse::created_with_answer(
         RETRY_AFTER_INTERVAL_SEC,
-        FindAnswerResponseAnswerBody::new(answer.into_sdp()),
+        PutRoomResponseAnswerBody::new(answer.into_sdp()),
     ))
 }
 
-async fn delete_offer_and_answer(
+async fn delete_room(
     db: &impl Database,
     name: &str,
-    body: DeleteOfferRequestBody,
-) -> Result<DeleteOfferResponse> {
+    body: DeleteRoomRequestBody,
+) -> Result<DeleteRoomResponse> {
     if !db
         .remove_offer_with_key(name.to_owned(), body.into_key())
         .await?
     {
-        return Ok(DeleteOfferResponse::BadRequest);
+        return Ok(DeleteRoomResponse::BadRequest);
     }
     db.remove_answer(name.to_owned()).await?;
     info!("[Shared Room] Removed: {}", name);
-    Ok(DeleteOfferResponse::NoContent)
+    Ok(DeleteRoomResponse::NoContent)
 }
 
-async fn post_offer_keep(
+async fn post_room_keep(
     db: &impl Database,
     name: &str,
-    body: PostOfferKeepRequestBody,
-) -> Result<PostOfferKeepResponse> {
+    body: PostRoomKeepRequestBody,
+) -> Result<PostRoomKeepResponse> {
     let key = body.into_key();
     if Uuid::parse_str(&key).is_err() {
-        return Ok(PostOfferKeepResponse::BadRequest);
+        return Ok(PostRoomKeepResponse::BadRequest);
     }
     if db
         .keep_offer(name.to_owned(), key, ttl_sec(now_sec()))
         .await?
         .is_none()
     {
-        return Ok(PostOfferKeepResponse::BadRequest);
+        return Ok(PostRoomKeepResponse::BadRequest);
     }
     let Some(answer) = find_answer_and_remove(db, name.to_owned()).await? else {
-        return Ok(PostOfferKeepResponse::NoContent {
+        return Ok(PostRoomKeepResponse::NoContent {
             retry_after: RETRY_AFTER_INTERVAL_SEC,
         });
     };
-    Ok(PostOfferKeepResponse::Ok(
-        FindAnswerResponseAnswerBody::new(answer.into_sdp()),
-    ))
+    Ok(PostRoomKeepResponse::Ok(PutRoomResponseAnswerBody::new(
+        answer.into_sdp(),
+    )))
 }
 
-async fn post_answer(
+async fn post_room_join(
     db: &impl Database,
     name: &str,
-    body: PostAnswerRequestBody,
-) -> Result<PostAnswerResponse> {
+    body: PostRoomJoinRequestBody,
+) -> Result<PostRoomJoinResponse> {
     let answer = Answer::new(name.to_owned(), body.into_answer(), ttl_sec(now_sec()));
     match db.put_answer(answer).await {
         Ok(()) => {
             info!("[Shared Room] Answered: {}", name);
-            Ok(PostAnswerResponse::Ok)
+            Ok(PostRoomJoinResponse::Ok)
         }
-        Err(PutError::Conflict) => Ok(PostAnswerResponse::Conflict),
+        Err(PutError::Conflict) => Ok(PostRoomJoinResponse::Conflict),
         Err(PutError::Unknown(err)) => Err(err),
     }
 }
@@ -190,8 +187,8 @@ pub async fn custom(
                     to_response(StatusCode::BAD_REQUEST, None, Body::Empty)
                 }
                 Ok(body) => {
-                    let res = put_offer(db, &c[1], body).await?;
-                    from_put_offer_response(res)
+                    let res = put_room(db, &c[1], body).await?;
+                    from_put_room_response(res)
                 }
             },
             Method::DELETE => match try_parse(req.body()) {
@@ -200,7 +197,7 @@ pub async fn custom(
                     to_response(StatusCode::BAD_REQUEST, None, Body::Empty)
                 }
                 Ok(body) => {
-                    let res = delete_offer_and_answer(db, &c[1], body).await?;
+                    let res = delete_room(db, &c[1], body).await?;
                     to_response(res.status_code(), None, Body::Empty)
                 }
             },
@@ -216,7 +213,7 @@ pub async fn custom(
                     to_response(StatusCode::BAD_REQUEST, None, Body::Empty)
                 }
                 Ok(body) => {
-                    let res = post_answer(db, &c[1], body).await?;
+                    let res = post_room_join(db, &c[1], body).await?;
                     to_response(res.status_code_old(), None, Body::Empty)
                 }
             },
@@ -232,8 +229,8 @@ pub async fn custom(
                     to_response(StatusCode::BAD_REQUEST, None, Body::Empty)
                 }
                 Ok(body) => {
-                    let res = post_offer_keep(db, &c[1], body).await?;
-                    from_post_offer_keep_response(res)
+                    let res = post_room_keep(db, &c[1], body).await?;
+                    from_post_room_keep_response(res)
                 }
             },
             _ => to_response(StatusCode::METHOD_NOT_ALLOWED, None, Body::Empty),

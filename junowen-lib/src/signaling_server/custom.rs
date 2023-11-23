@@ -6,82 +6,82 @@ use serde::{Deserialize, Serialize};
 
 use crate::connection::signaling::CompressedSdp;
 
+#[derive(Deserialize, Serialize, Getters, new)]
+pub struct PutRoomRequestBody {
+    #[get = "pub"]
+    offer: CompressedSdp,
+}
+
 #[derive(Debug, Deserialize, Serialize, new)]
-pub struct FindAnswerResponseWaitingBody {
+pub struct PutRoomResponseWaitingBody {
     key: String,
 }
 
-impl FindAnswerResponseWaitingBody {
+impl PutRoomResponseWaitingBody {
     pub fn into_key(self) -> String {
         self.key
     }
 }
 
 #[derive(Debug, Deserialize, Serialize, new)]
-pub struct FindAnswerResponseAnswerBody {
+pub struct PutRoomResponseAnswerBody {
     answer: CompressedSdp,
 }
 
-impl FindAnswerResponseAnswerBody {
+impl PutRoomResponseAnswerBody {
     pub fn into_answer(self) -> CompressedSdp {
         self.answer
     }
 }
 
-#[derive(Deserialize, Serialize, Getters, new)]
-pub struct PutOfferRequestBody {
-    #[get = "pub"]
-    offer: CompressedSdp,
-}
-
 #[derive(Debug, Deserialize, Serialize, new)]
-pub struct PutOfferResponseConflictBody {
+pub struct PutRoomResponseConflictBody {
     offer: CompressedSdp,
 }
 
-impl PutOfferResponseConflictBody {
+impl PutRoomResponseConflictBody {
     pub fn into_offer(self) -> CompressedSdp {
         self.offer
     }
 }
 
 #[derive(Debug)]
-pub enum PutOfferResponse {
+pub enum PutRoomResponse {
     CreatedWithKey {
         retry_after: u32,
-        body: FindAnswerResponseWaitingBody,
+        body: PutRoomResponseWaitingBody,
     },
     CreatedWithAnswer {
         retry_after: u32,
-        body: FindAnswerResponseAnswerBody,
+        body: PutRoomResponseAnswerBody,
     },
     Conflict {
         retry_after: u32,
-        body: PutOfferResponseConflictBody,
+        body: PutRoomResponseConflictBody,
     },
 }
 
-impl PutOfferResponse {
-    pub fn created_with_key(retry_after: u32, body: FindAnswerResponseWaitingBody) -> Self {
+impl PutRoomResponse {
+    pub fn created_with_key(retry_after: u32, body: PutRoomResponseWaitingBody) -> Self {
         Self::CreatedWithKey { retry_after, body }
     }
-    pub fn created_with_answer(retry_after: u32, body: FindAnswerResponseAnswerBody) -> Self {
+    pub fn created_with_answer(retry_after: u32, body: PutRoomResponseAnswerBody) -> Self {
         Self::CreatedWithAnswer { retry_after, body }
     }
-    pub fn conflict(retry_after: u32, body: PutOfferResponseConflictBody) -> Self {
+    pub fn conflict(retry_after: u32, body: PutRoomResponseConflictBody) -> Self {
         Self::Conflict { retry_after, body }
     }
 
     pub fn parse(status: StatusCode, retry_after: Option<u32>, text: &str) -> Result<Self> {
         match status {
             StatusCode::CREATED => {
-                if let Ok(res) = serde_json::from_str::<FindAnswerResponseWaitingBody>(text) {
+                if let Ok(res) = serde_json::from_str::<PutRoomResponseWaitingBody>(text) {
                     return Ok(Self::CreatedWithKey {
                         retry_after: retry_after.ok_or_else(|| anyhow!("invalid response"))?,
                         body: res,
                     });
                 }
-                if let Ok(res) = serde_json::from_str::<FindAnswerResponseAnswerBody>(text) {
+                if let Ok(res) = serde_json::from_str::<PutRoomResponseAnswerBody>(text) {
                     return Ok(Self::CreatedWithAnswer {
                         retry_after: retry_after.ok_or_else(|| anyhow!("invalid response"))?,
                         body: res,
@@ -89,7 +89,7 @@ impl PutOfferResponse {
                 }
             }
             StatusCode::CONFLICT => {
-                if let Ok(res) = serde_json::from_str::<PutOfferResponseConflictBody>(text) {
+                if let Ok(res) = serde_json::from_str::<PutRoomResponseConflictBody>(text) {
                     return Ok(Self::Conflict {
                         retry_after: retry_after.ok_or_else(|| anyhow!("invalid response"))?,
                         body: res,
@@ -103,39 +103,39 @@ impl PutOfferResponse {
 
     pub fn status_code(&self) -> StatusCode {
         match self {
-            PutOfferResponse::CreatedWithKey { .. } => StatusCode::CREATED,
-            PutOfferResponse::CreatedWithAnswer { .. } => StatusCode::CREATED,
-            PutOfferResponse::Conflict { .. } => StatusCode::CONFLICT,
+            PutRoomResponse::CreatedWithKey { .. } => StatusCode::CREATED,
+            PutRoomResponse::CreatedWithAnswer { .. } => StatusCode::CREATED,
+            PutRoomResponse::Conflict { .. } => StatusCode::CONFLICT,
         }
     }
 
     pub fn retry_after(&self) -> u32 {
         match self {
-            PutOfferResponse::CreatedWithKey { retry_after, .. } => *retry_after,
-            PutOfferResponse::CreatedWithAnswer { retry_after, .. } => *retry_after,
-            PutOfferResponse::Conflict { retry_after, .. } => *retry_after,
+            PutRoomResponse::CreatedWithKey { retry_after, .. } => *retry_after,
+            PutRoomResponse::CreatedWithAnswer { retry_after, .. } => *retry_after,
+            PutRoomResponse::Conflict { retry_after, .. } => *retry_after,
         }
     }
 }
 
 #[derive(Deserialize, Serialize, Getters, new)]
-pub struct DeleteOfferRequestBody {
+pub struct DeleteRoomRequestBody {
     key: String,
 }
 
-impl DeleteOfferRequestBody {
+impl DeleteRoomRequestBody {
     pub fn into_key(self) -> String {
         self.key
     }
 }
 
 #[derive(Debug)]
-pub enum DeleteOfferResponse {
+pub enum DeleteRoomResponse {
     BadRequest,
     NoContent,
 }
 
-impl DeleteOfferResponse {
+impl DeleteRoomResponse {
     pub fn parse(status: StatusCode) -> Result<Self> {
         match status {
             StatusCode::BAD_REQUEST => Ok(Self::BadRequest),
@@ -153,24 +153,24 @@ impl DeleteOfferResponse {
 }
 
 #[derive(Deserialize, Serialize, Getters, new)]
-pub struct PostOfferKeepRequestBody {
+pub struct PostRoomKeepRequestBody {
     key: String,
 }
 
-impl PostOfferKeepRequestBody {
+impl PostRoomKeepRequestBody {
     pub fn into_key(self) -> String {
         self.key
     }
 }
 
 #[derive(Debug)]
-pub enum PostOfferKeepResponse {
+pub enum PostRoomKeepResponse {
     BadRequest,
     NoContent { retry_after: u32 },
-    Ok(FindAnswerResponseAnswerBody),
+    Ok(PutRoomResponseAnswerBody),
 }
 
-impl PostOfferKeepResponse {
+impl PostRoomKeepResponse {
     pub fn parse(status: StatusCode, retry_after: Option<u32>, text: Option<&str>) -> Result<Self> {
         match status {
             StatusCode::BAD_REQUEST => Ok(Self::BadRequest),
@@ -186,38 +186,38 @@ impl PostOfferKeepResponse {
 
     pub fn retry_after(&self) -> Option<u32> {
         match self {
-            PostOfferKeepResponse::BadRequest => None,
-            PostOfferKeepResponse::NoContent { retry_after } => Some(*retry_after),
-            PostOfferKeepResponse::Ok(_) => None,
+            PostRoomKeepResponse::BadRequest => None,
+            PostRoomKeepResponse::NoContent { retry_after } => Some(*retry_after),
+            PostRoomKeepResponse::Ok(_) => None,
         }
     }
 
     pub fn status_code(&self) -> StatusCode {
         match self {
-            PostOfferKeepResponse::BadRequest => StatusCode::BAD_REQUEST,
-            PostOfferKeepResponse::NoContent { .. } => StatusCode::NO_CONTENT,
-            PostOfferKeepResponse::Ok(_) => StatusCode::OK,
+            PostRoomKeepResponse::BadRequest => StatusCode::BAD_REQUEST,
+            PostRoomKeepResponse::NoContent { .. } => StatusCode::NO_CONTENT,
+            PostRoomKeepResponse::Ok(_) => StatusCode::OK,
         }
     }
 }
 
 #[derive(Deserialize, Serialize, new)]
-pub struct PostAnswerRequestBody {
+pub struct PostRoomJoinRequestBody {
     answer: CompressedSdp,
 }
 
-impl PostAnswerRequestBody {
+impl PostRoomJoinRequestBody {
     pub fn into_answer(self) -> CompressedSdp {
         self.answer
     }
 }
 
-pub enum PostAnswerResponse {
+pub enum PostRoomJoinResponse {
     Ok,
     Conflict,
 }
 
-impl PostAnswerResponse {
+impl PostRoomJoinResponse {
     pub fn parse(status: StatusCode) -> Result<Self> {
         match status {
             StatusCode::OK => Ok(Self::Ok),
@@ -229,15 +229,15 @@ impl PostAnswerResponse {
 
     pub fn status_code_old(&self) -> StatusCode {
         match self {
-            PostAnswerResponse::Ok => StatusCode::CREATED,
-            PostAnswerResponse::Conflict => StatusCode::CONFLICT,
+            PostRoomJoinResponse::Ok => StatusCode::CREATED,
+            PostRoomJoinResponse::Conflict => StatusCode::CONFLICT,
         }
     }
 
     pub fn status_code(&self) -> StatusCode {
         match self {
-            PostAnswerResponse::Ok => StatusCode::OK,
-            PostAnswerResponse::Conflict => StatusCode::CONFLICT,
+            PostRoomJoinResponse::Ok => StatusCode::OK,
+            PostRoomJoinResponse::Conflict => StatusCode::CONFLICT,
         }
     }
 }
