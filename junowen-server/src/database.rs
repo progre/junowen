@@ -11,8 +11,8 @@ use getset::Getters;
 use junowen_lib::connection::signaling::CompressedSdp;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Getters, Serialize)]
-pub struct Offer {
+#[derive(Debug, Deserialize, Getters, Serialize, new)]
+pub struct SharedRoomOffer {
     /// primary
     #[get = "pub"]
     name: String,
@@ -24,16 +24,7 @@ pub struct Offer {
     ttl_sec: u64,
 }
 
-impl Offer {
-    pub fn new(name: String, key: String, sdp: CompressedSdp, ttl_sec: u64) -> Self {
-        Self {
-            name,
-            key,
-            sdp,
-            ttl_sec,
-        }
-    }
-
+impl SharedRoomOffer {
     pub fn into_sdp(self) -> CompressedSdp {
         self.sdp
     }
@@ -59,6 +50,9 @@ impl Answer {
     }
 }
 
+#[derive(Deserialize, Serialize)]
+pub struct SharedRoomAnswer(pub Answer);
+
 #[derive(Debug)]
 pub enum PutError {
     Conflict,
@@ -67,12 +61,16 @@ pub enum PutError {
 
 #[async_trait]
 pub trait Database: Send + Sync + 'static {
-    async fn find_offer(&self, name: String) -> Result<Option<Offer>>;
-    async fn put_offer(&self, offer: Offer) -> Result<(), PutError>;
-    async fn keep_offer(&self, name: String, key: String, ttl_sec: u64) -> Result<Option<()>>;
-    async fn find_answer(&self, name: String) -> Result<Option<Answer>>;
-    async fn put_answer(&self, answer: Answer) -> Result<(), PutError>;
-    async fn remove_offer(&self, name: String) -> Result<()>;
-    async fn remove_offer_with_key(&self, name: String, key: String) -> Result<bool>;
-    async fn remove_answer(&self, name: String) -> Result<()>;
+    async fn put_shared_room_offer(&self, offer: SharedRoomOffer) -> Result<(), PutError>;
+    async fn find_shared_room_offer(&self, name: String) -> Result<Option<SharedRoomOffer>>;
+    async fn keep_shared_room_offer(
+        &self,
+        name: String,
+        key: String,
+        ttl_sec: u64,
+    ) -> Result<Option<()>>;
+    async fn remove_shared_room_offer(&self, name: String) -> Result<()>;
+    async fn remove_shared_room_offer_with_key(&self, name: String, key: String) -> Result<bool>;
+    async fn put_shared_room_answer(&self, answer: SharedRoomAnswer) -> Result<(), PutError>;
+    async fn remove_shared_room_answer(&self, name: String) -> Result<Option<SharedRoomAnswer>>;
 }

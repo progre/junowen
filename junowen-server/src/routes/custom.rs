@@ -4,7 +4,7 @@ use anyhow::{bail, Result};
 use junowen_lib::signaling_server::custom::{
     DeleteRoomRequestBody, DeleteRoomResponse, PostRoomJoinRequestBody, PostRoomJoinResponse,
     PostRoomKeepRequestBody, PostRoomKeepResponse, PutRoomRequestBody, PutRoomResponse,
-    PutRoomResponseAnswerBody, PutRoomResponseConflictBody, PutRoomResponseWaitingBody,
+    PutRoomResponseAnswerBody, PutRoomResponseWaitingBody, PutSharedRoomResponseConflictBody,
 };
 use lambda_http::{
     http::{Method, StatusCode},
@@ -14,7 +14,7 @@ use regex::Regex;
 use tracing::{debug, info};
 use uuid::Uuid;
 
-use crate::database::{Answer, Database, Offer, PutError};
+use crate::database::{Answer, Database, PutError, SharedRoomAnswer, SharedRoomOffer};
 
 use super::{to_response, try_parse};
 
@@ -56,13 +56,27 @@ fn ttl_sec(now_sec: u64) -> u64 {
     now_sec + OFFER_TTL_DURATION_SEC
 }
 
-async fn find_answer_and_remove(db: &impl Database, name: String) -> Result<Option<Answer>> {
-    let answer = db.find_answer(name.to_owned()).await?;
-    let Some(answer) = answer else {
+async fn find_valid_room(
+    db: &impl Database,
+    now_sec: u64,
+    name: String,
+) -> Result<Option<SharedRoomOffer>> {
+    let Some(offer) = db.find_shared_room_offer(name.to_owned()).await? else {
         return Ok(None);
     };
-    db.remove_offer(name.to_owned()).await?;
-    db.remove_answer(name).await?;
+    if !offer.is_expired(now_sec) {
+        return Ok(Some(offer));
+    }
+    db.remove_shared_room_offer(offer.name().clone()).await?;
+    db.remove_shared_room_answer(offer.name().clone()).await?;
+    Ok(None)
+}
+
+async fn find_guest(db: &impl Database, name: String) -> Result<Option<SharedRoomAnswer>> {
+    let Some(answer) = db.remove_shared_room_answer(name.to_owned()).await? else {
+        return Ok(None);
+    };
+    db.remove_shared_room_offer(name.to_owned()).await?;
     Ok(Some(answer))
 }
 
@@ -74,24 +88,17 @@ async fn put_room(
     let now_sec = now_sec();
     let key = Uuid::new_v4().to_string();
     for retry in 0.. {
-        let offer: Option<Offer> = db.find_offer(name.to_owned()).await?;
-        if let Some(offer) = offer {
-            if !offer.is_expired(now_sec) {
-                return Ok(PutRoomResponse::conflict(
-                    RETRY_AFTER_INTERVAL_SEC,
-                    PutRoomResponseConflictBody::new(offer.into_sdp()),
-                ));
-            }
-            db.remove_offer(offer.name().clone()).await?;
-            db.remove_answer(offer.name().clone()).await?;
-        };
-        let offer = Offer::new(
+        if let Some(offer) = find_valid_room(db, now_sec, name.to_owned()).await? {
+            let body = PutSharedRoomResponseConflictBody::new(offer.into_sdp());
+            return Ok(PutRoomResponse::conflict(RETRY_AFTER_INTERVAL_SEC, body));
+        }
+        let offer = SharedRoomOffer::new(
             name.to_owned(),
             key.clone(),
             body.offer().clone(),
             ttl_sec(now_sec),
         );
-        match db.put_offer(offer).await {
+        match db.put_shared_room_offer(offer).await {
             Ok(()) => break,
             Err(PutError::Conflict) => {
                 if retry >= 2 {
@@ -99,36 +106,19 @@ async fn put_room(
                 }
                 continue;
             }
-            Err(err) => bail!("{:?}", err),
+            Err(PutError::Unknown(err)) => bail!("{:?}", err),
         }
     }
     info!("[Shared Room] Created: {}", name);
-    let Some(answer) = find_answer_and_remove(db, name.to_owned()).await? else {
-        return Ok(PutRoomResponse::created_with_key(
-            RETRY_AFTER_INTERVAL_SEC,
-            PutRoomResponseWaitingBody::new(key),
-        ));
-    };
-    Ok(PutRoomResponse::created_with_answer(
-        RETRY_AFTER_INTERVAL_SEC,
-        PutRoomResponseAnswerBody::new(answer.into_sdp()),
-    ))
-}
-
-async fn delete_room(
-    db: &impl Database,
-    name: &str,
-    body: DeleteRoomRequestBody,
-) -> Result<DeleteRoomResponse> {
-    if !db
-        .remove_offer_with_key(name.to_owned(), body.into_key())
-        .await?
-    {
-        return Ok(DeleteRoomResponse::BadRequest);
-    }
-    db.remove_answer(name.to_owned()).await?;
-    info!("[Shared Room] Removed: {}", name);
-    Ok(DeleteRoomResponse::NoContent)
+    Ok(
+        if let Some(answer) = find_guest(db, name.to_owned()).await? {
+            let body = PutRoomResponseAnswerBody::new(answer.0.into_sdp());
+            PutRoomResponse::created_with_answer(RETRY_AFTER_INTERVAL_SEC, body)
+        } else {
+            let body = PutRoomResponseWaitingBody::new(key);
+            PutRoomResponse::created_with_key(RETRY_AFTER_INTERVAL_SEC, body)
+        },
+    )
 }
 
 async fn post_room_keep(
@@ -141,20 +131,37 @@ async fn post_room_keep(
         return Ok(PostRoomKeepResponse::BadRequest);
     }
     if db
-        .keep_offer(name.to_owned(), key, ttl_sec(now_sec()))
+        .keep_shared_room_offer(name.to_owned(), key, ttl_sec(now_sec()))
         .await?
         .is_none()
     {
         return Ok(PostRoomKeepResponse::BadRequest);
     }
-    let Some(answer) = find_answer_and_remove(db, name.to_owned()).await? else {
-        return Ok(PostRoomKeepResponse::NoContent {
-            retry_after: RETRY_AFTER_INTERVAL_SEC,
-        });
-    };
-    Ok(PostRoomKeepResponse::Ok(PutRoomResponseAnswerBody::new(
-        answer.into_sdp(),
-    )))
+    Ok(
+        if let Some(answer) = find_guest(db, name.to_owned()).await? {
+            PostRoomKeepResponse::Ok(PutRoomResponseAnswerBody::new(answer.0.into_sdp()))
+        } else {
+            let retry_after = RETRY_AFTER_INTERVAL_SEC;
+            PostRoomKeepResponse::NoContent { retry_after }
+        },
+    )
+}
+
+async fn delete_room(
+    db: &impl Database,
+    name: &str,
+    body: DeleteRoomRequestBody,
+) -> Result<DeleteRoomResponse> {
+    if !db
+        .remove_shared_room_offer_with_key(name.to_owned(), body.into_key())
+        .await?
+    {
+        Ok(DeleteRoomResponse::BadRequest)
+    } else {
+        db.remove_shared_room_answer(name.to_owned()).await?;
+        info!("[Shared Room] Removed: {}", name);
+        Ok(DeleteRoomResponse::NoContent)
+    }
 }
 
 async fn post_room_join(
@@ -162,8 +169,12 @@ async fn post_room_join(
     name: &str,
     body: PostRoomJoinRequestBody,
 ) -> Result<PostRoomJoinResponse> {
-    let answer = Answer::new(name.to_owned(), body.into_answer(), ttl_sec(now_sec()));
-    match db.put_answer(answer).await {
+    let answer = SharedRoomAnswer(Answer::new(
+        name.to_owned(),
+        body.into_answer(),
+        ttl_sec(now_sec()),
+    ));
+    match db.put_shared_room_answer(answer).await {
         Ok(()) => {
             info!("[Shared Room] Answered: {}", name);
             Ok(PostRoomJoinResponse::Ok)

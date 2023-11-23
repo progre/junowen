@@ -1,11 +1,11 @@
 use std::{collections::HashMap, env};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use aws_sdk_dynamodb::{error::SdkError, types::AttributeValue, Client};
 use serde_dynamo::{from_item, to_item};
 
-use super::{Answer, Database, Offer, PutError};
+use super::{Database, PutError, SharedRoomAnswer, SharedRoomOffer};
 
 async fn put_item(
     client: &Client,
@@ -51,7 +51,12 @@ impl DynamoDB {
 
 #[async_trait]
 impl Database for DynamoDB {
-    async fn find_offer(&self, name: String) -> Result<Option<Offer>> {
+    async fn put_shared_room_offer(&self, offer: SharedRoomOffer) -> Result<(), PutError> {
+        let item = to_item(offer).map_err(|err| PutError::Unknown(err.into()))?;
+        put_item(&self.client, &self.table_name_offer, item).await
+    }
+
+    async fn find_shared_room_offer(&self, name: String) -> Result<Option<SharedRoomOffer>> {
         let output = self
             .client
             .query()
@@ -67,15 +72,15 @@ impl Database for DynamoDB {
         let Some(item) = items.first() else {
             return Ok(None);
         };
-        Ok(Some(from_item::<_, Offer>(item.to_owned())?))
+        Ok(Some(from_item::<_, SharedRoomOffer>(item.to_owned())?))
     }
 
-    async fn put_offer(&self, offer: Offer) -> Result<(), PutError> {
-        let item = to_item(offer).map_err(|err| PutError::Unknown(err.into()))?;
-        put_item(&self.client, &self.table_name_offer, item).await
-    }
-
-    async fn keep_offer(&self, name: String, key: String, ttl_sec: u64) -> Result<Option<()>> {
+    async fn keep_shared_room_offer(
+        &self,
+        name: String,
+        key: String,
+        ttl_sec: u64,
+    ) -> Result<Option<()>> {
         let result = self
             .client
             .update_item()
@@ -103,31 +108,7 @@ impl Database for DynamoDB {
         }
     }
 
-    async fn find_answer(&self, name: String) -> Result<Option<Answer>> {
-        let output = self
-            .client
-            .query()
-            .table_name(&self.table_name_answer)
-            .key_condition_expression("#name = :name")
-            .expression_attribute_names("#name", "name")
-            .expression_attribute_values(":name", AttributeValue::S(name))
-            .send()
-            .await?;
-        let Some(items) = output.items() else {
-            return Ok(None);
-        };
-        let Some(item) = items.first() else {
-            return Ok(None);
-        };
-        Ok(Some(from_item(item.to_owned())?))
-    }
-
-    async fn put_answer(&self, answer: Answer) -> Result<(), PutError> {
-        let item = to_item(answer).map_err(|err| PutError::Unknown(err.into()))?;
-        put_item(&self.client, &self.table_name_answer, item).await
-    }
-
-    async fn remove_offer(&self, name: String) -> Result<()> {
+    async fn remove_shared_room_offer(&self, name: String) -> Result<()> {
         let _output = self
             .client
             .delete_item()
@@ -138,7 +119,7 @@ impl Database for DynamoDB {
         Ok(())
     }
 
-    async fn remove_offer_with_key(&self, name: String, key: String) -> Result<bool> {
+    async fn remove_shared_room_offer_with_key(&self, name: String, key: String) -> Result<bool> {
         if let Err(err) = self
             .client
             .delete_item()
@@ -160,14 +141,22 @@ impl Database for DynamoDB {
         Ok(true)
     }
 
-    async fn remove_answer(&self, name: String) -> Result<()> {
-        let _output = self
+    async fn put_shared_room_answer(&self, answer: SharedRoomAnswer) -> Result<(), PutError> {
+        let item = to_item(answer).map_err(|err| PutError::Unknown(err.into()))?;
+        put_item(&self.client, &self.table_name_answer, item).await
+    }
+
+    async fn remove_shared_room_answer(&self, name: String) -> Result<Option<SharedRoomAnswer>> {
+        let output = self
             .client
             .delete_item()
             .table_name(&self.table_name_answer)
             .key("name", AttributeValue::S(name))
             .send()
             .await?;
-        Ok(())
+        let item = output
+            .attributes()
+            .ok_or_else(|| anyhow!("attributes not found"))?;
+        Ok(Some(from_item(item.to_owned())?))
     }
 }

@@ -35,12 +35,23 @@ impl PutRoomResponseAnswerBody {
 }
 
 #[derive(Debug, Deserialize, Serialize, new)]
-pub struct PutRoomResponseConflictBody {
+pub struct PutSharedRoomResponseConflictBody {
     offer: CompressedSdp,
 }
 
-impl PutRoomResponseConflictBody {
+impl PutSharedRoomResponseConflictBody {
     pub fn into_offer(self) -> CompressedSdp {
+        self.offer
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, new)]
+pub struct PutReservedRoomResponseConflictBody {
+    offer: Option<CompressedSdp>,
+}
+
+impl PutReservedRoomResponseConflictBody {
+    pub fn into_offer(self) -> Option<CompressedSdp> {
         self.offer
     }
 }
@@ -57,7 +68,7 @@ pub enum PutRoomResponse {
     },
     Conflict {
         retry_after: u32,
-        body: PutRoomResponseConflictBody,
+        body: PutSharedRoomResponseConflictBody,
     },
 }
 
@@ -68,7 +79,7 @@ impl PutRoomResponse {
     pub fn created_with_answer(retry_after: u32, body: PutRoomResponseAnswerBody) -> Self {
         Self::CreatedWithAnswer { retry_after, body }
     }
-    pub fn conflict(retry_after: u32, body: PutRoomResponseConflictBody) -> Self {
+    pub fn conflict(retry_after: u32, body: PutSharedRoomResponseConflictBody) -> Self {
         Self::Conflict { retry_after, body }
     }
 
@@ -89,7 +100,7 @@ impl PutRoomResponse {
                 }
             }
             StatusCode::CONFLICT => {
-                if let Ok(res) = serde_json::from_str::<PutRoomResponseConflictBody>(text) {
+                if let Ok(res) = serde_json::from_str::<PutSharedRoomResponseConflictBody>(text) {
                     return Ok(Self::Conflict {
                         retry_after: retry_after.ok_or_else(|| anyhow!("invalid response"))?,
                         body: res,
