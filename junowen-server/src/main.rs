@@ -40,12 +40,16 @@ mod local {
 
 mod lambda {
     use lambda_http::{service_fn, IntoResponse, Request};
+    use tracing::error;
 
     use crate::{database, routes::routes, tracing_helper};
 
     async fn func(req: Request) -> Result<impl IntoResponse, anyhow::Error> {
         let db = database::DynamoDB::new().await;
-        routes(&req, &db).await
+        routes(&req, &db).await.map_err(|err| {
+            error!("Fatal error: {:?}", err);
+            err
+        })
     }
 
     #[allow(unused)]
