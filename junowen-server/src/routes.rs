@@ -1,4 +1,5 @@
 mod custom;
+mod room_utils;
 
 use std::hash::{DefaultHasher, Hash, Hasher};
 
@@ -12,7 +13,7 @@ use once_cell::sync::Lazy;
 use serde::Deserialize;
 use tracing::{info_span, trace, Instrument};
 
-use crate::{database::Database, routes::custom::custom};
+use crate::database::Database;
 
 static BASE_YOTEICHI_MOD: Lazy<BaseCustom<char>> = Lazy::new(|| {
     const CHARS: &str = concat!(
@@ -80,7 +81,7 @@ pub async fn routes(req: &Request, db: &impl Database) -> Result<impl IntoRespon
     trace!("{:?}", req);
 
     if let Some(relative_uri) = req.uri().path().strip_prefix("/custom/") {
-        return custom(relative_uri, req, db)
+        return custom::route(relative_uri, req, db)
             .instrument(info_span!("req", ip_hash = base_yoteichi_mod(ip_hash(req))))
             .await;
     }

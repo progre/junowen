@@ -60,7 +60,7 @@ flowchart TB
     0055 --> 0065(Remove Answer)
 
     0100 -.-> DB
-    subgraph "fn find_guest()"
+    subgraph "fn find_oppnent()"
       0065 -- Some? --> 0070{ }
         0070 -- YES<br><br>Reserve? --> 0072{ }
           0072 -- NO --> 0100("Remove Room(Offer)")
@@ -95,15 +95,30 @@ flowchart TB
     3010 -- Succeeded? --> 3020{ }
       3020 -- NO --> 3030(Bad request)
       3030 --> 3031((E))
-    3020 -- YES --> 3065("fn find_guest()")
-    3065 -.-> DB
-    3065 -- Some? --> 3070{ }
-      3070 -- YES --> 3110(OK with Answer)
-      3110 --> 3998{ }
+    3020 -- YES<br><br>Has opponent offer? --> 3040{ }
+      3040 -- Some --> 3065("fn find_oppnent()")
+      3065 -.-> DB
+      3065 -- Some? --> 3070{ }
+        3070 -- YES --> 3090(OK with Opponent Answer)
+        3090 --> 3999((E))
+        %% return
+      %% else
+        3070 -- NO --> 3080(No content)
+        3080 --> 3089((E))
+        %% return
     %% else
-      3070 -- NO --> 3080(No content)
-      3080 --> 3998
-    3998 --> 3999((E))
+      3040 -- None<br><br>Has spectator offer? --> 3097{ }
+      3097 -- Some --> 3100("fn find_spectator()")
+      3100 -.-> DB
+      3100 -- Some? --> 3170{ }
+        3170 -- YES --> 3110(OK with Spectator Answer)
+        3110 --> 3119((E))
+      %% else
+        3170 -- NO --> 3180(No content)
+        3180 --> 3189((E))
+    %% else
+      3097 -- None --> 3280(No content)
+    3280 --> 3289((E))
   end
 ```
 

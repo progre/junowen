@@ -1,10 +1,14 @@
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use anyhow::{bail, Result};
-use junowen_lib::signaling_server::custom::{
-    DeleteRoomRequestBody, DeleteRoomResponse, PostRoomJoinRequestBody, PostRoomJoinResponse,
-    PostRoomKeepRequestBody, PostRoomKeepResponse, PutRoomRequestBody, PutRoomResponse,
-    PutRoomResponseAnswerBody, PutRoomResponseWaitingBody, PutSharedRoomResponseConflictBody,
+use junowen_lib::signaling_server::{
+    custom::{
+        PostSharedRoomKeepRequestBody, PostSharedRoomKeepResponse, PutSharedRoomResponse,
+        PutSharedRoomResponseConflictBody,
+    },
+    room::{
+        DeleteRoomRequestBody, DeleteRoomResponse, PostRoomJoinRequestBody, PostRoomJoinResponse,
+        PostRoomKeepResponse, PutRoomRequestBody, PutRoomResponseAnswerBody,
+        PutRoomResponseWaitingBody,
+    },
 };
 use lambda_http::{
     http::{Method, StatusCode},
@@ -14,91 +18,63 @@ use regex::Regex;
 use tracing::{debug, info};
 use uuid::Uuid;
 
-use crate::database::{Answer, Database, PutError, SharedRoomAnswer, SharedRoomOffer};
+use crate::{
+    database::{PutError, SharedRoom, SharedRoomOpponentAnswer, SharedRoomTables},
+    routes::room_utils::{now_sec, ttl_sec, RETRY_AFTER_INTERVAL_SEC},
+};
 
-use super::{to_response, try_parse};
-
-const OFFER_TTL_DURATION_SEC: u64 = 10;
-const RETRY_AFTER_INTERVAL_SEC: u32 = 3;
-
-fn from_put_room_response(value: PutRoomResponse) -> Response<Body> {
-    let status_code = value.status_code();
-    let retry_after = Some(value.retry_after());
-    let body = match value {
-        PutRoomResponse::CreatedWithKey { body, .. } => {
-            Body::Text(serde_json::to_string(&body).unwrap())
-        }
-        PutRoomResponse::CreatedWithAnswer { body, .. } => {
-            Body::Text(serde_json::to_string(&body).unwrap())
-        }
-        PutRoomResponse::Conflict { body, .. } => Body::Text(serde_json::to_string(&body).unwrap()),
-    };
-    to_response(status_code, retry_after, body)
-}
-
-fn from_post_room_keep_response(value: PostRoomKeepResponse) -> Response<Body> {
-    let status_code = value.status_code();
-    let retry_after = value.retry_after();
-    let body = match value {
-        PostRoomKeepResponse::BadRequest => Body::Empty,
-        PostRoomKeepResponse::NoContent { .. } => Body::Empty,
-        PostRoomKeepResponse::Ok(body) => Body::Text(serde_json::to_string(&body).unwrap()),
-    };
-    to_response(status_code, retry_after, body)
-}
-
-fn now_sec() -> u64 {
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-    now.as_secs()
-}
-
-fn ttl_sec(now_sec: u64) -> u64 {
-    now_sec + OFFER_TTL_DURATION_SEC
-}
+use super::{
+    room_utils::{from_post_room_keep_response, from_put_room_response},
+    to_response, try_parse,
+};
 
 async fn find_valid_room(
-    db: &impl Database,
+    db: &impl SharedRoomTables,
     now_sec: u64,
     name: String,
-) -> Result<Option<SharedRoomOffer>> {
-    let Some(offer) = db.find_shared_room_offer(name.to_owned()).await? else {
+) -> Result<Option<SharedRoom>> {
+    let Some(offer) = db.find_room(name.to_owned()).await? else {
         return Ok(None);
     };
     if !offer.is_expired(now_sec) {
         return Ok(Some(offer));
     }
-    db.remove_shared_room_offer(offer.name().clone()).await?;
-    db.remove_shared_room_answer(offer.name().clone()).await?;
+    db.remove_room(offer.name().clone(), None).await?;
+    db.remove_room_opponent_answer(offer.name().clone()).await?;
     Ok(None)
 }
 
-async fn find_guest(db: &impl Database, name: String) -> Result<Option<SharedRoomAnswer>> {
-    let Some(answer) = db.remove_shared_room_answer(name.to_owned()).await? else {
+async fn find_guest(
+    db: &impl SharedRoomTables,
+    name: String,
+) -> Result<Option<SharedRoomOpponentAnswer>> {
+    let Some(answer) = db.remove_room_opponent_answer(name.to_owned()).await? else {
         return Ok(None);
     };
-    db.remove_shared_room_offer(name.to_owned()).await?;
+    db.remove_room(name.to_owned(), None).await?;
     Ok(Some(answer))
 }
 
 async fn put_room(
-    db: &impl Database,
+    db: &impl SharedRoomTables,
     name: &str,
     body: PutRoomRequestBody,
-) -> Result<PutRoomResponse> {
+) -> Result<PutSharedRoomResponse> {
     let now_sec = now_sec();
     let key = Uuid::new_v4().to_string();
+    let room = SharedRoom::new(
+        name.to_owned(),
+        key.clone(),
+        body.offer().clone(),
+        ttl_sec(now_sec),
+    );
     for retry in 0.. {
-        if let Some(offer) = find_valid_room(db, now_sec, name.to_owned()).await? {
-            let body = PutSharedRoomResponseConflictBody::new(offer.into_sdp());
-            return Ok(PutRoomResponse::conflict(RETRY_AFTER_INTERVAL_SEC, body));
+        if let Some(room) = find_valid_room(db, now_sec, name.to_owned()).await? {
+            let body = PutSharedRoomResponseConflictBody::new(room.into_sdp());
+            let response = PutSharedRoomResponse::conflict(RETRY_AFTER_INTERVAL_SEC, body);
+            return Ok(response);
         }
-        let offer = SharedRoomOffer::new(
-            name.to_owned(),
-            key.clone(),
-            body.offer().clone(),
-            ttl_sec(now_sec),
-        );
-        match db.put_shared_room_offer(offer).await {
+        match db.put_room(room.clone()).await {
             Ok(()) => break,
             Err(PutError::Conflict) => {
                 if retry >= 2 {
@@ -112,34 +88,33 @@ async fn put_room(
     info!("[Shared Room] Created: {}", name);
     Ok(
         if let Some(answer) = find_guest(db, name.to_owned()).await? {
-            let body = PutRoomResponseAnswerBody::new(answer.0.into_sdp());
-            PutRoomResponse::created_with_answer(RETRY_AFTER_INTERVAL_SEC, body)
+            let body = PutRoomResponseAnswerBody::new(answer.into_sdp());
+            PutSharedRoomResponse::created_with_answer(RETRY_AFTER_INTERVAL_SEC, body)
         } else {
             let body = PutRoomResponseWaitingBody::new(key);
-            PutRoomResponse::created_with_key(RETRY_AFTER_INTERVAL_SEC, body)
+            PutSharedRoomResponse::created_with_key(RETRY_AFTER_INTERVAL_SEC, body)
         },
     )
 }
 
 async fn post_room_keep(
-    db: &impl Database,
+    db: &impl SharedRoomTables,
     name: &str,
-    body: PostRoomKeepRequestBody,
-) -> Result<PostRoomKeepResponse> {
+    body: PostSharedRoomKeepRequestBody,
+) -> Result<PostSharedRoomKeepResponse> {
     let key = body.into_key();
     if Uuid::parse_str(&key).is_err() {
         return Ok(PostRoomKeepResponse::BadRequest);
     }
-    if db
-        .keep_shared_room_offer(name.to_owned(), key, ttl_sec(now_sec()))
+    if !db
+        .keep_room(name.to_owned(), key, ttl_sec(now_sec()))
         .await?
-        .is_none()
     {
         return Ok(PostRoomKeepResponse::BadRequest);
     }
     Ok(
         if let Some(answer) = find_guest(db, name.to_owned()).await? {
-            PostRoomKeepResponse::Ok(PutRoomResponseAnswerBody::new(answer.0.into_sdp()))
+            PostRoomKeepResponse::Ok(PutRoomResponseAnswerBody::new(answer.into_sdp()))
         } else {
             let retry_after = RETRY_AFTER_INTERVAL_SEC;
             PostRoomKeepResponse::NoContent { retry_after }
@@ -148,33 +123,30 @@ async fn post_room_keep(
 }
 
 async fn delete_room(
-    db: &impl Database,
+    db: &impl SharedRoomTables,
     name: &str,
     body: DeleteRoomRequestBody,
 ) -> Result<DeleteRoomResponse> {
     if !db
-        .remove_shared_room_offer_with_key(name.to_owned(), body.into_key())
+        .remove_room(name.to_owned(), Some(body.into_key()))
         .await?
     {
         Ok(DeleteRoomResponse::BadRequest)
     } else {
-        db.remove_shared_room_answer(name.to_owned()).await?;
+        db.remove_room_opponent_answer(name.to_owned()).await?;
         info!("[Shared Room] Removed: {}", name);
         Ok(DeleteRoomResponse::NoContent)
     }
 }
 
 async fn post_room_join(
-    db: &impl Database,
+    db: &impl SharedRoomTables,
     name: &str,
     body: PostRoomJoinRequestBody,
 ) -> Result<PostRoomJoinResponse> {
-    let answer = SharedRoomAnswer(Answer::new(
-        name.to_owned(),
-        body.into_answer(),
-        ttl_sec(now_sec()),
-    ));
-    match db.put_shared_room_answer(answer).await {
+    let answer =
+        SharedRoomOpponentAnswer::new(name.to_owned(), body.into_answer(), ttl_sec(now_sec()));
+    match db.put_room_opponent_answer(answer).await {
         Ok(()) => {
             info!("[Shared Room] Answered: {}", name);
             Ok(PostRoomJoinResponse::Ok)
@@ -184,10 +156,10 @@ async fn post_room_join(
     }
 }
 
-pub async fn custom(
+pub async fn route(
     relative_uri: &str,
     req: &Request,
-    db: &impl Database,
+    db: &impl SharedRoomTables,
 ) -> Result<Response<Body>> {
     let regex = Regex::new(r"^([^/]+)$").unwrap();
     if let Some(c) = regex.captures(relative_uri) {

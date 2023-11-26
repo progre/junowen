@@ -1,41 +1,21 @@
-use std::{collections::HashMap, env};
+mod shared_room;
 
-use anyhow::{anyhow, Result};
-use async_trait::async_trait;
-use aws_sdk_dynamodb::{error::SdkError, types::AttributeValue, Client};
+use std::env;
+
+use anyhow::Result;
+use aws_sdk_dynamodb::{
+    error::SdkError,
+    types::{AttributeValue, ReturnValue},
+};
+use serde::{Deserialize, Serialize};
 use serde_dynamo::{from_item, to_item};
 
-use super::{Database, PutError, SharedRoomAnswer, SharedRoomOffer};
-
-async fn put_item(
-    client: &Client,
-    table_name: &str,
-    item: HashMap<String, AttributeValue>,
-) -> Result<(), PutError> {
-    if let Err(error) = client
-        .put_item()
-        .table_name(table_name)
-        .set_item(Some(item))
-        .condition_expression("attribute_not_exists(#name)")
-        .expression_attribute_names("#name", "name")
-        .send()
-        .await
-    {
-        let SdkError::ServiceError(err) = &error else {
-            return Err(PutError::Unknown(error.into()));
-        };
-        if !err.err().is_conditional_check_failed_exception() {
-            return Err(PutError::Unknown(error.into()));
-        }
-        return Err(PutError::Conflict);
-    }
-    Ok(())
-}
+use super::{Database, PutError};
 
 pub struct DynamoDB {
     client: aws_sdk_dynamodb::Client,
-    table_name_offer: String,
-    table_name_answer: String,
+    table_name_shared_room: String,
+    table_name_shared_room_opponent_answer: String,
 }
 
 impl DynamoDB {
@@ -43,24 +23,41 @@ impl DynamoDB {
         let config = aws_config::load_from_env().await;
         Self {
             client: aws_sdk_dynamodb::Client::new(&config),
-            table_name_offer: format!("{}.Offer", env::var("ENV").unwrap()),
-            table_name_answer: format!("{}.Answer", env::var("ENV").unwrap()),
+            table_name_shared_room: format!("{}.Offer", env::var("ENV").unwrap()),
+            table_name_shared_room_opponent_answer: format!("{}.Answer", env::var("ENV").unwrap()),
         }
     }
-}
 
-#[async_trait]
-impl Database for DynamoDB {
-    async fn put_shared_room_offer(&self, offer: SharedRoomOffer) -> Result<(), PutError> {
-        let item = to_item(offer).map_err(|err| PutError::Unknown(err.into()))?;
-        put_item(&self.client, &self.table_name_offer, item).await
+    pub async fn put_item(&self, table_name: &str, item: impl Serialize) -> Result<(), PutError> {
+        let item = to_item(item).map_err(|err| PutError::Unknown(err.into()))?;
+        let result = self
+            .client
+            .put_item()
+            .table_name(table_name)
+            .set_item(Some(item))
+            .condition_expression("attribute_not_exists(#name)")
+            .expression_attribute_names("#name", "name")
+            .send()
+            .await;
+        if let Err(err) = result {
+            if let SdkError::ServiceError(service_error) = &err {
+                if service_error.err().is_conditional_check_failed_exception() {
+                    return Err(PutError::Conflict);
+                }
+            }
+            return Err(PutError::Unknown(err.into()));
+        }
+        Ok(())
     }
 
-    async fn find_shared_room_offer(&self, name: String) -> Result<Option<SharedRoomOffer>> {
+    async fn find_item_by_name<'a, T>(&self, table_name: &str, name: String) -> Result<Option<T>>
+    where
+        T: Deserialize<'a>,
+    {
         let output = self
             .client
             .query()
-            .table_name(&self.table_name_offer)
+            .table_name(table_name)
             .key_condition_expression("#name = :name")
             .expression_attribute_names("#name", "name")
             .expression_attribute_values(":name", AttributeValue::S(name))
@@ -72,67 +69,52 @@ impl Database for DynamoDB {
         let Some(item) = items.first() else {
             return Ok(None);
         };
-        Ok(Some(from_item::<_, SharedRoomOffer>(item.to_owned())?))
+        Ok(Some(from_item(item.to_owned())?))
     }
 
-    async fn keep_shared_room_offer(
+    async fn remove_item_and_get_old<'a, T>(
         &self,
+        table_name: &str,
         name: String,
-        key: String,
-        ttl_sec: u64,
-    ) -> Result<Option<()>> {
-        let result = self
-            .client
-            .update_item()
-            .table_name(&self.table_name_offer)
-            .key("name", AttributeValue::S(name))
-            .condition_expression("#key = :key")
-            .update_expression("SET #ttl_sec = :ttl_sec")
-            .expression_attribute_names("#key", "key")
-            .expression_attribute_names("#ttl_sec", "ttl_sec")
-            .expression_attribute_values(":key", AttributeValue::S(key))
-            .expression_attribute_values(":ttl_sec", AttributeValue::N((ttl_sec).to_string()))
-            .send()
-            .await;
-        match result {
-            Ok(_) => return Ok(Some(())),
-            Err(error) => {
-                let SdkError::ServiceError(err) = &error else {
-                    return Err(error.into());
-                };
-                if !err.err().is_conditional_check_failed_exception() {
-                    return Err(error.into());
-                }
-                return Ok(None);
-            }
-        }
-    }
-
-    async fn remove_shared_room_offer(&self, name: String) -> Result<()> {
-        let _output = self
+    ) -> Result<Option<T>>
+    where
+        T: Deserialize<'a>,
+    {
+        let output = self
             .client
             .delete_item()
-            .table_name(&self.table_name_offer)
+            .table_name(table_name)
             .key("name", AttributeValue::S(name))
+            .return_values(ReturnValue::AllOld)
             .send()
             .await?;
-        Ok(())
+        let Some(item) = output.attributes() else {
+            return Ok(None);
+        };
+        Ok(Some(from_item(item.to_owned())?))
     }
 
-    async fn remove_shared_room_offer_with_key(&self, name: String, key: String) -> Result<bool> {
-        if let Err(err) = self
+    async fn remove_item(
+        &self,
+        table_name: &str,
+        name: String,
+        key: Option<String>,
+    ) -> Result<bool> {
+        let mut builder = self
             .client
             .delete_item()
-            .table_name(&self.table_name_offer)
-            .key("name", AttributeValue::S(name))
-            .condition_expression("#key = :key")
-            .expression_attribute_names("#key", "key")
-            .expression_attribute_values(":key", AttributeValue::S(key))
-            .send()
-            .await
-        {
+            .table_name(table_name)
+            .key("name", AttributeValue::S(name));
+        if let Some(key) = key {
+            builder = builder
+                .condition_expression("#key = :key")
+                .expression_attribute_names("#key", "key")
+                .expression_attribute_values(":key", AttributeValue::S(key));
+        }
+        let result = builder.send().await;
+        if let Err(err) = result {
             if let SdkError::ServiceError(service_error) = &err {
-                if service_error.err().is_resource_not_found_exception() {
+                if service_error.err().is_conditional_check_failed_exception() {
                     return Ok(false);
                 }
             }
@@ -140,23 +122,6 @@ impl Database for DynamoDB {
         }
         Ok(true)
     }
-
-    async fn put_shared_room_answer(&self, answer: SharedRoomAnswer) -> Result<(), PutError> {
-        let item = to_item(answer).map_err(|err| PutError::Unknown(err.into()))?;
-        put_item(&self.client, &self.table_name_answer, item).await
-    }
-
-    async fn remove_shared_room_answer(&self, name: String) -> Result<Option<SharedRoomAnswer>> {
-        let output = self
-            .client
-            .delete_item()
-            .table_name(&self.table_name_answer)
-            .key("name", AttributeValue::S(name))
-            .send()
-            .await?;
-        let item = output
-            .attributes()
-            .ok_or_else(|| anyhow!("attributes not found"))?;
-        Ok(Some(from_item(item.to_owned())?))
-    }
 }
+
+impl Database for DynamoDB {}

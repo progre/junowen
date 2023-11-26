@@ -8,9 +8,14 @@ use junowen_lib::{
         socket::{OfferResponse, SignalingSocket},
         CompressedSdp,
     },
-    signaling_server::custom::{
-        DeleteRoomRequestBody, PostRoomJoinRequestBody, PostRoomJoinResponse,
-        PostRoomKeepRequestBody, PostRoomKeepResponse, PutRoomRequestBody, PutRoomResponse,
+    signaling_server::{
+        custom::{
+            PostSharedRoomKeepRequestBody, PostSharedRoomKeepResponse, PutSharedRoomResponse,
+        },
+        room::{
+            DeleteRoomRequestBody, PostRoomJoinRequestBody, PostRoomJoinResponse,
+            PostRoomKeepResponse, PutRoomRequestBody, PutRoomResponse,
+        },
     },
 };
 use reqwest::{header::RETRY_AFTER, Response};
@@ -84,7 +89,7 @@ impl SignalingSocket for SignalingServerSocket {
             .json(&PutRoomRequestBody::new(desc))
             .send()
             .await?;
-        let res =
+        let res: PutSharedRoomResponse =
             PutRoomResponse::parse(res.status(), retry_after(&res), &res.text().await.unwrap())?;
         info!("{:?}", res);
         let (delete_req_body, key) = match res {
@@ -102,12 +107,12 @@ impl SignalingSocket for SignalingServerSocket {
             }
         };
 
-        let keep_req_body = PostRoomKeepRequestBody::new(key);
+        let keep_req_body = PostSharedRoomKeepRequestBody::new(key);
         loop {
             let url = format!("{}/custom/{}/keep", self.origin, self.room_name);
             info!("POST {}", url);
             let res = self.client.post(url).json(&keep_req_body).send().await?;
-            let res = PostRoomKeepResponse::parse(
+            let res = PostSharedRoomKeepResponse::parse(
                 res.status(),
                 retry_after(&res),
                 res.text().await.as_ref().map(|x| x.as_str()).ok(),
