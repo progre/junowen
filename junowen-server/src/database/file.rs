@@ -2,7 +2,11 @@ use anyhow::Result;
 use serde_json::Value;
 use tokio::fs;
 
-use super::{Answer, Database, PutError, SharedRoom, SharedRoomOpponentAnswer, SharedRoomTables};
+use super::{
+    Answer, Database, PutError, ReservedRoom, ReservedRoomOpponentAnswer,
+    ReservedRoomSpectatorAnswer, ReservedRoomTables, SharedRoom, SharedRoomOpponentAnswer,
+    SharedRoomTables,
+};
 
 pub struct File;
 
@@ -125,6 +129,66 @@ impl SharedRoomTables for File {
             .filter_map(|x| serde_json::from_value(x.clone()).unwrap())
             .find(|x: &Answer| x.name == name);
 
+        unimplemented!()
+    }
+}
+
+impl ReservedRoomTables for File {
+    async fn put_room(&self, _offer: ReservedRoom) -> Result<(), PutError> {
+        unimplemented!();
+    }
+
+    async fn find_room(&self, _name: String) -> Result<Option<ReservedRoom>> {
+        unimplemented!();
+    }
+
+    async fn remove_room(&self, _name: String, _key: Option<String>) -> Result<bool> {
+        unimplemented!();
+    }
+
+    async fn remove_opponent_offer_sdp_in_room(&self, _name: String) -> Result<bool> {
+        unimplemented!()
+    }
+
+    async fn remove_spectator_offer_sdp_in_room(&self, _name: String) -> Result<bool> {
+        unimplemented!()
+    }
+
+    async fn put_room_opponent_answer(
+        &self,
+        _answer: ReservedRoomOpponentAnswer,
+    ) -> Result<(), PutError> {
+        unimplemented!()
+    }
+
+    async fn remove_room_opponent_answer(
+        &self,
+        _name: String,
+    ) -> Result<Option<ReservedRoomOpponentAnswer>> {
+        unimplemented!()
+    }
+
+    async fn put_room_spectator_answer(
+        &self,
+        _answer: ReservedRoomSpectatorAnswer,
+    ) -> Result<(), PutError> {
+        unimplemented!()
+    }
+
+    async fn remove_room_spectator_answer(
+        &self,
+        _name: String,
+    ) -> Result<Option<ReservedRoomSpectatorAnswer>> {
+        unimplemented!()
+    }
+
+    async fn keep_room(
+        &self,
+        _name: String,
+        _key: String,
+        _spectator_offer_sdp: Option<String>,
+        _ttl_sec: u64,
+    ) -> Result<Option<ReservedRoom>> {
         unimplemented!()
     }
 }

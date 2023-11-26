@@ -1,6 +1,8 @@
+# junowen-server
+
 ## create
 
-```
+```sh
 cargo lambda deploy \
   --binary-name junowen-server \
   --enable-function-url \
@@ -12,7 +14,7 @@ cargo lambda deploy \
 ## Dynamo DB definition
 
 * env = dev | prod
-* table_name = Offer | Answer
+* table_name = Offer | Answer | ReservedRoom | ReservedRoomOpponentAnswer | ReservedRoomSpectatorAnswer
 
 ### {env}.{table_name}
 

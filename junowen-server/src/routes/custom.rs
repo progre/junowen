@@ -167,7 +167,7 @@ pub async fn route(
             Method::PUT => match try_parse(req.body()) {
                 Err(err) => {
                     debug!("{:?}", err);
-                    to_response(StatusCode::BAD_REQUEST, None, Body::Empty)
+                    to_response(StatusCode::BAD_REQUEST, Body::Empty)
                 }
                 Ok(body) => {
                     let res = put_room(db, &c[1], body).await?;
@@ -177,14 +177,14 @@ pub async fn route(
             Method::DELETE => match try_parse(req.body()) {
                 Err(err) => {
                     debug!("{:?}", err);
-                    to_response(StatusCode::BAD_REQUEST, None, Body::Empty)
+                    to_response(StatusCode::BAD_REQUEST, Body::Empty)
                 }
                 Ok(body) => {
                     let res = delete_room(db, &c[1], body).await?;
-                    to_response(res.status_code(), None, Body::Empty)
+                    to_response(res.status_code(), Body::Empty)
                 }
             },
-            _ => to_response(StatusCode::METHOD_NOT_ALLOWED, None, Body::Empty),
+            _ => to_response(StatusCode::METHOD_NOT_ALLOWED, Body::Empty),
         });
     }
     let regex = Regex::new(r"^([^/]+)/join$").unwrap();
@@ -193,14 +193,14 @@ pub async fn route(
             Method::POST => match try_parse(req.body()) {
                 Err(err) => {
                     debug!("{:?}", err);
-                    to_response(StatusCode::BAD_REQUEST, None, Body::Empty)
+                    to_response(StatusCode::BAD_REQUEST, Body::Empty)
                 }
                 Ok(body) => {
                     let res = post_room_join(db, &c[1], body).await?;
-                    to_response(res.status_code_old(), None, Body::Empty)
+                    to_response(res.status_code_old(), Body::Empty)
                 }
             },
-            _ => to_response(StatusCode::METHOD_NOT_ALLOWED, None, Body::Empty),
+            _ => to_response(StatusCode::METHOD_NOT_ALLOWED, Body::Empty),
         });
     }
     let regex = Regex::new(r"^([^/]+)/keep$").unwrap();
@@ -209,15 +209,15 @@ pub async fn route(
             Method::POST => match try_parse(req.body()) {
                 Err(err) => {
                     debug!("{:?}", err);
-                    to_response(StatusCode::BAD_REQUEST, None, Body::Empty)
+                    to_response(StatusCode::BAD_REQUEST, Body::Empty)
                 }
                 Ok(body) => {
                     let res = post_room_keep(db, &c[1], body).await?;
                     from_post_room_keep_response(res)
                 }
             },
-            _ => to_response(StatusCode::METHOD_NOT_ALLOWED, None, Body::Empty),
+            _ => to_response(StatusCode::METHOD_NOT_ALLOWED, Body::Empty),
         });
     }
-    Ok(to_response(StatusCode::NOT_FOUND, None, Body::Empty))
+    Ok(to_response(StatusCode::NOT_FOUND, Body::Empty))
 }

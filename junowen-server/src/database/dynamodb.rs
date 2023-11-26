@@ -1,3 +1,4 @@
+mod reserved_room;
 mod shared_room;
 
 use std::env;
@@ -16,6 +17,9 @@ pub struct DynamoDB {
     client: aws_sdk_dynamodb::Client,
     table_name_shared_room: String,
     table_name_shared_room_opponent_answer: String,
+    table_name_reserved_room: String,
+    table_name_reserved_room_opponent_answer: String,
+    table_name_reserved_room_spectator_answer: String,
 }
 
 impl DynamoDB {
@@ -25,6 +29,15 @@ impl DynamoDB {
             client: aws_sdk_dynamodb::Client::new(&config),
             table_name_shared_room: format!("{}.Offer", env::var("ENV").unwrap()),
             table_name_shared_room_opponent_answer: format!("{}.Answer", env::var("ENV").unwrap()),
+            table_name_reserved_room: format!("{}.ReservedRoom", env::var("ENV").unwrap()),
+            table_name_reserved_room_opponent_answer: format!(
+                "{}.ReservedRoomOpponentAnswer",
+                env::var("ENV").unwrap()
+            ),
+            table_name_reserved_room_spectator_answer: format!(
+                "{}.ReservedRoomSpectatorAnswer",
+                env::var("ENV").unwrap()
+            ),
         }
     }
 

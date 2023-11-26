@@ -23,7 +23,6 @@ where
     T: Deserialize<'a> + Serialize,
 {
     let status_code = value.status_code();
-    let retry_after = Some(value.retry_after());
     let body = match value {
         PutRoomResponse::CreatedWithKey { body, .. } => {
             Body::Text(serde_json::to_string(&body).unwrap())
@@ -33,7 +32,7 @@ where
         }
         PutRoomResponse::Conflict { body, .. } => Body::Text(serde_json::to_string(&body).unwrap()),
     };
-    to_response(status_code, retry_after, body)
+    to_response(status_code, body)
 }
 
 pub fn from_post_room_keep_response<'a, T>(value: PostRoomKeepResponse<T>) -> Response<Body>
@@ -41,11 +40,10 @@ where
     T: Deserialize<'a> + Serialize,
 {
     let status_code = value.status_code();
-    let retry_after = value.retry_after();
     let body = match value {
         PostRoomKeepResponse::BadRequest => Body::Empty,
         PostRoomKeepResponse::NoContent { .. } => Body::Empty,
         PostRoomKeepResponse::Ok(body) => Body::Text(serde_json::to_string(&body).unwrap()),
     };
-    to_response(status_code, retry_after, body)
+    to_response(status_code, body)
 }

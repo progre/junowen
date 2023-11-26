@@ -1,4 +1,5 @@
 mod custom;
+mod reserved_room;
 mod room_utils;
 
 use std::hash::{DefaultHasher, Hash, Hasher};
@@ -13,7 +14,7 @@ use once_cell::sync::Lazy;
 use serde::Deserialize;
 use tracing::{info_span, trace, Instrument};
 
-use crate::database::Database;
+use crate::{database::Database, routes::room_utils::RETRY_AFTER_INTERVAL_SEC};
 
 static BASE_YOTEICHI_MOD: Lazy<BaseCustom<char>> = Lazy::new(|| {
     const CHARS: &str = concat!(
@@ -54,16 +55,12 @@ where
     serde_json::from_str(body.as_str()).map_err(|err| err.into())
 }
 
-fn to_response(
-    status_code: StatusCode,
-    retry_after: Option<u32>,
-    body: impl Into<Body>,
-) -> Response<Body> {
-    let mut builder = Response::builder().status(status_code);
-    if let Some(retry_after) = retry_after {
-        builder = builder.header(RETRY_AFTER, retry_after);
-    }
-    builder.body(body.into()).unwrap()
+fn to_response(status_code: StatusCode, body: impl Into<Body>) -> Response<Body> {
+    Response::builder()
+        .status(status_code)
+        .header(RETRY_AFTER, RETRY_AFTER_INTERVAL_SEC)
+        .body(body.into())
+        .unwrap()
 }
 
 fn ip_hash(req: &Request) -> u64 {
@@ -85,5 +82,10 @@ pub async fn routes(req: &Request, db: &impl Database) -> Result<impl IntoRespon
             .instrument(info_span!("req", ip_hash = base_yoteichi_mod(ip_hash(req))))
             .await;
     }
-    Ok(to_response(StatusCode::NOT_FOUND, None, Body::Empty))
+    if let Some(relative_uri) = req.uri().path().strip_prefix("/reserved-room/") {
+        return reserved_room::route(relative_uri, req, db)
+            .instrument(info_span!("req", ip_hash = base_yoteichi_mod(ip_hash(req))))
+            .await;
+    }
+    Ok(to_response(StatusCode::NOT_FOUND, Body::Empty))
 }
