@@ -3,6 +3,7 @@ use aws_sdk_dynamodb::{
     error::SdkError,
     types::{AttributeValue, ReturnValue},
 };
+use junowen_lib::connection::signaling::CompressedSdp;
 use serde_dynamo::from_item;
 
 use crate::database::{
@@ -25,7 +26,7 @@ impl database::ReservedRoomTables for DynamoDB {
         &self,
         name: String,
         key: String,
-        spectator_offer_sdp: Option<String>,
+        spectator_offer_sdp: Option<CompressedSdp>,
         ttl_sec: u64,
     ) -> Result<Option<ReservedRoom>> {
         let mut builder = self
@@ -44,7 +45,7 @@ impl database::ReservedRoomTables for DynamoDB {
                 .expression_attribute_names("#spectator_offer_sdp", "spectator_offer_sdp")
                 .expression_attribute_values(
                     ":spectator_offer_sdp",
-                    AttributeValue::S(spectator_offer_sdp),
+                    AttributeValue::S(spectator_offer_sdp.into_inner()),
                 )
                 .update_expression(
                     "SET #ttl_sec = :ttl_sec, #spectator_offer_sdp = :spectator_offer_sdp",

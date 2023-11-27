@@ -14,31 +14,29 @@ pub fn retry_after(res: &Response) -> Option<u32> {
         .and_then(|x| x.parse::<u32>().ok())
 }
 
-async fn delete_room(
-    client: &reqwest::Client,
-    url: &str,
-    body: &DeleteRoomRequestBody,
-) -> Result<()> {
-    info!("DELETE {}", url);
-    let res = client.delete(url).json(body).send().await?;
-    info!("{:?}", res.status());
-    Ok(())
-}
-
-pub async fn sleep_or_abort_and_delete_room(
-    retry_after: u32,
-    abort_rx: &mut watch::Receiver<bool>,
-    client: &reqwest::Client,
-    url_delete_room: &str,
-    key: &str,
-) -> Result<()> {
+pub async fn sleep_or_abort(retry_after: u32, abort_rx: &mut watch::Receiver<bool>) -> Result<()> {
     let task1 = sleep(Duration::from_secs(retry_after as u64));
     let task2 = abort_rx.wait_for(|&val| val);
     tokio::select! {
         _ = task1 => return Ok(()),
         _ = task2 => {},
     };
-    let body = DeleteRoomRequestBody::new(key.to_owned());
-    delete_room(client, url_delete_room, &body).await?;
     bail!("abort");
+}
+
+pub async fn sleep_or_abort_and_delete_room(
+    retry_after: u32,
+    abort_rx: &mut watch::Receiver<bool>,
+    client: &reqwest::Client,
+    url: &str,
+    key: &str,
+) -> Result<()> {
+    let Err(err) = sleep_or_abort(retry_after, abort_rx).await else {
+        return Ok(());
+    };
+    let body = DeleteRoomRequestBody::new(key.to_owned());
+    info!("DELETE {}", url);
+    let res = client.delete(url).json(&body).send().await?;
+    info!("{:?}", res.status());
+    Err(err)
 }

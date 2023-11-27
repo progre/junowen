@@ -83,11 +83,11 @@ impl GetReservedRoomResponse {
 #[derive(Deserialize, Serialize, Getters, new)]
 pub struct PostReservedRoomKeepRequestBody {
     key: String,
-    spectator_offer: Option<String>,
+    spectator_offer: Option<CompressedSdp>,
 }
 
 impl PostReservedRoomKeepRequestBody {
-    pub fn into_inner(self) -> (String, Option<String>) {
+    pub fn into_inner(self) -> (String, Option<CompressedSdp>) {
         (self.key, self.spectator_offer)
     }
 }

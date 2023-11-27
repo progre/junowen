@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::Error;
 use getset::Getters;
-use junowen_lib::connection::signaling::socket::SignalingSocket;
+use junowen_lib::connection::{signaling::socket::SignalingSocket, DataChannel, PeerConnection};
 use tokio::{
     sync::{
         mpsc::{self},
@@ -21,28 +21,43 @@ use crate::{
         reserved_room_opponent_socket::SignalingServerReservedRoomOpponentSocket,
         shared_room_opponent_socket::SignalingServerSharedRoomOpponentSocket,
     },
-    session::battle::BattleSession,
+    session::{battle::BattleSession, spectator::SpectatorSessionGuest},
     TOKIO_RUNTIME,
 };
 
+use super::reserved_room_spectator_socket::SignalingServerReservedRoomSpectatorSocket;
+
 #[derive(Getters)]
-pub struct WaitingInRoom<T> {
+pub struct WaitingInRoom<TSocket, TSession> {
     handle: JoinHandle<()>,
     room_name: String,
     created_at: Instant,
     errors: Vec<Error>,
     error_rx: mpsc::Receiver<Error>,
-    session_rx: oneshot::Receiver<BattleSession>,
+    session_rx: oneshot::Receiver<TSession>,
     abort_tx: watch::Sender<bool>,
-    _phantom: PhantomData<T>,
+    _phantom: PhantomData<TSocket>,
 }
 
-impl<T> WaitingInRoom<T>
+pub type WaitingForOpponentInSharedRoom =
+    WaitingInRoom<SignalingServerSharedRoomOpponentSocket, BattleSession>;
+pub type WaitingForOpponentInReservedRoom =
+    WaitingInRoom<SignalingServerReservedRoomOpponentSocket, BattleSession>;
+pub type WaitingForSpectatorHostInReservedRoom =
+    WaitingInRoom<SignalingServerReservedRoomSpectatorSocket, SpectatorSessionGuest>;
+
+impl<TSocket, TSession> WaitingInRoom<TSocket, TSession>
 where
-    T: SignalingSocket + Send + 'static,
+    TSocket: SignalingSocket + Send + 'static,
+    TSession: Send + 'static,
 {
     fn internal_new(
-        create_socket: fn(origin: String, room_name: String, abort_rx: watch::Receiver<bool>) -> T,
+        create_socket: fn(
+            origin: String,
+            room_name: String,
+            abort_rx: watch::Receiver<bool>,
+        ) -> TSocket,
+        create_session: fn(conn: PeerConnection, data_channel: DataChannel, host: bool) -> TSession,
         room_name: String,
     ) -> Self {
         let (error_tx, error_rx) = mpsc::channel(1);
@@ -75,7 +90,7 @@ where
                     }
                 };
                 info!("Signaling succeeded");
-                let session = BattleSession::new(conn, dc, host);
+                let session = create_session(conn, dc, host);
                 session_tx.send(session).map_err(|_| ()).unwrap();
             })
         };
@@ -93,19 +108,42 @@ where
     }
 }
 
-impl WaitingInRoom<SignalingServerSharedRoomOpponentSocket> {
+impl WaitingForOpponentInSharedRoom {
     pub fn new(room_name: String) -> Self {
-        Self::internal_new(SignalingServerSharedRoomOpponentSocket::new, room_name)
+        Self::internal_new(
+            SignalingServerSharedRoomOpponentSocket::new,
+            BattleSession::new,
+            room_name,
+        )
     }
 }
 
-impl WaitingInRoom<SignalingServerReservedRoomOpponentSocket> {
+impl WaitingForOpponentInReservedRoom {
     pub fn new(room_name: String) -> Self {
-        Self::internal_new(SignalingServerReservedRoomOpponentSocket::new, room_name)
+        Self::internal_new(
+            SignalingServerReservedRoomOpponentSocket::new,
+            BattleSession::new,
+            room_name,
+        )
     }
 }
 
-impl<T> WaitingInRoom<T> {
+impl WaitingForSpectatorHostInReservedRoom {
+    pub fn new(room_name: String) -> Self {
+        Self::internal_new(
+            |origin, room_name, abort_rx| {
+                SignalingServerReservedRoomSpectatorSocket::new(origin, room_name, None, abort_rx)
+            },
+            |pc, dc, host| {
+                assert!(!host);
+                SpectatorSessionGuest::new(pc, dc)
+            },
+            room_name,
+        )
+    }
+}
+
+impl<TSocket, TSession> WaitingInRoom<TSocket, TSession> {
     pub fn room_name(&self) -> &str {
         &self.room_name
     }
@@ -124,12 +162,12 @@ impl<T> WaitingInRoom<T> {
         &self.errors
     }
 
-    pub fn try_into_session(mut self) -> Result<BattleSession, Self> {
+    pub fn try_into_session(mut self) -> Result<TSession, Self> {
         self.session_rx.try_recv().map_err(|_| self)
     }
 }
 
-impl<T> Drop for WaitingInRoom<T> {
+impl<TSocket, TSession> Drop for WaitingInRoom<TSocket, TSession> {
     fn drop(&mut self) {
         let _ = self.abort_tx.send(true);
         if self.handle.is_finished() {
@@ -148,7 +186,3 @@ impl<T> Drop for WaitingInRoom<T> {
         );
     }
 }
-
-pub type WaitingForOpponentInSharedRoom = WaitingInRoom<SignalingServerSharedRoomOpponentSocket>;
-pub type WaitingForOpponentInReservedRoom =
-    WaitingInRoom<SignalingServerReservedRoomOpponentSocket>;

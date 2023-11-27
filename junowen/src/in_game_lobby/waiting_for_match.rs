@@ -1,14 +1,18 @@
 mod reserved_room_opponent_socket;
+mod reserved_room_spectator_socket;
 pub mod rooms;
 mod shared_room_opponent_socket;
 mod socket;
 
 use derive_new::new;
-use tokio::sync::mpsc::{self, error::TryRecvError};
+use tokio::sync::mpsc;
 
 use crate::session::{battle::BattleSession, spectator::SpectatorSessionGuest};
 
-use self::rooms::{WaitingForOpponentInReservedRoom, WaitingForOpponentInSharedRoom};
+use self::rooms::{
+    WaitingForOpponentInReservedRoom, WaitingForOpponentInSharedRoom,
+    WaitingForSpectatorHostInReservedRoom,
+};
 
 #[derive(new)]
 pub struct WaitingForPureP2pOpponent {
@@ -45,12 +49,19 @@ pub struct WaitingForPureP2pSpectatorHost {
 
 pub enum WaitingForSpectatorHost {
     PureP2p(WaitingForPureP2pSpectatorHost),
+    ReservedRoom(WaitingForSpectatorHostInReservedRoom),
 }
 
 impl WaitingForSpectatorHost {
-    pub fn try_recv_session(&mut self) -> Result<SpectatorSessionGuest, TryRecvError> {
+    pub fn try_into_session(self) -> Result<SpectatorSessionGuest, Self> {
         match self {
-            Self::PureP2p(waiting) => waiting.spectator_session_guest_rx.try_recv(),
+            Self::PureP2p(mut waiting) => waiting
+                .spectator_session_guest_rx
+                .try_recv()
+                .map_err(|_| WaitingForSpectatorHost::PureP2p(waiting)),
+            Self::ReservedRoom(waiting) => waiting
+                .try_into_session()
+                .map_err(WaitingForSpectatorHost::ReservedRoom),
         }
     }
 }

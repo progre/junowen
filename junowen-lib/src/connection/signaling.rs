@@ -40,6 +40,10 @@ impl SignalingCodeType {
 pub struct CompressedSdp(String);
 
 impl CompressedSdp {
+    pub fn into_inner(self) -> String {
+        self.0
+    }
+
     pub fn compress(desc: &RTCSessionDescription) -> Self {
         let mut e = DeflateEncoder::new(Vec::new(), Compression::best());
         e.write_all(desc.sdp.as_bytes()).unwrap();

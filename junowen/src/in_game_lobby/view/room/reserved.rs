@@ -2,7 +2,13 @@ use std::ffi::c_void;
 
 use junowen_lib::{InputValue, Th19};
 
-use crate::in_game_lobby::waiting_for_match::rooms::WaitingForOpponentInReservedRoom;
+use crate::in_game_lobby::{
+    waiting_for_match::{
+        rooms::{WaitingForOpponentInReservedRoom, WaitingForSpectatorHostInReservedRoom},
+        WaitingForSpectatorHost,
+    },
+    WaitingForMatch, WaitingForOpponent, WaitingInRoom,
+};
 
 use super::{
     super::common_menu::{
@@ -14,7 +20,7 @@ use super::{
 fn make_enter_menu() -> (u8, CommonMenu) {
     let items = vec![
         MenuItem::new("Enter as Player", MenuAction::Action(0, true).into()),
-        // MenuItem::new("Enter as Spectator", MenuAction::Action(3, true).into()),
+        MenuItem::new("Enter as Spectator", MenuAction::Action(3, true).into()),
         // MenuItem::new("Change Room Name", MenuAction::Action(2, true).into()),
     ];
     (
@@ -47,11 +53,22 @@ impl ReservedRoom {
         current_input: InputValue,
         prev_input: InputValue,
         th19: &Th19,
-        waiting: &mut Option<WaitingForOpponentInReservedRoom>,
+        waiting: &mut Option<WaitingForMatch>,
     ) -> Option<LobbyScene> {
-        if let Some(waiting) = waiting {
-            waiting.recv();
+        match waiting {
+            Some(WaitingForMatch::Opponent(WaitingForOpponent::ReservedRoom(waiting))) => {
+                waiting.recv();
+            }
+            Some(WaitingForMatch::SpectatorHost(WaitingForSpectatorHost::ReservedRoom(
+                waiting,
+            ))) => {
+                waiting.recv();
+            }
+            _ => {
+                *waiting = None;
+            }
         }
+
         match self.menu.on_input_menu(current_input, prev_input, th19) {
             OnMenuInputResult::None => {
                 if waiting.is_none() {
@@ -70,9 +87,11 @@ impl ReservedRoom {
             OnMenuInputResult::Action(MenuAction::SubScene(_)) => unreachable!(),
             OnMenuInputResult::Action(MenuAction::Action(action, _)) => match action {
                 0 => {
-                    *waiting = Some(WaitingForOpponentInReservedRoom::new(
-                        th19.online_vs_mode().room_name().to_owned(),
-                    ));
+                    *waiting = Some(WaitingForMatch::Opponent(WaitingForOpponent::ReservedRoom(
+                        WaitingForOpponentInReservedRoom::new(
+                            th19.online_vs_mode().room_name().to_owned(),
+                        ),
+                    )));
                     (self.menu_id, self.menu) = make_leave_menu();
                     None
                 }
@@ -81,14 +100,25 @@ impl ReservedRoom {
                     (self.menu_id, self.menu) = make_enter_menu();
                     None
                 }
+                3 => {
+                    *waiting = Some(WaitingForMatch::SpectatorHost(
+                        WaitingForSpectatorHost::ReservedRoom(
+                            WaitingForSpectatorHostInReservedRoom::new(
+                                th19.online_vs_mode().room_name().to_owned(),
+                            ),
+                        ),
+                    ));
+                    (self.menu_id, self.menu) = make_leave_menu();
+                    None
+                }
                 _ => unreachable!(),
             },
         }
     }
 
-    pub fn on_render_texts(
+    pub fn on_render_texts<T, U>(
         &self,
-        waiting: Option<&WaitingForOpponentInReservedRoom>,
+        waiting: Option<&WaitingInRoom<T, U>>,
         th19: &Th19,
         text_renderer: *const c_void,
     ) {

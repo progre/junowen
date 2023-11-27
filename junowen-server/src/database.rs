@@ -116,7 +116,7 @@ pub trait ReservedRoomTables: Send + Sync + 'static {
         &self,
         name: String,
         key: String,
-        spectator_offer_sdp: Option<String>,
+        spectator_offer_sdp: Option<CompressedSdp>,
         ttl_sec: u64,
     ) -> Result<Option<ReservedRoom>>;
     async fn remove_opponent_offer_sdp_in_room(&self, name: String) -> Result<bool>;

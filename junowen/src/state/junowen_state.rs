@@ -60,37 +60,32 @@ impl JunowenState {
                 };
                 if let Some(menu) = th19.app().main_loop_tasks().find_menu() {
                     if menu.screen_id == ScreenId::OnlineVSMode {
-                        *waiting_for_match = None;
                         return None;
                     }
                 }
                 match old_waiting {
-                    WaitingForMatch::Opponent(waiting) => {
-                        let result = waiting.try_into_session();
-                        match result {
-                            Ok(session) => {
-                                trace!("session received");
-                                self.start_battle_session(session);
-                                None
-                            }
-                            Err(waiting) => {
-                                *waiting_for_match = Some(WaitingForMatch::Opponent(waiting));
-                                None
-                            }
+                    WaitingForMatch::Opponent(waiting) => match waiting.try_into_session() {
+                        Ok(session) => {
+                            trace!("session received");
+                            self.start_battle_session(session);
+                            None
                         }
-                    }
-                    WaitingForMatch::SpectatorHost(mut waiting) => {
-                        let result = waiting.try_recv_session();
-                        *waiting_for_match = Some(WaitingForMatch::SpectatorHost(waiting));
-                        match result {
-                            Ok(session) => {
-                                trace!("session received");
-                                self.start_spectator_session(session);
-                                None
-                            }
-                            Err(_) => None,
+                        Err(waiting) => {
+                            *waiting_for_match = Some(WaitingForMatch::Opponent(waiting));
+                            None
                         }
-                    }
+                    },
+                    WaitingForMatch::SpectatorHost(waiting) => match waiting.try_into_session() {
+                        Ok(session) => {
+                            trace!("session received");
+                            self.start_spectator_session(session);
+                            None
+                        }
+                        Err(waiting) => {
+                            *waiting_for_match = Some(WaitingForMatch::SpectatorHost(waiting));
+                            None
+                        }
+                    },
                 }
             }
             Self::BattleSession(session_state) => {

@@ -3,7 +3,12 @@ use std::ffi::c_void;
 use getset::{Getters, MutGetters};
 use junowen_lib::{InputFlags, InputValue, Th19};
 
-use crate::session::{battle::BattleSession, spectator::SpectatorSessionGuest};
+use crate::{
+    in_game_lobby::waiting_for_match::{
+        rooms::WaitingForOpponentInReservedRoom, WaitingForSpectatorHost,
+    },
+    session::{battle::BattleSession, spectator::SpectatorSessionGuest},
+};
 
 use super::{
     super::waiting_for_match::{
@@ -138,24 +143,12 @@ impl Lobby {
                     .map(WaitingForMatch::Opponent);
                 ret
             }
-            LobbyScene::ReservedRoom => {
-                let mut waiting = match self.waiting_for_match.take() {
-                    Some(WaitingForMatch::Opponent(WaitingForOpponent::ReservedRoom(waiting))) => {
-                        Some(waiting)
-                    }
-                    _ => None,
-                };
-                let ret = self.reserved_room.on_input_menu(
-                    current_input,
-                    self.prev_input,
-                    th19,
-                    &mut waiting,
-                );
-                self.waiting_for_match = waiting
-                    .map(WaitingForOpponent::ReservedRoom)
-                    .map(WaitingForMatch::Opponent);
-                ret
-            }
+            LobbyScene::ReservedRoom => self.reserved_room.on_input_menu(
+                current_input,
+                self.prev_input,
+                th19,
+                &mut self.waiting_for_match,
+            ),
             LobbyScene::PureP2pHost => {
                 if self.pure_p2p_host.is_none() {
                     self.waiting_for_match = None;
@@ -235,18 +228,25 @@ impl Lobby {
                     _ => None,
                 });
                 self.shared_room
-                    .on_render_texts(waiting, th19, text_renderer)
+                    .on_render_texts(waiting, th19, text_renderer);
             }
-            LobbyScene::ReservedRoom => {
-                let waiting = self.waiting_for_match.as_ref().and_then(|x| match x {
-                    WaitingForMatch::Opponent(WaitingForOpponent::ReservedRoom(waiting)) => {
-                        Some(waiting)
-                    }
-                    _ => None,
-                });
-                self.reserved_room
-                    .on_render_texts(waiting, th19, text_renderer)
-            }
+            LobbyScene::ReservedRoom => match &self.waiting_for_match {
+                Some(WaitingForMatch::Opponent(WaitingForOpponent::ReservedRoom(waiting))) => {
+                    self.reserved_room
+                        .on_render_texts(Some(waiting), th19, text_renderer);
+                }
+                Some(WaitingForMatch::SpectatorHost(WaitingForSpectatorHost::ReservedRoom(
+                    waiting,
+                ))) => {
+                    self.reserved_room
+                        .on_render_texts(Some(waiting), th19, text_renderer);
+                }
+                _ => {
+                    let none: Option<&WaitingForOpponentInReservedRoom> = None;
+                    self.reserved_room
+                        .on_render_texts(none, th19, text_renderer);
+                }
+            },
             LobbyScene::PureP2pHost => self
                 .pure_p2p_host
                 .as_ref()

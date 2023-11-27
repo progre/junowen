@@ -131,9 +131,9 @@ fn render_progress(th19: &Th19, text_renderer: *const c_void, progress: f64) {
     render_progress_item(th19, text_renderer, 0xff, &base_text);
 }
 
-pub fn on_render_texts<T>(
+pub fn on_render_texts<T, U>(
     menu: &CommonMenu,
-    waiting: Option<&WaitingInRoom<T>>,
+    waiting: Option<&WaitingInRoom<T, U>>,
     th19: &Th19,
     text_renderer: *const c_void,
 ) {

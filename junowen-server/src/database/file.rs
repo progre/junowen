@@ -1,4 +1,5 @@
 use anyhow::Result;
+use junowen_lib::connection::signaling::CompressedSdp;
 use serde_json::Value;
 use tokio::fs;
 
@@ -186,7 +187,7 @@ impl ReservedRoomTables for File {
         &self,
         _name: String,
         _key: String,
-        _spectator_offer_sdp: Option<String>,
+        _spectator_offer_sdp: Option<CompressedSdp>,
         _ttl_sec: u64,
     ) -> Result<Option<ReservedRoom>> {
         unimplemented!()
