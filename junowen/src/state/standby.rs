@@ -76,13 +76,13 @@ pub fn on_render_texts(
 ) {
     match lobby.waiting_for_match() {
         None
-        | Some(WaitingForMatch::Spectator(_))
+        | Some(WaitingForMatch::SpectatorHost(_))
         | Some(WaitingForMatch::Opponent(WaitingForOpponent::PureP2p(_))) => {}
-        Some(WaitingForMatch::Opponent(WaitingForOpponent::SharedRoom(room))) => {
-            render_waiting_message("Shared", room, th19, text_renderer);
+        Some(WaitingForMatch::Opponent(WaitingForOpponent::SharedRoom(waiting))) => {
+            render_waiting_message("Shared", waiting, th19, text_renderer);
         }
-        Some(WaitingForMatch::Opponent(WaitingForOpponent::ReservedRoom(room))) => {
-            render_waiting_message("Reserved", room, th19, text_renderer);
+        Some(WaitingForMatch::Opponent(WaitingForOpponent::ReservedRoom(waiting))) => {
+            render_waiting_message("Reserved", waiting, th19, text_renderer);
         }
     }
     let Some(menu) = th19.app().main_loop_tasks().find_menu() else {

@@ -7,7 +7,8 @@ use crate::session::{battle::BattleSession, spectator::SpectatorSessionGuest};
 
 use super::{
     super::waiting_for_match::{
-        WaitingForMatch, WaitingForOpponent, WaitingForPureP2pOpponent, WaitingForPureP2pSpectator,
+        WaitingForMatch, WaitingForOpponent, WaitingForPureP2pOpponent,
+        WaitingForPureP2pSpectatorHost,
     },
     common_menu::{
         CommonMenu, LobbyScene, MenuAction, MenuContent, MenuDefine, MenuItem, OnMenuInputResult,
@@ -211,7 +212,7 @@ impl Lobby {
                 );
                 if let Some(session_rx) = session_rx {
                     self.waiting_for_match =
-                        Some(WaitingForPureP2pSpectator::new(session_rx).into());
+                        Some(WaitingForPureP2pSpectatorHost::new(session_rx).into());
                 }
                 ret
             }

@@ -24,40 +24,40 @@ pub enum WaitingForOpponent {
 impl WaitingForOpponent {
     pub fn try_into_session(self) -> Result<BattleSession, Self> {
         match self {
-            Self::SharedRoom(room) => room
+            Self::SharedRoom(waiting) => waiting
                 .try_into_session()
                 .map_err(WaitingForOpponent::SharedRoom),
-            Self::ReservedRoom(room) => room
+            Self::ReservedRoom(waiting) => waiting
                 .try_into_session()
                 .map_err(WaitingForOpponent::ReservedRoom),
-            Self::PureP2p(mut pure_p2p) => pure_p2p
+            Self::PureP2p(mut waiting) => waiting
                 .battle_session_rx
                 .try_recv()
-                .map_err(|_| WaitingForOpponent::PureP2p(pure_p2p)),
+                .map_err(|_| WaitingForOpponent::PureP2p(waiting)),
         }
     }
 }
 
 #[derive(new)]
-pub struct WaitingForPureP2pSpectator {
+pub struct WaitingForPureP2pSpectatorHost {
     spectator_session_guest_rx: mpsc::Receiver<SpectatorSessionGuest>,
 }
 
-pub enum WaitingForSpectator {
-    PureP2p(WaitingForPureP2pSpectator),
+pub enum WaitingForSpectatorHost {
+    PureP2p(WaitingForPureP2pSpectatorHost),
 }
 
-impl WaitingForSpectator {
+impl WaitingForSpectatorHost {
     pub fn try_recv_session(&mut self) -> Result<SpectatorSessionGuest, TryRecvError> {
         match self {
-            Self::PureP2p(pure_p2p) => pure_p2p.spectator_session_guest_rx.try_recv(),
+            Self::PureP2p(waiting) => waiting.spectator_session_guest_rx.try_recv(),
         }
     }
 }
 
 pub enum WaitingForMatch {
     Opponent(WaitingForOpponent),
-    Spectator(WaitingForSpectator),
+    SpectatorHost(WaitingForSpectatorHost),
 }
 
 impl From<WaitingForPureP2pOpponent> for WaitingForMatch {
@@ -66,8 +66,8 @@ impl From<WaitingForPureP2pOpponent> for WaitingForMatch {
     }
 }
 
-impl From<WaitingForPureP2pSpectator> for WaitingForMatch {
-    fn from(value: WaitingForPureP2pSpectator) -> Self {
-        WaitingForMatch::Spectator(WaitingForSpectator::PureP2p(value))
+impl From<WaitingForPureP2pSpectatorHost> for WaitingForMatch {
+    fn from(value: WaitingForPureP2pSpectatorHost) -> Self {
+        WaitingForMatch::SpectatorHost(WaitingForSpectatorHost::PureP2p(value))
     }
 }

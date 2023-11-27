@@ -79,9 +79,9 @@ impl JunowenState {
                             }
                         }
                     }
-                    WaitingForMatch::Spectator(mut waiting) => {
+                    WaitingForMatch::SpectatorHost(mut waiting) => {
                         let result = waiting.try_recv_session();
-                        *waiting_for_match = Some(WaitingForMatch::Spectator(waiting));
+                        *waiting_for_match = Some(WaitingForMatch::SpectatorHost(waiting));
                         match result {
                             Ok(session) => {
                                 trace!("session received");
