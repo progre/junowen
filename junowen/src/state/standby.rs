@@ -2,7 +2,9 @@ use std::ffi::c_void;
 
 use junowen_lib::{Fn0b7d40, Fn0d5ae0, Menu, RenderingText, ScreenId, Th19};
 
-use crate::in_game_lobby::{Lobby, TitleMenuModifier, WaitingForMatch, WaitingForOpponent};
+use crate::in_game_lobby::{
+    Lobby, TitleMenuModifier, WaitingForMatch, WaitingForOpponent, WaitingInRoom,
+};
 
 fn is_title(menu: &Menu) -> bool {
     menu.screen_id == ScreenId::Title
@@ -49,6 +51,23 @@ fn render_message(text_renderer: *const c_void, th19: &Th19, msg: &str, color: u
     th19.render_text(text_renderer, &text);
 }
 
+fn render_waiting_message<T>(
+    room_type: &str,
+    room: &WaitingInRoom<T>,
+    th19: &Th19,
+    text_renderer: *const c_void,
+) {
+    let room_name = room.room_name();
+    let dot = ".".repeat((room.elapsed().as_secs() % 4) as usize);
+    let msg = format!("Waiting in {} Room: {} {:<3}", room_type, room_name, dot);
+    render_message(text_renderer, th19, &msg, 0xffc0c0c0);
+    if !room.errors().is_empty() {
+        let padding = " ".repeat(msg.chars().count());
+        let msg = format!("{} E({})", padding, room.errors().len());
+        render_message(text_renderer, th19, &msg, 0xffff2800);
+    }
+}
+
 pub fn on_render_texts(
     th19: &Th19,
     title_menu_modifier: &TitleMenuModifier,
@@ -59,21 +78,11 @@ pub fn on_render_texts(
         None
         | Some(WaitingForMatch::Spectator(_))
         | Some(WaitingForMatch::Opponent(WaitingForOpponent::PureP2p(_))) => {}
-        Some(WaitingForMatch::Opponent(WaitingForOpponent::SharedRoom(waiting))) => {
-            let msg = format!(
-                "Waiting in Shared Room: {} {:<3}",
-                waiting.room_name(),
-                ".".repeat((waiting.elapsed().as_secs() % 4) as usize)
-            );
-            render_message(text_renderer, th19, &msg, 0xffc0c0c0);
-            if !waiting.errors().is_empty() {
-                let msg = format!(
-                    "{} E({})",
-                    " ".repeat(msg.chars().count()),
-                    waiting.errors().len()
-                );
-                render_message(text_renderer, th19, &msg, 0xffff2800);
-            }
+        Some(WaitingForMatch::Opponent(WaitingForOpponent::SharedRoom(room))) => {
+            render_waiting_message("Shared", room, th19, text_renderer);
+        }
+        Some(WaitingForMatch::Opponent(WaitingForOpponent::ReservedRoom(room))) => {
+            render_waiting_message("Reserved", room, th19, text_renderer);
         }
     }
     let Some(menu) = th19.app().main_loop_tasks().find_menu() else {

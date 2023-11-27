@@ -4,10 +4,9 @@ use std::{f64::consts::PI, ffi::c_void};
 
 use junowen_lib::{RenderingText, Th19};
 
-use super::{
-    super::waiting_for_match::rooms::WaitingInSharedRoom, common_menu::CommonMenu,
-    helper::render_text_line,
-};
+use crate::in_game_lobby::waiting_for_match::rooms::WaitingInRoom;
+
+use super::{common_menu::CommonMenu, helper::render_text_line};
 
 fn progress_alphas(progress: f64) -> Vec<u8> {
     const LENGTH: f64 = 20.0;
@@ -132,9 +131,9 @@ fn render_progress(th19: &Th19, text_renderer: *const c_void, progress: f64) {
     render_progress_item(th19, text_renderer, 0xff, &base_text);
 }
 
-pub fn on_render_texts(
+pub fn on_render_texts<T>(
     menu: &CommonMenu,
-    waiting: Option<&WaitingInSharedRoom>,
+    waiting: Option<&WaitingInRoom<T>>,
     th19: &Th19,
     text_renderer: *const c_void,
 ) {

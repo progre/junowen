@@ -2,7 +2,7 @@ use std::ffi::c_void;
 
 use junowen_lib::{InputValue, Th19};
 
-use crate::in_game_lobby::waiting_for_match::rooms::WaitingInSharedRoom;
+use crate::in_game_lobby::waiting_for_match::rooms::WaitingForOpponentInReservedRoom;
 
 use super::{
     super::common_menu::{
@@ -47,8 +47,7 @@ impl ReservedRoom {
         current_input: InputValue,
         prev_input: InputValue,
         th19: &Th19,
-        // TODO: &mut Option<WaitingInReservedRoom>
-        waiting: &mut Option<WaitingInSharedRoom>,
+        waiting: &mut Option<WaitingForOpponentInReservedRoom>,
     ) -> Option<LobbyScene> {
         if let Some(waiting) = waiting {
             waiting.recv();
@@ -71,8 +70,7 @@ impl ReservedRoom {
             OnMenuInputResult::Action(MenuAction::SubScene(_)) => unreachable!(),
             OnMenuInputResult::Action(MenuAction::Action(action, _)) => match action {
                 0 => {
-                    // TODO: WaitingInReservedRoom::new
-                    *waiting = Some(WaitingInSharedRoom::new(
+                    *waiting = Some(WaitingForOpponentInReservedRoom::new(
                         th19.online_vs_mode().room_name().to_owned(),
                     ));
                     (self.menu_id, self.menu) = make_leave_menu();
@@ -90,8 +88,7 @@ impl ReservedRoom {
 
     pub fn on_render_texts(
         &self,
-        // TODO: Option<&WaitingInReservedRoom>
-        waiting: Option<&WaitingInSharedRoom>,
+        waiting: Option<&WaitingForOpponentInReservedRoom>,
         th19: &Th19,
         text_renderer: *const c_void,
     ) {

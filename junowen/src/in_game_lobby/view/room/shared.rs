@@ -2,7 +2,7 @@ use std::ffi::c_void;
 
 use junowen_lib::{InputValue, Th19};
 
-use crate::in_game_lobby::waiting_for_match::rooms::WaitingInSharedRoom;
+use crate::in_game_lobby::waiting_for_match::rooms::WaitingForOpponentInSharedRoom;
 
 use super::{
     super::common_menu::{
@@ -46,7 +46,7 @@ impl SharedRoom {
         current_input: InputValue,
         prev_input: InputValue,
         th19: &Th19,
-        waiting: &mut Option<WaitingInSharedRoom>,
+        waiting: &mut Option<WaitingForOpponentInSharedRoom>,
     ) -> Option<LobbyScene> {
         if let Some(waiting) = waiting {
             waiting.recv();
@@ -69,7 +69,7 @@ impl SharedRoom {
             OnMenuInputResult::Action(MenuAction::SubScene(_)) => unreachable!(),
             OnMenuInputResult::Action(MenuAction::Action(action, _)) => match action {
                 0 => {
-                    *waiting = Some(WaitingInSharedRoom::new(
+                    *waiting = Some(WaitingForOpponentInSharedRoom::new(
                         th19.online_vs_mode().room_name().to_owned(),
                     ));
                     (self.menu_id, self.menu) = make_leave_menu();
@@ -87,7 +87,7 @@ impl SharedRoom {
 
     pub fn on_render_texts(
         &self,
-        waiting: Option<&WaitingInSharedRoom>,
+        waiting: Option<&WaitingForOpponentInSharedRoom>,
         th19: &Th19,
         text_renderer: *const c_void,
     ) {

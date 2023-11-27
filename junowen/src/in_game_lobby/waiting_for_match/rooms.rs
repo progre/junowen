@@ -1,4 +1,7 @@
-use std::time::{Duration, Instant};
+use std::{
+    marker::PhantomData,
+    time::{Duration, Instant},
+};
 
 use anyhow::Error;
 use getset::Getters;
@@ -13,12 +16,17 @@ use tokio::{
 };
 use tracing::{debug, debug_span, info, Instrument};
 
-use crate::{session::battle::BattleSession, TOKIO_RUNTIME};
-
-use super::socket::SignalingServerSocket;
+use crate::{
+    in_game_lobby::waiting_for_match::{
+        reserved_room_opponent_socket::SignalingServerReservedRoomOpponentSocket,
+        shared_room_opponent_socket::SignalingServerSharedRoomOpponentSocket,
+    },
+    session::battle::BattleSession,
+    TOKIO_RUNTIME,
+};
 
 #[derive(Getters)]
-pub struct WaitingInSharedRoom {
+pub struct WaitingInRoom<T> {
     handle: JoinHandle<()>,
     room_name: String,
     created_at: Instant,
@@ -26,27 +34,33 @@ pub struct WaitingInSharedRoom {
     error_rx: mpsc::Receiver<Error>,
     session_rx: oneshot::Receiver<BattleSession>,
     abort_tx: watch::Sender<bool>,
+    _phantom: PhantomData<T>,
 }
 
-impl WaitingInSharedRoom {
-    pub fn new(room_name: String) -> Self {
+impl<T> WaitingInRoom<T>
+where
+    T: SignalingSocket + Send + 'static,
+{
+    fn internal_new(
+        create_socket: fn(origin: String, room_name: String, abort_rx: watch::Receiver<bool>) -> T,
+        room_name: String,
+    ) -> Self {
         let (error_tx, error_rx) = mpsc::channel(1);
         let (session_tx, session_rx) = oneshot::channel();
         let (abort_tx, abort_rx) = watch::channel(false);
 
         let handle = {
-            let mut room_name = room_name.clone();
+            let room_name = room_name.clone();
             TOKIO_RUNTIME.spawn(async move {
-                let mut origin = if cfg!(debug_assertions) {
+                let origin = if cfg!(debug_assertions) {
                     "https://qayvs4nki2nl72kf4tn5h5yati0maxpe.lambda-url.ap-northeast-1.on.aws"
                         .into()
                 } else {
                     "https://wxvo3rgklveqwyig4b3q5qupbq0mgvik.lambda-url.ap-northeast-1.on.aws"
                         .into()
                 };
+                let mut socket = create_socket(origin, room_name, abort_rx.clone());
                 let (conn, dc, host) = loop {
-                    let mut socket =
-                        SignalingServerSocket::new(origin, room_name.clone(), abort_rx.clone());
                     match socket.receive_signaling().await {
                         Ok(ok) => break ok,
                         Err(err) => {
@@ -57,7 +71,6 @@ impl WaitingInSharedRoom {
                             info!("Signaling failed: {}", err);
                             let _ = error_tx.send(err).await;
                             sleep(Duration::from_secs(3)).await;
-                            (origin, room_name) = socket.into_inner();
                         }
                     }
                 };
@@ -75,9 +88,24 @@ impl WaitingInSharedRoom {
             error_rx,
             session_rx,
             abort_tx,
+            _phantom: PhantomData,
         }
     }
+}
 
+impl WaitingInRoom<SignalingServerSharedRoomOpponentSocket> {
+    pub fn new(room_name: String) -> Self {
+        Self::internal_new(SignalingServerSharedRoomOpponentSocket::new, room_name)
+    }
+}
+
+impl WaitingInRoom<SignalingServerReservedRoomOpponentSocket> {
+    pub fn new(room_name: String) -> Self {
+        Self::internal_new(SignalingServerReservedRoomOpponentSocket::new, room_name)
+    }
+}
+
+impl<T> WaitingInRoom<T> {
     pub fn room_name(&self) -> &str {
         &self.room_name
     }
@@ -101,7 +129,7 @@ impl WaitingInSharedRoom {
     }
 }
 
-impl Drop for WaitingInSharedRoom {
+impl<T> Drop for WaitingInRoom<T> {
     fn drop(&mut self) {
         let _ = self.abort_tx.send(true);
         if self.handle.is_finished() {
@@ -120,3 +148,7 @@ impl Drop for WaitingInSharedRoom {
         );
     }
 }
+
+pub type WaitingForOpponentInSharedRoom = WaitingInRoom<SignalingServerSharedRoomOpponentSocket>;
+pub type WaitingForOpponentInReservedRoom =
+    WaitingInRoom<SignalingServerReservedRoomOpponentSocket>;

@@ -139,8 +139,7 @@ impl Lobby {
             }
             LobbyScene::ReservedRoom => {
                 let mut waiting = match self.waiting_for_match.take() {
-                    // TODO: WaitingForOpponent::ReservedRoom
-                    Some(WaitingForMatch::Opponent(WaitingForOpponent::SharedRoom(waiting))) => {
+                    Some(WaitingForMatch::Opponent(WaitingForOpponent::ReservedRoom(waiting))) => {
                         Some(waiting)
                     }
                     _ => None,
@@ -152,8 +151,7 @@ impl Lobby {
                     &mut waiting,
                 );
                 self.waiting_for_match = waiting
-                    // TODO: WaitingForOpponent::ReservedRoom
-                    .map(WaitingForOpponent::SharedRoom)
+                    .map(WaitingForOpponent::ReservedRoom)
                     .map(WaitingForMatch::Opponent);
                 ret
             }
@@ -233,20 +231,17 @@ impl Lobby {
                     WaitingForMatch::Opponent(WaitingForOpponent::SharedRoom(waiting)) => {
                         Some(waiting)
                     }
-                    WaitingForMatch::Opponent(WaitingForOpponent::PureP2p(_))
-                    | WaitingForMatch::Spectator(_) => None,
+                    _ => None,
                 });
                 self.shared_room
                     .on_render_texts(waiting, th19, text_renderer)
             }
             LobbyScene::ReservedRoom => {
                 let waiting = self.waiting_for_match.as_ref().and_then(|x| match x {
-                    // TODO: WaitingForOpponent::ReservedRoom
-                    WaitingForMatch::Opponent(WaitingForOpponent::SharedRoom(waiting)) => {
+                    WaitingForMatch::Opponent(WaitingForOpponent::ReservedRoom(waiting)) => {
                         Some(waiting)
                     }
-                    WaitingForMatch::Opponent(WaitingForOpponent::PureP2p(_))
-                    | WaitingForMatch::Spectator(_) => None,
+                    _ => None,
                 });
                 self.reserved_room
                     .on_render_texts(waiting, th19, text_renderer)
