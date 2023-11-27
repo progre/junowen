@@ -1,52 +1,13 @@
+pub mod reserved;
+pub mod shared;
 use std::{f64::consts::PI, ffi::c_void};
 
-use junowen_lib::{InputValue, RenderingText, Th19};
+use junowen_lib::{RenderingText, Th19};
 
 use super::{
-    super::waiting_for_match::rooms::WaitingInSharedRoom,
-    common_menu::{CommonMenu, LobbyScene, MenuAction, MenuDefine, MenuItem, OnMenuInputResult},
+    super::waiting_for_match::rooms::WaitingInSharedRoom, common_menu::CommonMenu,
     helper::render_text_line,
 };
-
-fn make_enter_menu() -> (u8, CommonMenu) {
-    (
-        0,
-        CommonMenu::new(
-            "Shared Room",
-            false,
-            240 + 56,
-            MenuDefine::new(
-                0,
-                vec![
-                    // MenuItem::new("Change Room Name", MenuAction::Action(0, true).into()),
-                    // MenuItem::new("Spectate: Disallow", MenuAction::Action(0, true).into()),
-                    // MenuItem::new("", MenuAction::Action(0, true).into()),
-                    MenuItem::new("Enter", MenuAction::Action(0, true).into()),
-                ],
-            ),
-        ),
-    )
-}
-
-fn make_leave_menu() -> (u8, CommonMenu) {
-    (
-        1,
-        CommonMenu::new(
-            "Shared Room",
-            false,
-            240 + 56,
-            MenuDefine::new(
-                0,
-                vec![
-                    // MenuItem::new("Change Room Name", MenuAction::Action(0, true).into()),
-                    // MenuItem::new("Spectate: Disallow", MenuAction::Action(0, true).into()),
-                    // MenuItem::new("", MenuAction::Action(0, true).into()),
-                    MenuItem::new("Leave", MenuAction::Action(1, true).into()),
-                ],
-            ),
-        ),
-    )
-}
 
 fn progress_alphas(progress: f64) -> Vec<u8> {
     const LENGTH: f64 = 20.0;
@@ -171,81 +132,25 @@ fn render_progress(th19: &Th19, text_renderer: *const c_void, progress: f64) {
     render_progress_item(th19, text_renderer, 0xff, &base_text);
 }
 
-pub struct SharedRoom {
-    menu_id: u8,
-    menu: CommonMenu,
-}
+pub fn on_render_texts(
+    menu: &CommonMenu,
+    waiting: Option<&WaitingInSharedRoom>,
+    th19: &Th19,
+    text_renderer: *const c_void,
+) {
+    menu.on_render_texts(th19, text_renderer);
 
-impl SharedRoom {
-    pub fn new() -> Self {
-        let (menu_id, menu) = make_enter_menu();
-        Self { menu_id, menu }
+    if waiting.is_none() {
+        let room_name = th19.online_vs_mode().room_name();
+        render_room_name(th19, text_renderer, room_name);
     }
 
-    pub fn on_input_menu(
-        &mut self,
-        current_input: InputValue,
-        prev_input: InputValue,
-        th19: &Th19,
-        waiting: &mut Option<WaitingInSharedRoom>,
-    ) -> Option<LobbyScene> {
-        if let Some(waiting) = waiting {
-            waiting.recv();
-        }
-        match self.menu.on_input_menu(current_input, prev_input, th19) {
-            OnMenuInputResult::None => {
-                if waiting.is_none() {
-                    if self.menu_id != 0 {
-                        (self.menu_id, self.menu) = make_enter_menu();
-                    }
-                } else {
-                    //
-                    if self.menu_id != 1 {
-                        (self.menu_id, self.menu) = make_leave_menu();
-                    }
-                }
-                None
-            }
-            OnMenuInputResult::Cancel => Some(LobbyScene::Root),
-            OnMenuInputResult::Action(MenuAction::SubScene(_)) => unreachable!(),
-            OnMenuInputResult::Action(MenuAction::Action(action, _)) => match action {
-                0 => {
-                    *waiting = Some(WaitingInSharedRoom::new(
-                        th19.online_vs_mode().room_name().to_owned(),
-                    ));
-                    (self.menu_id, self.menu) = make_leave_menu();
-                    None
-                }
-                1 => {
-                    *waiting = None;
-                    (self.menu_id, self.menu) = make_enter_menu();
-                    None
-                }
-                _ => unreachable!(),
-            },
-        }
-    }
-
-    pub fn on_render_texts(
-        &self,
-        waiting: Option<&WaitingInSharedRoom>,
-        th19: &Th19,
-        text_renderer: *const c_void,
-    ) {
-        self.menu.on_render_texts(th19, text_renderer);
-
-        if waiting.is_none() {
-            let room_name = th19.online_vs_mode().room_name();
-            render_room_name(th19, text_renderer, room_name);
-        }
-
-        if let Some(waiting) = waiting {
-            let elapsed = waiting.elapsed();
-            render_progress(th19, text_renderer, elapsed.as_secs_f64() / 4.0);
-            for (i, error) in waiting.errors().iter().rev().enumerate() {
-                let error_msg = format!("Failed: {}", error);
-                render_text_line(th19, text_renderer, 13 + i as u32, error_msg.as_bytes());
-            }
+    if let Some(waiting) = waiting {
+        let elapsed = waiting.elapsed();
+        render_progress(th19, text_renderer, elapsed.as_secs_f64() / 4.0);
+        for (i, error) in waiting.errors().iter().rev().enumerate() {
+            let error_msg = format!("Failed: {}", error);
+            render_text_line(th19, text_renderer, 13 + i as u32, error_msg.as_bytes());
         }
     }
 }

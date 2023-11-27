@@ -10,6 +10,7 @@ use super::helper::{render_menu_item, render_title};
 pub enum LobbyScene {
     Root,
     SharedRoom,
+    ReservedRoom,
     PureP2pHost,
     PureP2pGuest,
     PureP2pSpectator,

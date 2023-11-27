@@ -14,7 +14,7 @@ use super::{
     },
     pure_p2p_guest::PureP2pGuest,
     pure_p2p_offerer::{pure_p2p_host, pure_p2p_spectator, PureP2pOfferer},
-    shared_room::SharedRoom,
+    room::{reserved::ReservedRoom, shared::SharedRoom},
 };
 
 pub struct Root {
@@ -27,6 +27,7 @@ impl Root {
             0,
             vec![
                 MenuItem::new("Shared Room", LobbyScene::SharedRoom.into()),
+                MenuItem::new("Reserved Room", LobbyScene::ReservedRoom.into()),
                 MenuItem::new(
                     "Pure P2P",
                     MenuContent::SubMenu(MenuDefine::new(
@@ -79,6 +80,7 @@ pub struct Lobby {
     prev_scene: LobbyScene,
     root: Root,
     shared_room: SharedRoom,
+    reserved_room: ReservedRoom,
     pure_p2p_host: Option<PureP2pOfferer<BattleSession>>,
     pure_p2p_guest: Option<PureP2pGuest>,
     pure_p2p_spectator: Option<PureP2pOfferer<SpectatorSessionGuest>>,
@@ -95,6 +97,7 @@ impl Lobby {
             root: Root::new(),
             waiting_for_match: None,
             shared_room: SharedRoom::new(),
+            reserved_room: ReservedRoom::new(),
             pure_p2p_host: None,
             pure_p2p_guest: None,
             pure_p2p_spectator: None,
@@ -117,7 +120,7 @@ impl Lobby {
                 .root
                 .on_input_menu(current_input, self.prev_input, th19),
             LobbyScene::SharedRoom => {
-                let mut opponent = match self.waiting_for_match.take() {
+                let mut waiting = match self.waiting_for_match.take() {
                     Some(WaitingForMatch::Opponent(WaitingForOpponent::SharedRoom(waiting))) => {
                         Some(waiting)
                     }
@@ -127,9 +130,29 @@ impl Lobby {
                     current_input,
                     self.prev_input,
                     th19,
-                    &mut opponent,
+                    &mut waiting,
                 );
-                self.waiting_for_match = opponent
+                self.waiting_for_match = waiting
+                    .map(WaitingForOpponent::SharedRoom)
+                    .map(WaitingForMatch::Opponent);
+                ret
+            }
+            LobbyScene::ReservedRoom => {
+                let mut waiting = match self.waiting_for_match.take() {
+                    // TODO: WaitingForOpponent::ReservedRoom
+                    Some(WaitingForMatch::Opponent(WaitingForOpponent::SharedRoom(waiting))) => {
+                        Some(waiting)
+                    }
+                    _ => None,
+                };
+                let ret = self.reserved_room.on_input_menu(
+                    current_input,
+                    self.prev_input,
+                    th19,
+                    &mut waiting,
+                );
+                self.waiting_for_match = waiting
+                    // TODO: WaitingForOpponent::ReservedRoom
                     .map(WaitingForOpponent::SharedRoom)
                     .map(WaitingForMatch::Opponent);
                 ret
@@ -214,6 +237,18 @@ impl Lobby {
                     | WaitingForMatch::Spectator(_) => None,
                 });
                 self.shared_room
+                    .on_render_texts(waiting, th19, text_renderer)
+            }
+            LobbyScene::ReservedRoom => {
+                let waiting = self.waiting_for_match.as_ref().and_then(|x| match x {
+                    // TODO: WaitingForOpponent::ReservedRoom
+                    WaitingForMatch::Opponent(WaitingForOpponent::SharedRoom(waiting)) => {
+                        Some(waiting)
+                    }
+                    WaitingForMatch::Opponent(WaitingForOpponent::PureP2p(_))
+                    | WaitingForMatch::Spectator(_) => None,
+                });
+                self.reserved_room
                     .on_render_texts(waiting, th19, text_renderer)
             }
             LobbyScene::PureP2pHost => self
