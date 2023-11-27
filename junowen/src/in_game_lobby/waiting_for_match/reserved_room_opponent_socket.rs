@@ -58,9 +58,9 @@ impl SignalingSocket for SignalingServerReservedRoomOpponentSocket {
         let json = PutRoomRequestBody::new(desc);
         info!("PUT {}", url);
         let res = self.client.put(url).json(&json).send().await?;
+        info!("{:?}", res);
         let res =
             PutReservedRoomResponse::parse(res.status(), retry_after(&res), &res.text().await?)?;
-        info!("{:?}", res);
         let key = match res {
             PutReservedRoomResponse::Conflict { body, .. } => {
                 let Some(offer) = body.into_offer() else {
@@ -84,6 +84,7 @@ impl SignalingSocket for SignalingServerReservedRoomOpponentSocket {
         loop {
             info!("POST {}", url);
             let res = self.client.post(&url).json(&body).send().await?;
+            info!("{:?}", res);
             let status = res.status();
             let retry_after = retry_after(&res);
             let body = res.text().await.ok();
