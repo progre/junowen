@@ -42,7 +42,7 @@ impl BattleSessionState {
         let old = mem::replace(self, Self::Null);
         let (session, spectator_host_state) = match old {
             Self::Null => unreachable!(),
-            Self::Prepare(prepare) => (prepare.inner_session(), SpectatorHostState::standby()),
+            Self::Prepare(prepare) => (prepare.inner_session(), SpectatorHostState::new()),
             Self::Select { .. } => unreachable!(),
             Self::GameLoading { .. } => unreachable!(),
             Self::Game { .. } => unreachable!(),
