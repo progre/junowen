@@ -1,14 +1,8 @@
-mod battle_game;
-mod battle_select;
 mod battle_session_state;
-mod in_session;
 mod junowen_state;
 mod prepare;
-mod spectator_game;
-mod spectator_host;
-mod spectator_select;
+mod render_names;
 mod spectator_session_state;
-mod standby;
 
 use std::{ffi::c_void, fmt::Display};
 

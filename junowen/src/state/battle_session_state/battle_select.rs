@@ -6,7 +6,6 @@ use getset::{Getters, MutGetters};
 use junowen_lib::{th19_helpers::reset_cursors, Menu, ScreenId, Th19};
 use tracing::trace;
 
-use super::spectator_host::SpectatorHostState;
 use crate::{
     helper::{inputed_number, pushed_f1},
     session::{
@@ -14,6 +13,8 @@ use crate::{
         RoundInitial,
     },
 };
+
+use super::spectator_host::SpectatorHostState;
 
 fn init_match(th19: &mut Th19, battle_session: &mut BattleSession) -> Result<(), RecvError> {
     trace!("init_match");

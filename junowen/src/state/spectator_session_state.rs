@@ -1,3 +1,7 @@
+mod in_session;
+mod spectator_game;
+mod spectator_select;
+
 use std::{ffi::c_void, mem, sync::mpsc::RecvError};
 
 use anyhow::Result;
@@ -5,9 +9,9 @@ use junowen_lib::{GameSettings, InputFlags, Menu, ScreenId, Th19};
 
 use crate::session::spectator::SpectatorSessionGuest;
 
-use super::{
-    in_session, prepare::Prepare, spectator_game::SpectatorGame, spectator_select::SpectatorSelect,
-};
+use super::prepare::Prepare;
+
+use {spectator_game::SpectatorGame, spectator_select::SpectatorSelect};
 
 pub enum SpectatorSessionState {
     Null,
@@ -19,6 +23,10 @@ pub enum SpectatorSessionState {
 }
 
 impl SpectatorSessionState {
+    pub fn prepare(session: SpectatorSessionGuest) -> Self {
+        Self::Prepare(Prepare::new(session))
+    }
+
     pub fn game_settings(&self) -> Option<&GameSettings> {
         let init = match self {
             Self::Null => unreachable!(),

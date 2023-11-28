@@ -1,14 +1,20 @@
+mod battle_game;
+mod battle_select;
+mod in_session;
+mod spectator_host;
+
 use std::{ffi::c_void, mem, sync::mpsc::RecvError};
 
 use anyhow::Result;
 use junowen_lib::{GameSettings, Menu, ScreenId, Th19};
 
-use crate::session::battle::BattleSession;
-
-use super::{
-    battle_game::BattleGame, battle_select::BattleSelect, in_session, prepare::Prepare,
-    spectator_host::SpectatorHostState,
+use crate::{
+    in_game_lobby::waiting_for_spectator::WaitingForSpectator, session::battle::BattleSession,
 };
+
+use super::prepare::Prepare;
+
+use {battle_game::BattleGame, battle_select::BattleSelect, spectator_host::SpectatorHostState};
 
 pub enum BattleSessionState {
     Null,
@@ -26,6 +32,10 @@ pub enum BattleSessionState {
 }
 
 impl BattleSessionState {
+    pub fn prepare(session: BattleSession, waiting: WaitingForSpectator) -> Self {
+        Self::Prepare(Prepare::new((session, SpectatorHostState::new(waiting))))
+    }
+
     pub fn game_settings(&self) -> Option<&GameSettings> {
         match self {
             Self::Null => unreachable!(),

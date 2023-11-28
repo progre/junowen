@@ -1,3 +1,6 @@
+mod on_rewrite_controller_assignments;
+mod standby;
+
 use std::{ffi::c_void, sync::mpsc::RecvError};
 
 use anyhow::Result;
@@ -8,14 +11,17 @@ use junowen_lib::{
 use tracing::trace;
 
 use crate::{
-    in_game_lobby::{Lobby, TitleMenuModifier, WaitingForMatch},
+    in_game_lobby::{
+        waiting_for_spectator::WaitingForSpectator, Lobby, TitleMenuModifier, WaitingForMatch,
+    },
     session::{battle::BattleSession, spectator::SpectatorSessionGuest},
 };
 
 use super::{
-    battle_session_state::BattleSessionState, in_session, prepare::Prepare,
-    spectator_host::SpectatorHostState, spectator_session_state::SpectatorSessionState, standby,
+    battle_session_state::BattleSessionState, spectator_session_state::SpectatorSessionState,
 };
+
+use self::on_rewrite_controller_assignments::on_rewrite_controller_assignments;
 
 pub enum JunowenState {
     Standby,
@@ -36,15 +42,12 @@ impl JunowenState {
         !matches!(self, Self::Standby)
     }
 
-    pub fn start_battle_session(
+    fn start_battle_session(
         &mut self,
         battle_session: BattleSession,
-        spectator_host_state: SpectatorHostState,
+        waiting: WaitingForSpectator,
     ) {
-        *self = Self::BattleSession(BattleSessionState::Prepare(Prepare::new((
-            battle_session,
-            spectator_host_state,
-        ))));
+        *self = Self::BattleSession(BattleSessionState::prepare(battle_session, waiting));
     }
 
     pub fn end_session(&mut self) {
@@ -52,7 +55,7 @@ impl JunowenState {
     }
 
     pub fn start_spectator_session(&mut self, session: SpectatorSessionGuest) {
-        *self = Self::SpectatorSession(SpectatorSessionState::Prepare(Prepare::new(session)));
+        *self = Self::SpectatorSession(SpectatorSessionState::prepare(session));
     }
 
     fn update_state(
@@ -75,10 +78,7 @@ impl JunowenState {
                         match waiting.try_into_session_and_waiting_for_spectator() {
                             Ok((session, waiting)) => {
                                 trace!("session received");
-                                self.start_battle_session(
-                                    session,
-                                    SpectatorHostState::new(waiting),
-                                );
+                                self.start_battle_session(session, waiting);
                                 None
                             }
                             Err(waiting) => {
@@ -235,7 +235,7 @@ impl JunowenState {
             old_fn(th19)();
             return;
         }
-        in_session::on_rewrite_controller_assignments(th19, old_fn);
+        on_rewrite_controller_assignments(th19, old_fn);
     }
 
     pub fn on_loaded_game_settings(&self, th19: &mut Th19) {
