@@ -6,18 +6,18 @@ use getset::{Getters, MutGetters};
 use junowen_lib::{th19_helpers::reset_cursors, InputValue, Menu, ScreenId, Th19};
 use tracing::trace;
 
-use crate::session::spectator::{self, SpectatorSessionGuest};
+use crate::session::spectator::{self, SpectatorSession};
 
 #[derive(new, Getters, MutGetters)]
 pub struct SpectatorSelect {
     #[getset(get = "pub", get_mut = "pub")]
-    session: SpectatorSessionGuest,
+    session: SpectatorSession,
     #[new(value = "0")]
     initializing_state: u8,
 }
 
 impl SpectatorSelect {
-    pub fn inner_session(self) -> SpectatorSessionGuest {
+    pub fn inner_session(self) -> SpectatorSession {
         self.session
     }
 

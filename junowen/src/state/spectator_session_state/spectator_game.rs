@@ -5,16 +5,16 @@ use derive_new::new;
 use getset::{Getters, MutGetters};
 use junowen_lib::{InputValue, Th19};
 
-use crate::session::spectator::SpectatorSessionGuest;
+use crate::session::spectator::SpectatorSession;
 
 #[derive(new, Getters, MutGetters)]
 pub struct SpectatorGame {
     #[getset(get = "pub", get_mut = "pub")]
-    session: SpectatorSessionGuest,
+    session: SpectatorSession,
 }
 
 impl SpectatorGame {
-    pub fn inner_session(self) -> SpectatorSessionGuest {
+    pub fn inner_session(self) -> SpectatorSession {
         self.session
     }
 

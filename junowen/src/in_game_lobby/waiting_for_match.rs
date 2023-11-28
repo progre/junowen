@@ -7,7 +7,7 @@ mod socket;
 use derive_new::new;
 use tokio::sync::mpsc;
 
-use crate::session::{battle::BattleSession, spectator::SpectatorSessionGuest};
+use crate::session::{battle::BattleSession, spectator::SpectatorSession};
 
 use self::rooms::{
     WaitingForOpponentInReservedRoom, WaitingForOpponentInSharedRoom,
@@ -60,7 +60,7 @@ impl WaitingForOpponent {
 
 #[derive(new)]
 pub struct WaitingForPureP2pSpectatorHost {
-    spectator_session_guest_rx: mpsc::Receiver<SpectatorSessionGuest>,
+    spectator_session_rx: mpsc::Receiver<SpectatorSession>,
 }
 
 pub enum WaitingForSpectatorHost {
@@ -69,10 +69,10 @@ pub enum WaitingForSpectatorHost {
 }
 
 impl WaitingForSpectatorHost {
-    pub fn try_into_session(self) -> Result<SpectatorSessionGuest, Self> {
+    pub fn try_into_session(self) -> Result<SpectatorSession, Self> {
         match self {
             Self::PureP2p(mut waiting) => waiting
-                .spectator_session_guest_rx
+                .spectator_session_rx
                 .try_recv()
                 .map_err(|_| WaitingForSpectatorHost::PureP2p(waiting)),
             Self::ReservedRoom(waiting) => waiting

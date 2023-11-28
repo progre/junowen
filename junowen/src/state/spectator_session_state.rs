@@ -7,7 +7,7 @@ use std::{ffi::c_void, mem, sync::mpsc::RecvError};
 use anyhow::Result;
 use junowen_lib::{GameSettings, InputFlags, Menu, ScreenId, Th19};
 
-use crate::session::spectator::SpectatorSessionGuest;
+use crate::session::spectator::SpectatorSession;
 
 use super::prepare::Prepare;
 
@@ -15,15 +15,15 @@ use {spectator_game::SpectatorGame, spectator_select::SpectatorSelect};
 
 pub enum SpectatorSessionState {
     Null,
-    Prepare(Prepare<SpectatorSessionGuest>),
+    Prepare(Prepare<SpectatorSession>),
     Select(SpectatorSelect),
-    GameLoading { session: SpectatorSessionGuest },
+    GameLoading { session: SpectatorSession },
     Game(SpectatorGame),
-    BackToSelect { session: SpectatorSessionGuest },
+    BackToSelect { session: SpectatorSession },
 }
 
 impl SpectatorSessionState {
-    pub fn prepare(session: SpectatorSessionGuest) -> Self {
+    pub fn prepare(session: SpectatorSession) -> Self {
         Self::Prepare(Prepare::new(session))
     }
 
@@ -40,7 +40,7 @@ impl SpectatorSessionState {
         Some(init.game_settings())
     }
 
-    pub fn inner_spectator_session(self) -> SpectatorSessionGuest {
+    pub fn inner_spectator_session(self) -> SpectatorSession {
         match self {
             Self::Null => unreachable!(),
             Self::GameLoading { session } | Self::BackToSelect { session } => session,

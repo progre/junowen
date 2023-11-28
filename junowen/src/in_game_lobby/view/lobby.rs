@@ -7,7 +7,7 @@ use crate::{
     in_game_lobby::waiting_for_match::{
         rooms::WaitingForOpponentInReservedRoom, WaitingForSpectatorHost,
     },
-    session::{battle::BattleSession, spectator::SpectatorSessionGuest},
+    session::{battle::BattleSession, spectator::SpectatorSession},
 };
 
 use super::{
@@ -89,7 +89,7 @@ pub struct Lobby {
     reserved_room: ReservedRoom,
     pure_p2p_host: Option<PureP2pOfferer<BattleSession>>,
     pure_p2p_guest: Option<PureP2pGuest>,
-    pure_p2p_spectator: Option<PureP2pOfferer<SpectatorSessionGuest>>,
+    pure_p2p_spectator: Option<PureP2pOfferer<SpectatorSession>>,
     prev_input: InputValue,
     #[getset(get = "pub", get_mut = "pub")]
     waiting_for_match: Option<WaitingForMatch>,

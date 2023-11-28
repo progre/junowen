@@ -27,8 +27,7 @@ use crate::{
         waiting_for_spectator::WaitingForPureP2pSpectator,
     },
     session::{
-        battle::BattleSession,
-        spectator::{SpectatorSessionGuest, SpectatorSessionHost},
+        battle::BattleSession, spectator::SpectatorSession, spectator_host::SpectatorHostSession,
     },
     TOKIO_RUNTIME,
 };
@@ -56,9 +55,9 @@ pub type WaitingForOpponentInSharedRoom =
 pub type WaitingForOpponentInReservedRoom =
     WaitingInRoom<SignalingServerReservedRoomOpponentSocket, (BattleSession, Option<RoomKey>)>;
 pub type WaitingForSpectatorInReservedRoom =
-    WaitingInRoom<SignalingServerReservedRoomSpectatorSocket, (SpectatorSessionHost, RoomKey)>;
+    WaitingInRoom<SignalingServerReservedRoomSpectatorSocket, (SpectatorHostSession, RoomKey)>;
 pub type WaitingForSpectatorHostInReservedRoom =
-    WaitingInRoom<SignalingServerReservedRoomSpectatorSocket, SpectatorSessionGuest>;
+    WaitingInRoom<SignalingServerReservedRoomSpectatorSocket, SpectatorSession>;
 
 impl<TSocket, TSession> WaitingInRoom<TSocket, TSession>
 where
@@ -237,7 +236,7 @@ impl WaitingForSpectatorInReservedRoom {
                     }
                 };
                 info!("Signaling succeeded");
-                let session = SpectatorSessionHost::new(conn, dc);
+                let session = SpectatorHostSession::new(conn, dc);
                 session_tx
                     .send((session, RoomKey(socket.into_key())))
                     .map_err(|_| ())
@@ -259,7 +258,7 @@ impl WaitingForSpectatorInReservedRoom {
 
     pub fn try_session_and_waiting_for_spectator(
         &mut self,
-    ) -> Result<(SpectatorSessionHost, WaitingForSpectator), TryRecvError> {
+    ) -> Result<(SpectatorHostSession, WaitingForSpectator), TryRecvError> {
         let (session, key) = self.session_rx.try_recv()?;
         let waiting = WaitingForSpectatorInReservedRoom::new(self.room_name.clone(), key.0);
         let waiting = WaitingForSpectator::ReservedRoom(waiting);
@@ -275,7 +274,7 @@ impl WaitingForSpectatorHostInReservedRoom {
             }),
             |pc, dc, host| {
                 assert!(!host);
-                SpectatorSessionGuest::new(pc, dc)
+                SpectatorSession::new(pc, dc)
             },
             room_name,
         )

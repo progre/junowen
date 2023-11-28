@@ -14,7 +14,7 @@ use crate::{
     in_game_lobby::{
         waiting_for_spectator::WaitingForSpectator, Lobby, TitleMenuModifier, WaitingForMatch,
     },
-    session::{battle::BattleSession, spectator::SpectatorSessionGuest},
+    session::{battle::BattleSession, spectator::SpectatorSession},
 };
 
 use super::{
@@ -54,7 +54,7 @@ impl JunowenState {
         *self = Self::Standby;
     }
 
-    pub fn start_spectator_session(&mut self, session: SpectatorSessionGuest) {
+    pub fn start_spectator_session(&mut self, session: SpectatorSession) {
         *self = Self::SpectatorSession(SpectatorSessionState::prepare(session));
     }
 

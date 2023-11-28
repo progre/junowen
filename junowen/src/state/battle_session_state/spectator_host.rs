@@ -7,7 +7,8 @@ use crate::{
     in_game_lobby::waiting_for_spectator::WaitingForSpectator,
     session::{
         battle::BattleSession,
-        spectator::{self, InitialState, SpectatorInitial, SpectatorSessionHost},
+        spectator::{self, InitialState, SpectatorInitial},
+        spectator_host::SpectatorHostSession,
         RoundInitial,
     },
 };
@@ -56,7 +57,7 @@ fn create_spectator_initial(
 pub struct SpectatorHostState {
     #[get = "pub"]
     waiting: WaitingForSpectator,
-    sessions: Vec<SpectatorSessionHost>,
+    sessions: Vec<SpectatorHostSession>,
 }
 
 impl SpectatorHostState {
@@ -89,7 +90,7 @@ impl SpectatorHostState {
 
     fn init_session(
         &self,
-        session: &SpectatorSessionHost,
+        session: &SpectatorHostSession,
         battle_session: &BattleSession,
         menu: Option<&Menu>,
         th19: &Th19,

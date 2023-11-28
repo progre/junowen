@@ -12,7 +12,7 @@ use junowen_lib::{
 use tokio::sync::mpsc::{self, error::TryRecvError};
 use tracing::info;
 
-use crate::{in_game_lobby::Signaling, session::spectator::SpectatorSessionHost};
+use crate::{in_game_lobby::Signaling, session::spectator_host::SpectatorHostSession};
 
 use super::waiting_for_match::rooms::WaitingForSpectatorInReservedRoom;
 
@@ -26,7 +26,7 @@ fn try_start_signaling(th19: &Th19) -> Option<WaitingForPureP2pSpectator> {
         return None;
     };
     let (session_tx, session_rx) = mpsc::channel(1);
-    let mut signaling = Signaling::new(session_tx, SpectatorSessionHost::new);
+    let mut signaling = Signaling::new(session_tx, SpectatorHostSession::new);
     signaling
         .msg_tx_mut()
         .take()
@@ -49,13 +49,13 @@ pub enum WaitingForPureP2pSpectator {
     },
     SignalingCodeRecved {
         signaling: Signaling,
-        session_rx: mpsc::Receiver<SpectatorSessionHost>,
+        session_rx: mpsc::Receiver<SpectatorHostSession>,
         ready: bool,
         pushed: bool,
     },
     SignalingCodeSent {
         signaling: Signaling,
-        session_rx: mpsc::Receiver<SpectatorSessionHost>,
+        session_rx: mpsc::Receiver<SpectatorHostSession>,
         ready: bool,
         pushed: bool,
     },
@@ -180,7 +180,7 @@ impl WaitingForSpectator {
         pushed: bool,
         menu: Option<&Menu>,
         th19: &Th19,
-    ) -> Option<SpectatorSessionHost> {
+    ) -> Option<SpectatorHostSession> {
         match self {
             Self::PureP2p(waiting) => {
                 waiting.update(pushed, menu, th19);

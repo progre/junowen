@@ -14,7 +14,7 @@ use junowen_lib::{
 use tokio::sync::mpsc;
 use tracing::trace;
 
-use crate::session::{battle::BattleSession, spectator::SpectatorSessionGuest};
+use crate::session::{battle::BattleSession, spectator::SpectatorSession};
 
 use super::{
     super::signaling::Signaling,
@@ -235,11 +235,11 @@ pub fn pure_p2p_host() -> PureP2pOfferer<BattleSession> {
     )
 }
 
-pub fn pure_p2p_spectator() -> PureP2pOfferer<SpectatorSessionGuest> {
+pub fn pure_p2p_spectator() -> PureP2pOfferer<SpectatorSession> {
     PureP2pOfferer::new(
         SignalingCodeType::SpectatorOffer,
         SignalingCodeType::SpectatorAnswer,
-        SpectatorSessionGuest::new,
+        SpectatorSession::new,
         "Connect as Spectator",
         [
             "Share your signaling code with player.",

@@ -48,62 +48,21 @@ pub struct SpectatorInitial {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-enum SpectatorSessionMessage {
+pub enum SpectatorSessionMessage {
     InitSpectator(SpectatorInitial),
     InitRound(RoundInitial),
     Inputs(u16, u16),
 }
 
 #[derive(CopyGetters, Getters, Setters)]
-pub struct SpectatorSessionHost {
-    _conn: PeerConnection,
-    hook_outgoing_tx: std::sync::mpsc::Sender<SpectatorSessionMessage>,
-}
-
-impl SpectatorSessionHost {
-    pub fn new(conn: PeerConnection, data_channel: DataChannel) -> Self {
-        let (hook_outgoing_tx, _hook_incoming_rx) =
-            to_channel(data_channel, |input| rmp_serde::from_slice(input));
-        Self {
-            _conn: conn,
-            hook_outgoing_tx,
-        }
-    }
-
-    pub fn send_init_spectator(&self, init: SpectatorInitial) -> Result<()> {
-        Ok(self
-            .hook_outgoing_tx
-            .send(SpectatorSessionMessage::InitSpectator(init))?)
-    }
-
-    pub fn send_init_round(&self, init: RoundInitial) -> Result<()> {
-        Ok(self
-            .hook_outgoing_tx
-            .send(SpectatorSessionMessage::InitRound(init))?)
-    }
-
-    pub fn send_inputs(&self, p1_input: u16, p2_input: u16) -> Result<()> {
-        Ok(self
-            .hook_outgoing_tx
-            .send(SpectatorSessionMessage::Inputs(p1_input, p2_input))?)
-    }
-}
-
-impl Drop for SpectatorSessionHost {
-    fn drop(&mut self) {
-        info!("spectator session host closed");
-    }
-}
-
-#[derive(CopyGetters, Getters, Setters)]
-pub struct SpectatorSessionGuest {
+pub struct SpectatorSession {
     _conn: PeerConnection,
     hook_incoming_rx: std::sync::mpsc::Receiver<SpectatorSessionMessage>,
     spectator_initial: Option<SpectatorInitial>,
     round_initial: Option<RoundInitial>,
 }
 
-impl SpectatorSessionGuest {
+impl SpectatorSession {
     pub fn new(conn: PeerConnection, data_channel: DataChannel) -> Self {
         let (_hook_outgoing_tx, hook_incoming_rx) =
             to_channel(data_channel, |input| rmp_serde::from_slice(input));
@@ -165,7 +124,7 @@ impl SpectatorSessionGuest {
     }
 }
 
-impl Drop for SpectatorSessionGuest {
+impl Drop for SpectatorSession {
     fn drop(&mut self) {
         info!("spectator session guest closed");
     }
