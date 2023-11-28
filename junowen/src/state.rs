@@ -49,7 +49,7 @@ impl State {
         let has_session = self.junowen_state.has_session();
         match self
             .junowen_state
-            .on_input_players(&mut self.th19, self.lobby.match_standby_mut())
+            .on_input_players(&mut self.th19, self.lobby.waiting_for_match_mut())
         {
             Ok(_) => {
                 if has_session && self.junowen_state.has_session() {

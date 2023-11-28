@@ -2,7 +2,7 @@ use std::ffi::c_void;
 
 use junowen_lib::{Fn0b7d40, Fn0d5ae0, Menu, RenderingText, ScreenId, Th19};
 
-use crate::in_game_lobby::{Lobby, MatchStandby, TitleMenuModifier, WaitingForOpponent};
+use crate::in_game_lobby::{Lobby, TitleMenuModifier, WaitingForMatch, WaitingForOpponent};
 
 fn is_title(menu: &Menu) -> bool {
     menu.screen_id == ScreenId::Title
@@ -55,22 +55,22 @@ pub fn on_render_texts(
     lobby: &Lobby,
     text_renderer: *const c_void,
 ) {
-    match lobby.match_standby() {
+    match lobby.waiting_for_match() {
         None
-        | Some(MatchStandby::Spectator(_))
-        | Some(MatchStandby::Opponent(WaitingForOpponent::PureP2p(_))) => {}
-        Some(MatchStandby::Opponent(WaitingForOpponent::SharedRoom(room))) => {
+        | Some(WaitingForMatch::Spectator(_))
+        | Some(WaitingForMatch::Opponent(WaitingForOpponent::PureP2p(_))) => {}
+        Some(WaitingForMatch::Opponent(WaitingForOpponent::SharedRoom(waiting))) => {
             let msg = format!(
                 "Waiting in Shared Room: {} {:<3}",
-                room.room_name(),
-                ".".repeat((room.elapsed().as_secs() % 4) as usize)
+                waiting.room_name(),
+                ".".repeat((waiting.elapsed().as_secs() % 4) as usize)
             );
             render_message(text_renderer, th19, &msg, 0xffc0c0c0);
-            if !room.errors().is_empty() {
+            if !waiting.errors().is_empty() {
                 let msg = format!(
                     "{} E({})",
                     " ".repeat(msg.chars().count()),
-                    room.errors().len()
+                    waiting.errors().len()
                 );
                 render_message(text_renderer, th19, &msg, 0xffff2800);
             }

@@ -8,7 +8,7 @@ use junowen_lib::{
 use tracing::trace;
 
 use crate::{
-    in_game_lobby::{Lobby, MatchStandby, TitleMenuModifier},
+    in_game_lobby::{Lobby, TitleMenuModifier, WaitingForMatch},
     session::{battle::BattleSession, spectator::SpectatorSessionGuest},
 };
 
@@ -51,21 +51,21 @@ impl JunowenState {
     fn update_state(
         &mut self,
         th19: &Th19,
-        match_standby: &mut Option<MatchStandby>,
+        waiting_for_match: &mut Option<WaitingForMatch>,
     ) -> Option<&'static Menu> {
         match self {
             Self::Standby => {
-                let Some(old_match_standby) = match_standby.take() else {
+                let Some(old_waiting) = waiting_for_match.take() else {
                     return None;
                 };
                 if let Some(menu) = th19.app().main_loop_tasks().find_menu() {
                     if menu.screen_id == ScreenId::OnlineVSMode {
-                        *match_standby = None;
+                        *waiting_for_match = None;
                         return None;
                     }
                 }
-                match old_match_standby {
-                    MatchStandby::Opponent(waiting) => {
+                match old_waiting {
+                    WaitingForMatch::Opponent(waiting) => {
                         let result = waiting.try_into_session();
                         match result {
                             Ok(session) => {
@@ -74,14 +74,14 @@ impl JunowenState {
                                 None
                             }
                             Err(waiting) => {
-                                *match_standby = Some(MatchStandby::Opponent(waiting));
+                                *waiting_for_match = Some(WaitingForMatch::Opponent(waiting));
                                 None
                             }
                         }
                     }
-                    MatchStandby::Spectator(mut waiting) => {
+                    WaitingForMatch::Spectator(mut waiting) => {
                         let result = waiting.try_recv_session();
-                        *match_standby = Some(MatchStandby::Spectator(waiting));
+                        *waiting_for_match = Some(WaitingForMatch::Spectator(waiting));
                         match result {
                             Ok(session) => {
                                 trace!("session received");
@@ -129,9 +129,9 @@ impl JunowenState {
     pub fn on_input_players(
         &mut self,
         th19: &mut Th19,
-        match_standby: &mut Option<MatchStandby>,
+        waiting_for_match: &mut Option<WaitingForMatch>,
     ) -> Result<(), RecvError> {
-        let menu_opt = self.update_state(th19, match_standby);
+        let menu_opt = self.update_state(th19, waiting_for_match);
         self.update_th19_on_input_players(menu_opt, th19)
     }
 

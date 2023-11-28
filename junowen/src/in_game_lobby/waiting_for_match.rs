@@ -1,4 +1,4 @@
-mod rooms;
+pub mod rooms;
 mod socket;
 
 use derive_new::new;
@@ -6,7 +6,7 @@ use tokio::sync::mpsc::{self, error::TryRecvError};
 
 use crate::session::{battle::BattleSession, spectator::SpectatorSessionGuest};
 
-pub use rooms::WaitingInSharedRoom;
+use self::rooms::WaitingInSharedRoom;
 
 #[derive(new)]
 pub struct WaitingForPureP2pOpponent {
@@ -49,19 +49,19 @@ impl WaitingForSpectator {
     }
 }
 
-pub enum MatchStandby {
+pub enum WaitingForMatch {
     Opponent(WaitingForOpponent),
     Spectator(WaitingForSpectator),
 }
 
-impl From<WaitingForPureP2pOpponent> for MatchStandby {
+impl From<WaitingForPureP2pOpponent> for WaitingForMatch {
     fn from(value: WaitingForPureP2pOpponent) -> Self {
-        MatchStandby::Opponent(WaitingForOpponent::PureP2p(value))
+        WaitingForMatch::Opponent(WaitingForOpponent::PureP2p(value))
     }
 }
 
-impl From<WaitingForPureP2pSpectator> for MatchStandby {
+impl From<WaitingForPureP2pSpectator> for WaitingForMatch {
     fn from(value: WaitingForPureP2pSpectator) -> Self {
-        MatchStandby::Spectator(WaitingForSpectator::PureP2p(value))
+        WaitingForMatch::Spectator(WaitingForSpectator::PureP2p(value))
     }
 }

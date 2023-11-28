@@ -3,7 +3,7 @@ use std::{f64::consts::PI, ffi::c_void};
 use junowen_lib::{InputValue, RenderingText, Th19};
 
 use super::{
-    super::match_standby::WaitingInSharedRoom,
+    super::waiting_for_match::rooms::WaitingInSharedRoom,
     common_menu::{CommonMenu, LobbyScene, MenuAction, MenuDefine, MenuItem, OnMenuInputResult},
     helper::render_text_line,
 };
