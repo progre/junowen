@@ -36,9 +36,9 @@ pub fn on_render_texts(
     let (msg2_rear, msg2_front) = if let Some(spectator_host_state) = spectator_host_state {
         if spectator_host_state.count_spectators() > 0 {
             (
-                "            ",
+                "               ",
                 Cow::Owned(format!(
-                    "Spectator: {}",
+                    "Spectator(s): {}",
                     spectator_host_state.count_spectators()
                 )),
             )
@@ -63,6 +63,7 @@ pub fn on_render_texts(
                         "(Your signaling code has been copied to the clipboard)".into(),
                     ),
                 },
+                WaitingForSpectator::ReservedRoom(_) => ("", "".into()),
             }
         }
     } else {

@@ -12,7 +12,7 @@ use super::{
 
 pub enum BattleSessionState {
     Null,
-    Prepare(Prepare<BattleSession>),
+    Prepare(Prepare<(BattleSession, SpectatorHostState)>),
     Select(BattleSelect),
     GameLoading {
         session: BattleSession,
@@ -32,7 +32,10 @@ impl BattleSessionState {
             Self::GameLoading { session, .. } | Self::BackToSelect { session, .. } => {
                 session.match_initial().map(|x| &x.game_settings)
             }
-            Self::Prepare(i) => i.session().match_initial().map(|x| &x.game_settings),
+            Self::Prepare(i) => {
+                let (session, _) = i.session();
+                session.match_initial().map(|x| &x.game_settings)
+            }
             Self::Select(i) => i.session().match_initial().map(|x| &x.game_settings),
             Self::Game(i) => i.session().match_initial().map(|x| &x.game_settings),
         }
@@ -42,7 +45,7 @@ impl BattleSessionState {
         let old = mem::replace(self, Self::Null);
         let (session, spectator_host_state) = match old {
             Self::Null => unreachable!(),
-            Self::Prepare(prepare) => (prepare.inner_session(), SpectatorHostState::new()),
+            Self::Prepare(prepare) => prepare.inner_session(),
             Self::Select { .. } => unreachable!(),
             Self::GameLoading { .. } => unreachable!(),
             Self::Game { .. } => unreachable!(),
@@ -172,7 +175,10 @@ impl BattleSessionState {
         let (session, spectator_host_state) = {
             match self {
                 Self::Null => unreachable!(),
-                Self::Prepare(inner) => (inner.session(), None),
+                Self::Prepare(inner) => {
+                    let (session, spectator_host_state) = inner.session();
+                    (session, Some(spectator_host_state))
+                }
                 Self::Select(inner) => (inner.session(), Some(inner.spectator_host_state())),
                 Self::GameLoading {
                     session,

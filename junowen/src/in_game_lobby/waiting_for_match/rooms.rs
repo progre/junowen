@@ -9,7 +9,8 @@ use junowen_lib::connection::{signaling::socket::SignalingSocket, DataChannel, P
 use tokio::{
     sync::{
         mpsc::{self},
-        oneshot, watch,
+        oneshot::{self, error::TryRecvError},
+        watch,
     },
     task::JoinHandle,
     time::sleep,
@@ -17,15 +18,26 @@ use tokio::{
 use tracing::{debug, debug_span, info, Instrument};
 
 use crate::{
-    in_game_lobby::waiting_for_match::{
-        reserved_room_opponent_socket::SignalingServerReservedRoomOpponentSocket,
-        shared_room_opponent_socket::SignalingServerSharedRoomOpponentSocket,
+    in_game_lobby::{
+        waiting_for_match::{
+            reserved_room_opponent_socket::SignalingServerReservedRoomOpponentSocket,
+            reserved_room_spectator_socket::SignalingServerReservedRoomSpectatorHostSocket,
+            shared_room_opponent_socket::SignalingServerSharedRoomOpponentSocket,
+        },
+        waiting_for_spectator::WaitingForPureP2pSpectator,
     },
-    session::{battle::BattleSession, spectator::SpectatorSessionGuest},
+    session::{
+        battle::BattleSession,
+        spectator::{SpectatorSessionGuest, SpectatorSessionHost},
+    },
     TOKIO_RUNTIME,
 };
 
-use super::reserved_room_spectator_socket::SignalingServerReservedRoomSpectatorSocket;
+use super::{
+    reserved_room_spectator_socket::SignalingServerReservedRoomSpectatorSocket, WaitingForSpectator,
+};
+
+pub struct RoomKey(String);
 
 #[derive(Getters)]
 pub struct WaitingInRoom<TSocket, TSession> {
@@ -42,7 +54,9 @@ pub struct WaitingInRoom<TSocket, TSession> {
 pub type WaitingForOpponentInSharedRoom =
     WaitingInRoom<SignalingServerSharedRoomOpponentSocket, BattleSession>;
 pub type WaitingForOpponentInReservedRoom =
-    WaitingInRoom<SignalingServerReservedRoomOpponentSocket, BattleSession>;
+    WaitingInRoom<SignalingServerReservedRoomOpponentSocket, (BattleSession, Option<RoomKey>)>;
+pub type WaitingForSpectatorInReservedRoom =
+    WaitingInRoom<SignalingServerReservedRoomSpectatorSocket, (SpectatorSessionHost, RoomKey)>;
 pub type WaitingForSpectatorHostInReservedRoom =
     WaitingInRoom<SignalingServerReservedRoomSpectatorSocket, SpectatorSessionGuest>;
 
@@ -52,11 +66,7 @@ where
     TSession: Send + 'static,
 {
     fn internal_new(
-        create_socket: fn(
-            origin: String,
-            room_name: String,
-            abort_rx: watch::Receiver<bool>,
-        ) -> TSocket,
+        create_socket: Box<dyn FnOnce(String, String, watch::Receiver<bool>) -> TSocket + Send>,
         create_session: fn(conn: PeerConnection, data_channel: DataChannel, host: bool) -> TSession,
         room_name: String,
     ) -> Self {
@@ -111,7 +121,7 @@ where
 impl WaitingForOpponentInSharedRoom {
     pub fn new(room_name: String) -> Self {
         Self::internal_new(
-            SignalingServerSharedRoomOpponentSocket::new,
+            Box::new(SignalingServerSharedRoomOpponentSocket::new),
             BattleSession::new,
             room_name,
         )
@@ -120,20 +130,149 @@ impl WaitingForOpponentInSharedRoom {
 
 impl WaitingForOpponentInReservedRoom {
     pub fn new(room_name: String) -> Self {
-        Self::internal_new(
-            SignalingServerReservedRoomOpponentSocket::new,
-            BattleSession::new,
+        let (error_tx, error_rx) = mpsc::channel(1);
+        let (session_tx, session_rx) = oneshot::channel();
+        let (abort_tx, abort_rx) = watch::channel(false);
+
+        let handle = {
+            let room_name = room_name.clone();
+            TOKIO_RUNTIME.spawn(async move {
+                let origin = if cfg!(debug_assertions) {
+                    "https://qayvs4nki2nl72kf4tn5h5yati0maxpe.lambda-url.ap-northeast-1.on.aws"
+                        .into()
+                } else {
+                    "https://wxvo3rgklveqwyig4b3q5qupbq0mgvik.lambda-url.ap-northeast-1.on.aws"
+                        .into()
+                };
+                let mut socket = SignalingServerReservedRoomOpponentSocket::new(
+                    origin,
+                    room_name,
+                    abort_rx.clone(),
+                );
+                let (conn, dc, host) = loop {
+                    match socket.receive_signaling().await {
+                        Ok(ok) => break ok,
+                        Err(err) => {
+                            if *abort_rx.borrow() {
+                                info!("canceled");
+                                return;
+                            }
+                            info!("Signaling failed: {}", err);
+                            let _ = error_tx.send(err).await;
+                            sleep(Duration::from_secs(3)).await;
+                        }
+                    }
+                };
+                info!("Signaling succeeded");
+                let session = BattleSession::new(conn, dc, host);
+                session_tx
+                    .send((session, socket.into_key().map(RoomKey)))
+                    .map_err(|_| ())
+                    .unwrap();
+            })
+        };
+
+        Self {
+            handle,
             room_name,
-        )
+            created_at: Instant::now(),
+            errors: vec![],
+            error_rx,
+            session_rx,
+            abort_tx,
+            _phantom: PhantomData,
+        }
+    }
+
+    pub fn try_into_session_and_waiting_for_spectator(
+        mut self,
+    ) -> Result<(BattleSession, WaitingForSpectator), Self> {
+        let Ok((session, key)) = self.session_rx.try_recv() else {
+            return Err(self);
+        };
+        let waiting = if let Some(key) = key {
+            let waiting = WaitingForSpectatorInReservedRoom::new(self.room_name.clone(), key.0);
+            WaitingForSpectator::ReservedRoom(waiting)
+        } else {
+            WaitingForSpectator::PureP2p(WaitingForPureP2pSpectator::standby())
+        };
+        Ok((session, waiting))
+    }
+}
+
+impl WaitingForSpectatorInReservedRoom {
+    pub fn new(room_name: String, key: String) -> Self {
+        let (error_tx, error_rx) = mpsc::channel(1);
+        let (session_tx, session_rx) = oneshot::channel();
+        let (abort_tx, abort_rx) = watch::channel(false);
+
+        let handle = {
+            let room_name = room_name.clone();
+            TOKIO_RUNTIME.spawn(async move {
+                let origin = if cfg!(debug_assertions) {
+                    "https://qayvs4nki2nl72kf4tn5h5yati0maxpe.lambda-url.ap-northeast-1.on.aws"
+                        .into()
+                } else {
+                    "https://wxvo3rgklveqwyig4b3q5qupbq0mgvik.lambda-url.ap-northeast-1.on.aws"
+                        .into()
+                };
+                let mut socket = SignalingServerReservedRoomSpectatorHostSocket::new(
+                    origin,
+                    room_name,
+                    key,
+                    abort_rx.clone(),
+                );
+                let (conn, dc, _host) = loop {
+                    match socket.receive_signaling().await {
+                        Ok(ok) => break ok,
+                        Err(err) => {
+                            if *abort_rx.borrow() {
+                                info!("canceled");
+                                return;
+                            }
+                            info!("Signaling failed: {}", err);
+                            let _ = error_tx.send(err).await;
+                            sleep(Duration::from_secs(3)).await;
+                        }
+                    }
+                };
+                info!("Signaling succeeded");
+                let session = SpectatorSessionHost::new(conn, dc);
+                session_tx
+                    .send((session, RoomKey(socket.into_key())))
+                    .map_err(|_| ())
+                    .unwrap();
+            })
+        };
+
+        Self {
+            handle,
+            room_name,
+            created_at: Instant::now(),
+            errors: vec![],
+            error_rx,
+            session_rx,
+            abort_tx,
+            _phantom: PhantomData,
+        }
+    }
+
+    pub fn try_session_and_waiting_for_spectator(
+        &mut self,
+    ) -> Result<(SpectatorSessionHost, WaitingForSpectator), TryRecvError> {
+        let (session, key) = self.session_rx.try_recv()?;
+        let waiting = WaitingForSpectatorInReservedRoom::new(self.room_name.clone(), key.0);
+        let waiting = WaitingForSpectator::ReservedRoom(waiting);
+        Ok((session, waiting))
     }
 }
 
 impl WaitingForSpectatorHostInReservedRoom {
     pub fn new(room_name: String) -> Self {
         Self::internal_new(
-            |origin, room_name, abort_rx| {
-                SignalingServerReservedRoomSpectatorSocket::new(origin, room_name, None, abort_rx)
-            },
+            Box::new(|origin, room_name, abort_rx| {
+                SignalingServerReservedRoomSpectatorSocket::new(origin, room_name, abort_rx)
+            }),
             |pc, dc, host| {
                 assert!(!host);
                 SpectatorSessionGuest::new(pc, dc)

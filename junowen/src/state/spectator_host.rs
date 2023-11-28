@@ -4,7 +4,7 @@ use junowen_lib::{Menu, ScreenId, Selection, Th19};
 use tracing::info;
 
 use crate::{
-    in_game_lobby::waiting_for_spectator::{WaitingForPureP2pSpectator, WaitingForSpectator},
+    in_game_lobby::waiting_for_spectator::WaitingForSpectator,
     session::{
         battle::BattleSession,
         spectator::{self, InitialState, SpectatorInitial, SpectatorSessionHost},
@@ -60,9 +60,9 @@ pub struct SpectatorHostState {
 }
 
 impl SpectatorHostState {
-    pub fn new() -> Self {
+    pub fn new(waiting: WaitingForSpectator) -> Self {
         Self {
-            waiting: WaitingForSpectator::PureP2p(WaitingForPureP2pSpectator::standby()),
+            waiting,
             sessions: Vec::new(),
         }
     }

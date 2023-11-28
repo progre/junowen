@@ -14,6 +14,8 @@ use tracing::info;
 
 use crate::{in_game_lobby::Signaling, session::spectator::SpectatorSessionHost};
 
+use super::waiting_for_match::rooms::WaitingForSpectatorInReservedRoom;
+
 fn try_start_signaling(th19: &Th19) -> Option<WaitingForPureP2pSpectator> {
     let Ok(ok) = get_clipboard_string() else {
         th19.play_sound(th19.sound_manager(), 0x10, 0);
@@ -169,6 +171,7 @@ impl WaitingForPureP2pSpectator {
 
 pub enum WaitingForSpectator {
     PureP2p(WaitingForPureP2pSpectator),
+    ReservedRoom(WaitingForSpectatorInReservedRoom),
 }
 
 impl WaitingForSpectator {
@@ -199,6 +202,13 @@ impl WaitingForSpectator {
                     }
                 }
             }
+            Self::ReservedRoom(waiting) => match waiting.try_session_and_waiting_for_spectator() {
+                Ok((session, waiting)) => {
+                    *self = waiting;
+                    Some(session)
+                }
+                Err(_) => None,
+            },
         }
     }
 }

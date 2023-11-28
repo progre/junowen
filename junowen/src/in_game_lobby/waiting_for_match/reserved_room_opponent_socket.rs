@@ -27,6 +27,7 @@ pub struct SignalingServerReservedRoomOpponentSocket {
     client: reqwest::Client,
     origin: String,
     room_name: String,
+    key: Option<String>,
     abort_rx: watch::Receiver<bool>,
 }
 
@@ -36,8 +37,13 @@ impl SignalingServerReservedRoomOpponentSocket {
             client: reqwest::Client::new(),
             origin,
             room_name,
+            key: None,
             abort_rx,
         }
+    }
+
+    pub fn into_key(self) -> Option<String> {
+        self.key
     }
 
     async fn sleep_or_abort_and_delete_room(&mut self, retry_after: u32, key: &str) -> Result<()> {
@@ -78,6 +84,7 @@ impl SignalingSocket for SignalingServerReservedRoomOpponentSocket {
                 key
             }
         };
+        self.key = Some(key.clone());
 
         let url = format!("{}/reserved-room/{}/keep", self.origin, self.room_name);
         let body = PostReservedRoomKeepRequestBody::new(key.clone(), None);

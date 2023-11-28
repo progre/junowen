@@ -14,7 +14,7 @@ use crate::{
 
 use super::{
     battle_session_state::BattleSessionState, in_session, prepare::Prepare,
-    spectator_session_state::SpectatorSessionState, standby,
+    spectator_host::SpectatorHostState, spectator_session_state::SpectatorSessionState, standby,
 };
 
 pub enum JunowenState {
@@ -36,8 +36,15 @@ impl JunowenState {
         !matches!(self, Self::Standby)
     }
 
-    pub fn start_battle_session(&mut self, battle_session: BattleSession) {
-        *self = Self::BattleSession(BattleSessionState::Prepare(Prepare::new(battle_session)));
+    pub fn start_battle_session(
+        &mut self,
+        battle_session: BattleSession,
+        spectator_host_state: SpectatorHostState,
+    ) {
+        *self = Self::BattleSession(BattleSessionState::Prepare(Prepare::new((
+            battle_session,
+            spectator_host_state,
+        ))));
     }
 
     pub fn end_session(&mut self) {
@@ -64,17 +71,22 @@ impl JunowenState {
                     }
                 }
                 match old_waiting {
-                    WaitingForMatch::Opponent(waiting) => match waiting.try_into_session() {
-                        Ok(session) => {
-                            trace!("session received");
-                            self.start_battle_session(session);
-                            None
+                    WaitingForMatch::Opponent(waiting) => {
+                        match waiting.try_into_session_and_waiting_for_spectator() {
+                            Ok((session, waiting)) => {
+                                trace!("session received");
+                                self.start_battle_session(
+                                    session,
+                                    SpectatorHostState::new(waiting),
+                                );
+                                None
+                            }
+                            Err(waiting) => {
+                                *waiting_for_match = Some(WaitingForMatch::Opponent(waiting));
+                                None
+                            }
                         }
-                        Err(waiting) => {
-                            *waiting_for_match = Some(WaitingForMatch::Opponent(waiting));
-                            None
-                        }
-                    },
+                    }
                     WaitingForMatch::SpectatorHost(waiting) => match waiting.try_into_session() {
                         Ok(session) => {
                             trace!("session received");
