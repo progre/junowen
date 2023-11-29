@@ -18,7 +18,7 @@ use crate::{
     in_game_lobby::{
         waiting_for_match::{
             reserved_room_opponent_socket::SignalingServerReservedRoomOpponentSocket,
-            reserved_room_spectator_socket::SignalingServerReservedRoomSpectatorHostSocket,
+            reserved_room_spectator_host_socket::SignalingServerReservedRoomSpectatorHostSocket,
             shared_room_opponent_socket::SignalingServerSharedRoomOpponentSocket,
         },
         waiting_for_spectator::WaitingForPureP2pSpectator,

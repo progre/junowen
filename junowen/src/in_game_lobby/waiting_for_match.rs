@@ -1,4 +1,5 @@
 mod reserved_room_opponent_socket;
+mod reserved_room_spectator_host_socket;
 mod reserved_room_spectator_socket;
 mod shared_room_opponent_socket;
 mod socket;
