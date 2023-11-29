@@ -5,7 +5,7 @@ use junowen_lib::{InputFlags, InputValue, Th19};
 
 use crate::{
     in_game_lobby::waiting_for_match::{
-        rooms::WaitingForOpponentInReservedRoom, WaitingForSpectatorHost,
+        waiting_in_room::WaitingForOpponentInReservedRoom, WaitingForSpectatorHost,
     },
     session::{battle::BattleSession, spectator::SpectatorSession},
 };

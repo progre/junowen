@@ -4,7 +4,9 @@ use junowen_lib::{InputValue, Th19};
 
 use crate::in_game_lobby::{
     waiting_for_match::{
-        rooms::{WaitingForOpponentInReservedRoom, WaitingForSpectatorHostInReservedRoom},
+        waiting_in_room::{
+            WaitingForOpponentInReservedRoom, WaitingForSpectatorHostInReservedRoom,
+        },
         WaitingForSpectatorHost,
     },
     WaitingForMatch, WaitingForOpponent, WaitingInRoom,
@@ -122,9 +124,9 @@ impl ReservedRoom {
         }
     }
 
-    pub fn on_render_texts<T, U>(
+    pub fn on_render_texts<T>(
         &self,
-        waiting: Option<&WaitingInRoom<T, U>>,
+        waiting: Option<&WaitingInRoom<T>>,
         th19: &Th19,
         text_renderer: *const c_void,
     ) {

@@ -4,7 +4,7 @@ use std::{f64::consts::PI, ffi::c_void};
 
 use junowen_lib::{RenderingText, Th19};
 
-use crate::in_game_lobby::waiting_for_match::rooms::WaitingInRoom;
+use crate::in_game_lobby::waiting_for_match::waiting_in_room::WaitingInRoom;
 
 use super::{common_menu::CommonMenu, helper::render_text_line};
 
@@ -131,9 +131,9 @@ fn render_progress(th19: &Th19, text_renderer: *const c_void, progress: f64) {
     render_progress_item(th19, text_renderer, 0xff, &base_text);
 }
 
-pub fn on_render_texts<T, U>(
+pub fn on_render_texts<T>(
     menu: &CommonMenu,
-    waiting: Option<&WaitingInRoom<T, U>>,
+    waiting: Option<&WaitingInRoom<T>>,
     th19: &Th19,
     text_renderer: *const c_void,
 ) {

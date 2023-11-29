@@ -51,9 +51,9 @@ fn render_message(text_renderer: *const c_void, th19: &Th19, msg: &str, color: u
     th19.render_text(text_renderer, &text);
 }
 
-fn render_waiting_message<T, U>(
+fn render_waiting_message<T>(
     room_type: &str,
-    room: &WaitingInRoom<T, U>,
+    room: &WaitingInRoom<T>,
     th19: &Th19,
     text_renderer: *const c_void,
 ) {

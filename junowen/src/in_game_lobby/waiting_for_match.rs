@@ -1,15 +1,15 @@
 mod reserved_room_opponent_socket;
 mod reserved_room_spectator_socket;
-pub mod rooms;
 mod shared_room_opponent_socket;
 mod socket;
+pub mod waiting_in_room;
 
 use derive_new::new;
 use tokio::sync::mpsc;
 
 use crate::session::{battle::BattleSession, spectator::SpectatorSession};
 
-use self::rooms::{
+use self::waiting_in_room::{
     WaitingForOpponentInReservedRoom, WaitingForOpponentInSharedRoom,
     WaitingForSpectatorHostInReservedRoom,
 };
