@@ -2,14 +2,9 @@ use std::ffi::c_void;
 
 use junowen_lib::{InputValue, Th19};
 
-use crate::in_game_lobby::{
-    waiting_for_match::{
-        waiting_in_room::{
-            WaitingForOpponentInReservedRoom, WaitingForSpectatorHostInReservedRoom,
-        },
-        WaitingForSpectatorHost,
-    },
-    WaitingForMatch, WaitingForOpponent, WaitingInRoom,
+use crate::signaling::waiting_for_match::{
+    WaitingForMatch, WaitingForOpponent, WaitingForOpponentInReservedRoom, WaitingForSpectatorHost,
+    WaitingForSpectatorHostInReservedRoom, WaitingInRoom,
 };
 
 use super::{

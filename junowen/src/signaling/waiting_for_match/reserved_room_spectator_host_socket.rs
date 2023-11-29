@@ -16,9 +16,9 @@ use junowen_lib::{
 use tokio::sync::watch;
 use tracing::info;
 
-use super::socket::sleep_or_abort_and_delete_room;
+use crate::signaling::waiting_for_match::socket::retry_after;
 
-use crate::in_game_lobby::waiting_for_match::socket::retry_after;
+use super::socket::sleep_or_abort_and_delete_room;
 
 pub struct SignalingServerReservedRoomSpectatorHostSocket {
     client: reqwest::Client,

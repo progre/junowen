@@ -2,16 +2,14 @@ use std::time::Duration;
 
 use anyhow::{bail, Result};
 use async_trait::async_trait;
-
 use junowen_lib::{
     connection::signaling::{
         socket::{OfferResponse, SignalingSocket},
         CompressedSdp,
     },
     signaling_server::{
-        reserved_room::{
-            PostReservedRoomKeepRequestBody, PostReservedRoomKeepResponse,
-            PostReservedRoomKeepResponseOkBody, PutReservedRoomResponse,
+        custom::{
+            PostSharedRoomKeepRequestBody, PostSharedRoomKeepResponse, PutSharedRoomResponse,
         },
         room::{PostRoomJoinRequestBody, PostRoomJoinResponse, PutRoomRequestBody},
     },
@@ -19,29 +17,21 @@ use junowen_lib::{
 use tokio::sync::watch;
 use tracing::info;
 
-use crate::in_game_lobby::waiting_for_match::socket::retry_after;
+use super::socket::{retry_after, sleep_or_abort_and_delete_room};
 
-use super::socket::sleep_or_abort_and_delete_room;
-
-pub struct SignalingServerReservedRoomOpponentSocket {
+pub struct SignalingServerSharedRoomOpponentSocket {
     client: reqwest::Client,
     resource_url: String,
-    key: Option<String>,
     abort_rx: watch::Receiver<bool>,
 }
 
-impl SignalingServerReservedRoomOpponentSocket {
+impl SignalingServerSharedRoomOpponentSocket {
     pub fn new(origin: String, room_name: String, abort_rx: watch::Receiver<bool>) -> Self {
         Self {
             client: reqwest::Client::new(),
-            resource_url: format!("{}/reserved-room/{}", origin, room_name),
-            key: None,
+            resource_url: format!("{}/custom/{}", origin, room_name),
             abort_rx,
         }
-    }
-
-    pub fn into_key(self) -> Option<String> {
-        self.key
     }
 
     async fn sleep_or_abort_and_delete_room(&mut self, retry_after: u32, key: &str) -> Result<()> {
@@ -52,7 +42,7 @@ impl SignalingServerReservedRoomOpponentSocket {
 }
 
 #[async_trait]
-impl SignalingSocket for SignalingServerReservedRoomOpponentSocket {
+impl SignalingSocket for SignalingServerSharedRoomOpponentSocket {
     fn timeout() -> Duration {
         Duration::from_secs(10)
     }
@@ -62,50 +52,42 @@ impl SignalingSocket for SignalingServerReservedRoomOpponentSocket {
         let json = PutRoomRequestBody::new(desc);
         info!("PUT {}", url);
         let res = self.client.put(url).json(&json).send().await?;
-        info!("{:?}", res);
         let res =
-            PutReservedRoomResponse::parse(res.status(), retry_after(&res), &res.text().await?)?;
+            PutSharedRoomResponse::parse(res.status(), retry_after(&res), &res.text().await?)?;
+        info!("{:?}", res);
         let key = match res {
-            PutReservedRoomResponse::Conflict { body, .. } => {
-                let Some(offer) = body.into_offer() else {
-                    bail!("room is full");
-                };
-                return Ok(OfferResponse::Offer(offer));
+            PutSharedRoomResponse::Conflict { body, .. } => {
+                return Ok(OfferResponse::Offer(body.into_offer()))
             }
-            PutReservedRoomResponse::CreatedWithAnswer { body, .. } => {
+            PutSharedRoomResponse::CreatedWithAnswer { body, .. } => {
                 return Ok(OfferResponse::Answer(body.into_answer()));
             }
-            PutReservedRoomResponse::CreatedWithKey { retry_after, body } => {
+            PutSharedRoomResponse::CreatedWithKey { retry_after, body } => {
                 let key = body.into_key();
                 self.sleep_or_abort_and_delete_room(retry_after, &key)
                     .await?;
                 key
             }
         };
-        self.key = Some(key.clone());
 
         let url = format!("{}/keep", self.resource_url);
-        let body = PostReservedRoomKeepRequestBody::new(key.clone(), None);
+        let body = PostSharedRoomKeepRequestBody::new(key.clone());
         loop {
             info!("POST {}", url);
             let res = self.client.post(&url).json(&body).send().await?;
-            info!("{:?}", res);
             let status = res.status();
             let retry_after = retry_after(&res);
             let body = res.text().await.ok();
-            let res = PostReservedRoomKeepResponse::parse(status, retry_after, body.as_deref())?;
+            let res = PostSharedRoomKeepResponse::parse(status, retry_after, body.as_deref())?;
             info!("{:?}", res);
             match res {
-                PostReservedRoomKeepResponse::BadRequest => {
+                PostSharedRoomKeepResponse::BadRequest => {
                     bail!("bad request")
                 }
-                PostReservedRoomKeepResponse::Ok(body) => {
-                    let PostReservedRoomKeepResponseOkBody::OpponentAnswer(body) = body else {
-                        bail!("invalid response");
-                    };
-                    return Ok(OfferResponse::Answer(body.into_opponent_answer()));
+                PostSharedRoomKeepResponse::Ok(body) => {
+                    return Ok(OfferResponse::Answer(body.into_answer()));
                 }
-                PostReservedRoomKeepResponse::NoContent { retry_after } => {
+                PostSharedRoomKeepResponse::NoContent { retry_after } => {
                     self.sleep_or_abort_and_delete_room(retry_after, &key)
                         .await?;
                 }

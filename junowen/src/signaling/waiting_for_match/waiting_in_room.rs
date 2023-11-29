@@ -15,14 +15,14 @@ use tokio::{
 use tracing::{debug, debug_span, info, Instrument};
 
 use crate::{
-    in_game_lobby::waiting_for_match::{
+    session::{
+        battle::BattleSession, spectator::SpectatorSession, spectator_host::SpectatorHostSession,
+    },
+    signaling::waiting_for_match::{
         reserved_room_opponent_socket::SignalingServerReservedRoomOpponentSocket,
         reserved_room_spectator_host_socket::SignalingServerReservedRoomSpectatorHostSocket,
         shared_room_opponent_socket::SignalingServerSharedRoomOpponentSocket,
         waiting_for_spectator::WaitingForPureP2pSpectator,
-    },
-    session::{
-        battle::BattleSession, spectator::SpectatorSession, spectator_host::SpectatorHostSession,
     },
     TOKIO_RUNTIME,
 };

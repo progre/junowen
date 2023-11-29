@@ -4,17 +4,14 @@ use getset::{Getters, MutGetters};
 use junowen_lib::{InputFlags, InputValue, Th19};
 
 use crate::{
-    in_game_lobby::waiting_for_match::{
-        waiting_in_room::WaitingForOpponentInReservedRoom, WaitingForSpectatorHost,
-    },
     session::{battle::BattleSession, spectator::SpectatorSession},
+    signaling::waiting_for_match::{
+        WaitingForMatch, WaitingForOpponent, WaitingForOpponentInReservedRoom,
+        WaitingForPureP2pOpponent, WaitingForPureP2pSpectatorHost, WaitingForSpectatorHost,
+    },
 };
 
 use super::{
-    super::waiting_for_match::{
-        WaitingForMatch, WaitingForOpponent, WaitingForPureP2pOpponent,
-        WaitingForPureP2pSpectatorHost,
-    },
     common_menu::{
         CommonMenu, LobbyScene, MenuAction, MenuContent, MenuDefine, MenuItem, OnMenuInputResult,
     },

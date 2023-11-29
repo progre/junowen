@@ -4,19 +4,18 @@ mod reserved_room_spectator_socket;
 mod shared_room_opponent_socket;
 mod socket;
 pub mod waiting_for_spectator;
-pub mod waiting_in_room;
+mod waiting_in_room;
 
 use derive_new::new;
 use tokio::sync::mpsc;
 
 use crate::session::{battle::BattleSession, spectator::SpectatorSession};
 
-use self::waiting_in_room::{
+pub use waiting_for_spectator::{WaitingForPureP2pSpectator, WaitingForSpectator};
+pub use waiting_in_room::{
     WaitingForOpponentInReservedRoom, WaitingForOpponentInSharedRoom,
-    WaitingForSpectatorHostInReservedRoom,
+    WaitingForSpectatorHostInReservedRoom, WaitingInRoom,
 };
-
-use waiting_for_spectator::{WaitingForPureP2pSpectator, WaitingForSpectator};
 
 #[derive(new)]
 pub struct WaitingForPureP2pOpponent {

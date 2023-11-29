@@ -1,10 +1,11 @@
 pub mod reserved;
 pub mod shared;
+
 use std::{f64::consts::PI, ffi::c_void};
 
 use junowen_lib::{RenderingText, Th19};
 
-use crate::in_game_lobby::waiting_for_match::waiting_in_room::WaitingInRoom;
+use crate::signaling::waiting_for_match::WaitingInRoom;
 
 use super::{common_menu::CommonMenu, helper::render_text_line};
 

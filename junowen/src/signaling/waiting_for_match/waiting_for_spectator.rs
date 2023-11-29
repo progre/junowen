@@ -12,9 +12,9 @@ use junowen_lib::{
 use tokio::sync::mpsc::{self, error::TryRecvError};
 use tracing::info;
 
-use crate::{in_game_lobby::Signaling, session::spectator_host::SpectatorHostSession};
+use crate::session::spectator_host::SpectatorHostSession;
 
-use super::waiting_in_room::WaitingForSpectatorInReservedRoom;
+use super::{super::Signaling, waiting_in_room::WaitingForSpectatorInReservedRoom};
 
 fn try_start_signaling(th19: &Th19) -> Option<WaitingForPureP2pSpectator> {
     let Ok(ok) = get_clipboard_string() else {

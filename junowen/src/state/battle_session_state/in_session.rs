@@ -3,7 +3,7 @@ use std::{borrow::Cow, ffi::c_void};
 use junowen_lib::{RenderingText, Th19};
 
 use crate::{
-    in_game_lobby::{WaitingForPureP2pSpectator, WaitingForSpectator},
+    signaling::waiting_for_match::{WaitingForPureP2pSpectator, WaitingForSpectator},
     state::render_names::render_names,
 };
 

@@ -4,13 +4,13 @@ use junowen_lib::{Menu, ScreenId, Selection, Th19};
 use tracing::info;
 
 use crate::{
-    in_game_lobby::WaitingForSpectator,
     session::{
         battle::BattleSession,
         spectator::{self, InitialState, SpectatorInitial},
         spectator_host::SpectatorHostSession,
         RoundInitial,
     },
+    signaling::waiting_for_match::WaitingForSpectator,
 };
 
 fn create_spectator_initial(

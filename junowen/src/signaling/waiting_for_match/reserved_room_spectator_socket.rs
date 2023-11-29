@@ -2,7 +2,6 @@ use std::time::Duration;
 
 use anyhow::{bail, Error, Result};
 use async_trait::async_trait;
-
 use junowen_lib::{
     connection::signaling::{
         socket::{OfferResponse, SignalingSocket},
@@ -17,7 +16,7 @@ use thiserror::Error;
 use tokio::sync::watch;
 use tracing::info;
 
-use crate::in_game_lobby::waiting_for_match::socket::{retry_after, sleep_or_abort};
+use super::socket::{retry_after, sleep_or_abort};
 
 #[derive(Error, Debug)]
 pub enum SignalingServerReservedRoomSpectatorSocketError {

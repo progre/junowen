@@ -1,6 +1,7 @@
 mod helper;
 mod in_game_lobby;
 mod session;
+mod signaling;
 mod state;
 mod tracing_helper;
 

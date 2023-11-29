@@ -2,9 +2,8 @@ use std::ffi::c_void;
 
 use junowen_lib::{Fn0b7d40, Fn0d5ae0, Menu, RenderingText, ScreenId, Th19};
 
-use crate::in_game_lobby::{
-    Lobby, TitleMenuModifier, WaitingForMatch, WaitingForOpponent, WaitingInRoom,
-};
+use crate::in_game_lobby::{Lobby, TitleMenuModifier};
+use crate::signaling::waiting_for_match::{WaitingForMatch, WaitingForOpponent, WaitingInRoom};
 
 fn is_title(menu: &Menu) -> bool {
     menu.screen_id == ScreenId::Title
