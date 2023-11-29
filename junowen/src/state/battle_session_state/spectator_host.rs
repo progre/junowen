@@ -4,7 +4,7 @@ use junowen_lib::{Menu, ScreenId, Selection, Th19};
 use tracing::info;
 
 use crate::{
-    in_game_lobby::waiting_for_spectator::WaitingForSpectator,
+    in_game_lobby::WaitingForSpectator,
     session::{
         battle::BattleSession,
         spectator::{self, InitialState, SpectatorInitial},

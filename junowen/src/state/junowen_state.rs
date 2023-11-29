@@ -11,9 +11,7 @@ use junowen_lib::{
 use tracing::trace;
 
 use crate::{
-    in_game_lobby::{
-        waiting_for_spectator::WaitingForSpectator, Lobby, TitleMenuModifier, WaitingForMatch,
-    },
+    in_game_lobby::{Lobby, TitleMenuModifier, WaitingForMatch, WaitingForSpectator},
     session::{battle::BattleSession, spectator::SpectatorSession},
 };
 

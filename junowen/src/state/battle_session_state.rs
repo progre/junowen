@@ -8,9 +8,7 @@ use std::{ffi::c_void, mem, sync::mpsc::RecvError};
 use anyhow::Result;
 use junowen_lib::{GameSettings, Menu, ScreenId, Th19};
 
-use crate::{
-    in_game_lobby::waiting_for_spectator::WaitingForSpectator, session::battle::BattleSession,
-};
+use crate::{in_game_lobby::WaitingForSpectator, session::battle::BattleSession};
 
 use super::prepare::Prepare;
 
