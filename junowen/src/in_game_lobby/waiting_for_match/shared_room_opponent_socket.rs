@@ -24,8 +24,7 @@ use super::socket::sleep_or_abort_and_delete_room;
 
 pub struct SignalingServerSharedRoomOpponentSocket {
     client: reqwest::Client,
-    origin: String,
-    room_name: String,
+    resoruce_url: String,
     abort_rx: watch::Receiver<bool>,
 }
 
@@ -33,15 +32,14 @@ impl SignalingServerSharedRoomOpponentSocket {
     pub fn new(origin: String, room_name: String, abort_rx: watch::Receiver<bool>) -> Self {
         Self {
             client: reqwest::Client::new(),
-            origin,
-            room_name,
+            resoruce_url: format!("{}/custom/{}", origin, room_name),
             abort_rx,
         }
     }
 
     async fn sleep_or_abort_and_delete_room(&mut self, retry_after: u32, key: &str) -> Result<()> {
-        let url = format!("{}/custom/{}", self.origin, self.room_name);
-        sleep_or_abort_and_delete_room(retry_after, &mut self.abort_rx, &self.client, &url, key)
+        let url = &self.resoruce_url;
+        sleep_or_abort_and_delete_room(retry_after, &mut self.abort_rx, &self.client, url, key)
             .await
     }
 }
@@ -53,7 +51,7 @@ impl SignalingSocket for SignalingServerSharedRoomOpponentSocket {
     }
 
     async fn offer(&mut self, desc: CompressedSdp) -> Result<OfferResponse> {
-        let url = format!("{}/custom/{}", self.origin, self.room_name);
+        let url = &self.resoruce_url;
         let json = PutRoomRequestBody::new(desc);
         info!("PUT {}", url);
         let res = self.client.put(url).json(&json).send().await?;
@@ -75,7 +73,7 @@ impl SignalingSocket for SignalingServerSharedRoomOpponentSocket {
             }
         };
 
-        let url = format!("{}/custom/{}/keep", self.origin, self.room_name);
+        let url = format!("{}/keep", self.resoruce_url);
         let body = PostSharedRoomKeepRequestBody::new(key.clone());
         loop {
             info!("POST {}", url);
@@ -101,7 +99,7 @@ impl SignalingSocket for SignalingServerSharedRoomOpponentSocket {
     }
 
     async fn answer(&mut self, desc: CompressedSdp) -> Result<()> {
-        let url = format!("{}/custom/{}/join", self.origin, self.room_name);
+        let url = format!("{}/join", self.resoruce_url);
         let json = PostRoomJoinRequestBody::new(desc);
         let res = self.client.post(url).json(&json).send().await?;
         let res = PostRoomJoinResponse::parse(res.status())?;

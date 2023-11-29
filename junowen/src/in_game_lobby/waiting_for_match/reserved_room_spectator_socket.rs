@@ -32,8 +32,7 @@ pub enum SignalingServerReservedRoomSpectatorSocketError {
 
 pub struct SignalingServerReservedRoomSpectatorSocket {
     client: reqwest::Client,
-    origin: String,
-    room_name: String,
+    resource_url: String,
     abort_rx: watch::Receiver<bool>,
 }
 
@@ -41,8 +40,7 @@ impl SignalingServerReservedRoomSpectatorSocket {
     pub fn new(origin: String, room_name: String, abort_rx: watch::Receiver<bool>) -> Self {
         Self {
             client: reqwest::Client::new(),
-            origin,
-            room_name,
+            resource_url: format!("{}/reserved-room/{}", origin, room_name),
             abort_rx,
         }
     }
@@ -55,10 +53,9 @@ impl SignalingSocket for SignalingServerReservedRoomSpectatorSocket {
     }
 
     async fn offer(&mut self, _desc: CompressedSdp) -> Result<OfferResponse> {
-        let url = format!("{}/reserved-room/{}", self.origin, self.room_name);
         loop {
-            info!("GET {}", url);
-            let res = self.client.get(&url).send().await?;
+            info!("GET {}", self.resource_url);
+            let res = self.client.get(&self.resource_url).send().await?;
             info!("{:?}", res);
             let retry_after = retry_after(&res)
                 .ok_or_else(|| Error::msg("retry-after header not found in response"))?;
@@ -83,7 +80,7 @@ impl SignalingSocket for SignalingServerReservedRoomSpectatorSocket {
     }
 
     async fn answer(&mut self, desc: CompressedSdp) -> Result<()> {
-        let url = format!("{}/reserved-room/{}/spectate", self.origin, self.room_name);
+        let url = format!("{}/spectate", self.resource_url);
         let json = PostReservedRoomSpectateRequestBody::new(desc);
         loop {
             let res = self.client.post(&url).json(&json).send().await?;
@@ -102,8 +99,7 @@ impl SignalingSocket for SignalingServerReservedRoomSpectatorSocket {
 
 pub struct SignalingServerReservedRoomSpectatorHostSocket {
     client: reqwest::Client,
-    origin: String,
-    room_name: String,
+    resource_url: String,
     key: String,
     abort_rx: watch::Receiver<bool>,
 }
@@ -117,8 +113,7 @@ impl SignalingServerReservedRoomSpectatorHostSocket {
     ) -> Self {
         Self {
             client: reqwest::Client::new(),
-            origin,
-            room_name,
+            resource_url: format!("{}/reserved-room/{}", origin, room_name),
             key,
             abort_rx,
         }
@@ -129,8 +124,8 @@ impl SignalingServerReservedRoomSpectatorHostSocket {
     }
 
     async fn sleep_or_abort_and_delete_room(&mut self, retry_after: u32, key: &str) -> Result<()> {
-        let url = format!("{}/reserved-room/{}", self.origin, self.room_name);
-        sleep_or_abort_and_delete_room(retry_after, &mut self.abort_rx, &self.client, &url, key)
+        let url = &self.resource_url;
+        sleep_or_abort_and_delete_room(retry_after, &mut self.abort_rx, &self.client, url, key)
             .await
     }
 }
@@ -143,7 +138,7 @@ impl SignalingSocket for SignalingServerReservedRoomSpectatorHostSocket {
 
     async fn offer(&mut self, desc: CompressedSdp) -> Result<OfferResponse> {
         let key = self.key.clone();
-        let url = format!("{}/reserved-room/{}/keep", self.origin, self.room_name);
+        let url = format!("{}/keep", self.resource_url);
         let mut desc = Some(desc);
         loop {
             let body = PostReservedRoomKeepRequestBody::new(key.clone(), desc.take());
