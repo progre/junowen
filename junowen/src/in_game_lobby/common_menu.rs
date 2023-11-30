@@ -109,81 +109,79 @@ impl CommonMenu {
         }
     }
 
-    pub fn on_input_menu(
-        &mut self,
-        current_input: InputValue,
-        prev_input: InputValue,
-        th19: &Th19,
-    ) -> OnMenuInputResult {
-        if self.decide_count != 0 {
-            if self.decide_count > 0 {
-                self.decide_count += 1;
-                if self.decide_count <= 20 {
-                    return OnMenuInputResult::None;
-                }
-                self.decide_count = 0;
-                self.depth += 1;
-                if let (_, CurrentMenuResult::SubScene(scene)) = self.current_menu() {
-                    self.depth -= 1;
-                    return OnMenuInputResult::Action(MenuAction::SubScene(scene));
-                }
-            } else {
-                self.decide_count -= 1;
-                if self.decide_count >= -20 {
-                    return OnMenuInputResult::None;
-                }
-                self.decide_count = 0;
-                if self.depth == 0 {
-                    return OnMenuInputResult::Cancel;
-                }
+    fn apply_decide_count(&mut self) -> Option<OnMenuInputResult> {
+        if self.decide_count == 0 {
+            return None;
+        }
+        if self.decide_count > 0 {
+            self.decide_count += 1;
+            if self.decide_count <= 20 {
+                return Some(OnMenuInputResult::None);
+            }
+            self.decide_count = 0;
+            self.depth += 1;
+            if let (_, CurrentMenuResult::SubScene(scene)) = self.current_menu() {
                 self.depth -= 1;
+                return Some(OnMenuInputResult::Action(MenuAction::SubScene(scene)));
             }
+        } else {
+            self.decide_count -= 1;
+            if self.decide_count >= -20 {
+                return Some(OnMenuInputResult::None);
+            }
+            self.decide_count = 0;
+            if self.depth == 0 {
+                return Some(OnMenuInputResult::Cancel);
+            }
+            self.depth -= 1;
         }
+        None
+    }
 
-        if pulse(current_input, prev_input, InputFlags::CHARGE)
-            || pulse(current_input, prev_input, InputFlags::BOMB)
-            || pulse(current_input, prev_input, InputFlags::PAUSE)
-        {
-            if self.depth == 0 && self.instant_exit {
-                return OnMenuInputResult::Cancel;
-            } else {
-                th19.play_sound(th19.sound_manager(), 0x09, 0);
-                self.decide_count -= 1;
-                return OnMenuInputResult::None;
+    fn cancel(&mut self, th19: &Th19) -> OnMenuInputResult {
+        if self.depth == 0 && self.instant_exit {
+            OnMenuInputResult::Cancel
+        } else {
+            th19.play_sound(th19.sound_manager(), 0x09, 0);
+            self.decide_count -= 1;
+            OnMenuInputResult::None
+        }
+    }
+
+    fn decide(
+        decide_count: &mut i32,
+        th19: &Th19,
+        menu_content: &MenuContent,
+    ) -> OnMenuInputResult {
+        match menu_content {
+            MenuContent::SubMenu(_) => {
+                th19.play_sound(th19.sound_manager(), 0x07, 0);
+                *decide_count += 1;
+                OnMenuInputResult::None
+            }
+            MenuContent::Action(MenuAction::SubScene(_)) => {
+                th19.play_sound(th19.sound_manager(), 0x07, 0);
+                *decide_count += 1;
+                OnMenuInputResult::None
+            }
+            MenuContent::Action(MenuAction::Action(action, sound)) => {
+                if *sound {
+                    th19.play_sound(th19.sound_manager(), 0x07, 0);
+                }
+                OnMenuInputResult::Action(MenuAction::Action(*action, *sound))
             }
         }
+    }
+
+    fn select(&mut self, current_input: InputValue, prev_input: InputValue, th19: &Th19) {
         let (_label, result) = self.current_menu_mut();
         let (menu, repeat_up, repeat_down) = match result {
-            CurrentMenuMutResult::SubScene(scene) => {
-                return OnMenuInputResult::Action(MenuAction::SubScene(scene))
-            }
+            CurrentMenuMutResult::SubScene(_) => unreachable!(),
             CurrentMenuMutResult::MenuDefine(menu, repeat_up, repeat_down) => {
                 (menu, repeat_up, repeat_down)
             }
         };
-        if menu.items.is_empty() {
-            return OnMenuInputResult::None;
-        }
-        if pulse(current_input, prev_input, InputFlags::SHOT) {
-            match menu.items[menu.cursor].content {
-                MenuContent::SubMenu(_) => {
-                    th19.play_sound(th19.sound_manager(), 0x07, 0);
-                    self.decide_count += 1;
-                    return OnMenuInputResult::None;
-                }
-                MenuContent::Action(MenuAction::SubScene(_)) => {
-                    th19.play_sound(th19.sound_manager(), 0x07, 0);
-                    self.decide_count += 1;
-                    return OnMenuInputResult::None;
-                }
-                MenuContent::Action(MenuAction::Action(action, sound)) => {
-                    if sound {
-                        th19.play_sound(th19.sound_manager(), 0x07, 0);
-                    }
-                    return OnMenuInputResult::Action(MenuAction::Action(action, sound));
-                }
-            }
-        }
+
         if current_input.0 & InputFlags::UP != None
             && (prev_input.0 & InputFlags::UP == None || *repeat_up > 0)
         {
@@ -212,6 +210,41 @@ impl CommonMenu {
         } else {
             *repeat_down = 0;
         }
+    }
+
+    pub fn on_input_menu(
+        &mut self,
+        current_input: InputValue,
+        prev_input: InputValue,
+        th19: &Th19,
+    ) -> OnMenuInputResult {
+        if let Some(result) = self.apply_decide_count() {
+            return result;
+        }
+
+        if pulse(current_input, prev_input, InputFlags::CHARGE)
+            || pulse(current_input, prev_input, InputFlags::BOMB)
+            || pulse(current_input, prev_input, InputFlags::PAUSE)
+        {
+            return self.cancel(th19);
+        }
+        let (_label, result) = self.current_menu();
+        let menu = match result {
+            CurrentMenuResult::SubScene(scene) => {
+                return OnMenuInputResult::Action(MenuAction::SubScene(scene))
+            }
+            CurrentMenuResult::MenuDefine(menu) => menu,
+        };
+        if menu.items.is_empty() {
+            return OnMenuInputResult::None;
+        }
+        if pulse(current_input, prev_input, InputFlags::SHOT) {
+            let mut decide_count = self.decide_count;
+            let result = Self::decide(&mut decide_count, th19, &menu.items[menu.cursor].content);
+            self.decide_count = decide_count;
+            return result;
+        }
+        self.select(current_input, prev_input, th19);
         OnMenuInputResult::None
     }
 
