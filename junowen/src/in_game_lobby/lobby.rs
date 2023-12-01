@@ -12,9 +12,7 @@ use crate::{
 };
 
 use super::{
-    common_menu::{
-        CommonMenu, LobbyScene, MenuAction, MenuContent, MenuDefine, MenuItem, OnMenuInputResult,
-    },
+    common_menu::{CommonMenu, LobbyScene, MenuChild, MenuDefine, MenuItem, OnMenuInputResult},
     pure_p2p_guest::PureP2pGuest,
     pure_p2p_offerer::{pure_p2p_host, pure_p2p_spectator, PureP2pOfferer},
     room::{reserved::ReservedRoom, shared::SharedRoom},
@@ -29,21 +27,25 @@ impl Root {
         let menu_define = MenuDefine::new(
             0,
             vec![
-                MenuItem::new("Shared Room", LobbyScene::SharedRoom.into()),
-                MenuItem::new("Reserved Room", LobbyScene::ReservedRoom.into()),
+                MenuItem::simple_sub_scene("Shared Room", LobbyScene::SharedRoom),
+                MenuItem::simple_sub_scene("Reserved Room", LobbyScene::ReservedRoom),
                 MenuItem::new(
                     "Pure P2P",
-                    MenuContent::SubMenu(MenuDefine::new(
+                    None,
+                    Some(MenuChild::SubMenu(MenuDefine::new(
                         0,
                         vec![
-                            MenuItem::new("Connect as Host", LobbyScene::PureP2pHost.into()),
-                            MenuItem::new("Connect as Guest", LobbyScene::PureP2pGuest.into()),
-                            MenuItem::new(
+                            MenuItem::simple_sub_scene("Connect as Host", LobbyScene::PureP2pHost),
+                            MenuItem::simple_sub_scene(
+                                "Connect as Guest",
+                                LobbyScene::PureP2pGuest,
+                            ),
+                            MenuItem::simple_sub_scene(
                                 "Connect as Spectator",
-                                LobbyScene::PureP2pSpectator.into(),
+                                LobbyScene::PureP2pSpectator,
                             ),
                         ],
-                    )),
+                    ))),
                 ),
             ],
         );
@@ -68,7 +70,7 @@ impl Root {
                 Some(LobbyScene::Root)
             }
             OnMenuInputResult::SubScene(scene) => Some(scene),
-            OnMenuInputResult::Action(MenuAction::Action(..)) => unreachable!(),
+            OnMenuInputResult::Action(..) => unreachable!(),
         }
     }
 

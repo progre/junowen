@@ -5,9 +5,11 @@ use std::ffi::c_void;
 use getset::{CopyGetters, Setters};
 use junowen_lib::{InputFlags, InputValue, Th19};
 
+use self::components::Action;
+
 use super::helper::{render_menu_item, render_title};
 
-pub use components::{MenuAction, MenuContent, MenuDefine, MenuItem};
+pub use components::{MenuChild, MenuDefine, MenuItem};
 
 #[derive(Clone, Copy, Debug)]
 pub enum LobbyScene {
@@ -19,16 +21,10 @@ pub enum LobbyScene {
     PureP2pSpectator,
 }
 
-impl From<LobbyScene> for MenuContent {
-    fn from(value: LobbyScene) -> Self {
-        MenuContent::SubScene(value)
-    }
-}
-
 pub enum OnMenuInputResult {
     None,
     Cancel,
-    Action(MenuAction),
+    Action(Action),
     SubScene(LobbyScene),
 }
 
@@ -116,29 +112,25 @@ impl CommonMenu {
         }
     }
 
-    fn decide(
-        decide_count: &mut i32,
-        th19: &Th19,
-        menu_content: &MenuContent,
-    ) -> OnMenuInputResult {
-        match menu_content {
-            MenuContent::SubMenu(_) => {
+    fn decide(decide_count: &mut i32, th19: &Th19, menu_item: &MenuItem) -> OnMenuInputResult {
+        if let Some(action) = menu_item.action() {
+            if action.play_sound() {
                 th19.play_sound(th19.sound_manager(), 0x07, 0);
-                *decide_count += 1;
-                OnMenuInputResult::None
             }
-            MenuContent::SubScene(_) => {
-                th19.play_sound(th19.sound_manager(), 0x07, 0);
-                *decide_count += 1;
-                OnMenuInputResult::None
-            }
-            MenuContent::Action(MenuAction::Action(action, sound)) => {
-                if *sound {
-                    th19.play_sound(th19.sound_manager(), 0x07, 0);
-                }
-                OnMenuInputResult::Action(MenuAction::Action(*action, *sound))
-            }
+            return OnMenuInputResult::Action(action.clone());
         }
+        match menu_item.child() {
+            Some(MenuChild::SubMenu(_)) => {
+                th19.play_sound(th19.sound_manager(), 0x07, 0);
+                *decide_count += 1;
+            }
+            Some(MenuChild::SubScene(_)) => {
+                th19.play_sound(th19.sound_manager(), 0x07, 0);
+                *decide_count += 1;
+            }
+            None => {}
+        }
+        OnMenuInputResult::None
     }
 
     fn select(&mut self, current_input: InputValue, prev_input: InputValue, th19: &Th19) {
@@ -206,7 +198,7 @@ impl CommonMenu {
         }
         if pulse(current_input, prev_input, InputFlags::SHOT) {
             let mut decide_count = self.decide_count;
-            let result = Self::decide(&mut decide_count, th19, menu.selected_item().content());
+            let result = Self::decide(&mut decide_count, th19, menu.selected_item());
             self.decide_count = decide_count;
             return result;
         }
@@ -242,21 +234,20 @@ impl CommonMenu {
         }
         let item = self.menu_define.selected_item();
         let mut label = item.label();
-        let mut content = item.content();
+        let mut child = item.child().as_ref().unwrap();
         for _ in 1..self.depth {
-            let MenuContent::SubMenu(sub_menu) = content else {
+            let MenuChild::SubMenu(sub_menu) = child else {
                 unreachable!()
             };
             let item = sub_menu.selected_item();
             label = item.label();
-            content = item.content();
+            child = item.child().as_ref().unwrap();
         }
         (
             label,
-            match content {
-                MenuContent::SubMenu(sub_menu) => CurrentMenuResult::MenuDefine(sub_menu),
-                MenuContent::SubScene(scene) => CurrentMenuResult::SubScene(*scene),
-                MenuContent::Action(MenuAction::Action(..)) => unreachable!(),
+            match child {
+                MenuChild::SubMenu(sub_menu) => CurrentMenuResult::MenuDefine(sub_menu),
+                MenuChild::SubScene(scene) => CurrentMenuResult::SubScene(*scene),
             },
         )
     }
@@ -274,25 +265,24 @@ impl CommonMenu {
         }
         let item = self.menu_define.selected_item_mut();
         let mut label = item.label();
-        let mut content = item.content_mut();
+        let mut child = item.child_mut().as_mut().unwrap();
         for _ in 1..self.depth {
-            let MenuContent::SubMenu(sub_menu) = content else {
+            let MenuChild::SubMenu(sub_menu) = child else {
                 unreachable!()
             };
             let item = sub_menu.selected_item_mut();
             label = item.label();
-            content = item.content_mut();
+            child = item.child_mut().as_mut().unwrap();
         }
         (
             label,
-            match content {
-                MenuContent::SubMenu(sub_menu) => CurrentMenuMutResult::MenuDefine(
+            match child {
+                MenuChild::SubMenu(sub_menu) => CurrentMenuMutResult::MenuDefine(
                     sub_menu,
                     &mut self.repeat_up,
                     &mut self.repeat_down,
                 ),
-                MenuContent::SubScene(scene) => CurrentMenuMutResult::SubScene(*scene),
-                MenuContent::Action(MenuAction::Action(..)) => unreachable!(),
+                MenuChild::SubScene(scene) => CurrentMenuMutResult::SubScene(*scene),
             },
         )
     }

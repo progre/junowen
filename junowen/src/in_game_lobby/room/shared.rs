@@ -5,16 +5,14 @@ use junowen_lib::{InputValue, Th19};
 use crate::signaling::waiting_for_match::WaitingForOpponentInSharedRoom;
 
 use super::{
-    super::common_menu::{
-        CommonMenu, LobbyScene, MenuAction, MenuDefine, MenuItem, OnMenuInputResult,
-    },
+    super::common_menu::{CommonMenu, LobbyScene, MenuDefine, MenuItem, OnMenuInputResult},
     on_render_texts,
 };
 
 fn make_enter_menu() -> (u8, CommonMenu) {
     let items = vec![
-        MenuItem::new("Enter", MenuAction::Action(0, true).into()),
-        // MenuItem::new("Change Room Name", MenuAction::Action(2, true).into()),
+        MenuItem::simple_action("Enter", 0, true),
+        // MenuItem::simple_action("Change Room Name", 2, true),
     ];
     (
         0,
@@ -23,7 +21,7 @@ fn make_enter_menu() -> (u8, CommonMenu) {
 }
 
 fn make_leave_menu() -> (u8, CommonMenu) {
-    let items = vec![MenuItem::new("Leave", MenuAction::Action(1, true).into())];
+    let items = vec![MenuItem::simple_action("Leave", 1, true)];
     (
         1,
         CommonMenu::new("Shared Room", false, 240 + 56, MenuDefine::new(0, items)),
@@ -67,7 +65,7 @@ impl SharedRoom {
             }
             OnMenuInputResult::Cancel => Some(LobbyScene::Root),
             OnMenuInputResult::SubScene(_) => unreachable!(),
-            OnMenuInputResult::Action(MenuAction::Action(action, _)) => match action {
+            OnMenuInputResult::Action(action) => match action.id() {
                 0 => {
                     *waiting = Some(WaitingForOpponentInSharedRoom::new(
                         th19.online_vs_mode().room_name().to_owned(),

@@ -14,7 +14,7 @@ use crate::session::battle::BattleSession;
 
 use super::{
     super::signaling::Signaling,
-    common_menu::{CommonMenu, LobbyScene, MenuAction, MenuDefine, MenuItem, OnMenuInputResult},
+    common_menu::{CommonMenu, LobbyScene, MenuDefine, MenuItem, OnMenuInputResult},
     helper::{render_small_text_line, render_text_line},
 };
 
@@ -37,10 +37,7 @@ impl PureP2pGuest {
                 840,
                 MenuDefine::new(
                     0,
-                    vec![MenuItem::new(
-                        "Press SHOT to Paste",
-                        MenuAction::Action(0, false).into(),
-                    )],
+                    vec![MenuItem::simple_action("Press SHOT to Paste", 0, false)],
                 ),
             ),
             signaling: Signaling::new(session_tx, |conn, dc| BattleSession::new(conn, dc, false)),
@@ -72,10 +69,7 @@ impl PureP2pGuest {
                     840,
                     MenuDefine::new(
                         0,
-                        vec![MenuItem::new(
-                            "Press SHOT to Copy again",
-                            MenuAction::Action(1, true).into(),
-                        )],
+                        vec![MenuItem::simple_action("Press SHOT to Copy again", 1, true)],
                     ),
                 )
             }
@@ -99,8 +93,8 @@ impl PureP2pGuest {
                 Some(LobbyScene::Root)
             }
             OnMenuInputResult::SubScene(_) => unreachable!(),
-            OnMenuInputResult::Action(MenuAction::Action(action, _)) => {
-                match action {
+            OnMenuInputResult::Action(action) => {
+                match action.id() {
                     0 => {
                         let Ok(ok) = get_clipboard_string() else {
                             th19.play_sound(th19.sound_manager(), 0x10, 0);

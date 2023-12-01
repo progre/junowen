@@ -18,9 +18,7 @@ use crate::session::{battle::BattleSession, spectator::SpectatorSession};
 
 use super::{
     super::signaling::Signaling,
-    common_menu::{
-        CommonMenu, LobbyScene, MenuAction, MenuContent, MenuDefine, MenuItem, OnMenuInputResult,
-    },
+    common_menu::{CommonMenu, LobbyScene, MenuDefine, MenuItem, OnMenuInputResult},
     helper::{render_small_text_line, render_text_line},
 };
 
@@ -61,18 +59,9 @@ where
                 MenuDefine::new(
                     2,
                     vec![
-                        MenuItem::new(
-                            "Regenerate",
-                            MenuContent::Action(MenuAction::Action(0, true)),
-                        ),
-                        MenuItem::new(
-                            "Copy your code",
-                            MenuContent::Action(MenuAction::Action(1, true)),
-                        ),
-                        MenuItem::new(
-                            "Paste guest's code",
-                            MenuContent::Action(MenuAction::Action(2, false)),
-                        ),
+                        MenuItem::simple_action("Regenerate", 0, true),
+                        MenuItem::simple_action("Copy your code", 1, true),
+                        MenuItem::simple_action("Paste guest's code", 2, false),
                     ],
                 ),
             ),
@@ -114,11 +103,11 @@ where
                 Some(LobbyScene::Root)
             }
             OnMenuInputResult::SubScene(_) => unreachable!(),
-            OnMenuInputResult::Action(MenuAction::Action(action, _)) => {
-                if action == 0 {
+            OnMenuInputResult::Action(action) => {
+                if action.id() == 0 {
                     self.reset();
                 }
-                if action == 1 {
+                if action.id() == 1 {
                     set_clipboard_string(
                         &self
                             .offer_type
@@ -127,7 +116,7 @@ where
                     .unwrap();
                     self.copy_state = if self.copy_state <= 1 { 1 } else { 3 };
                 }
-                if action == 2 {
+                if action.id() == 2 {
                     let Ok(ok) = get_clipboard_string() else {
                         th19.play_sound(th19.sound_manager(), 0x10, 0);
                         return None;
