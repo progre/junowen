@@ -1,10 +1,13 @@
+mod components;
+
 use std::ffi::c_void;
 
-use derive_new::new;
 use getset::{CopyGetters, Setters};
 use junowen_lib::{InputFlags, InputValue, Th19};
 
 use super::helper::{render_menu_item, render_title};
+
+pub use components::{MenuAction, MenuContent, MenuDefine, MenuItem};
 
 #[derive(Clone, Copy, Debug)]
 pub enum LobbyScene {
@@ -22,46 +25,10 @@ impl From<LobbyScene> for MenuContent {
     }
 }
 
-#[derive(Debug)]
-pub enum MenuAction {
-    Action(u8, bool),
-    SubScene(LobbyScene),
-}
-
-#[derive(Debug)]
-pub enum MenuContent {
-    Action(MenuAction),
-    SubMenu(MenuDefine),
-}
-
-impl From<MenuAction> for MenuContent {
-    fn from(value: MenuAction) -> Self {
-        MenuContent::Action(value)
-    }
-}
-
 pub enum OnMenuInputResult {
     None,
     Cancel,
     Action(MenuAction),
-}
-
-#[derive(Debug)]
-pub struct MenuItem {
-    label: &'static str,
-    content: MenuContent,
-}
-
-impl MenuItem {
-    pub fn new(label: &'static str, content: MenuContent) -> Self {
-        Self { label, content }
-    }
-}
-
-#[derive(Debug, new)]
-pub struct MenuDefine {
-    cursor: usize,
-    items: Vec<MenuItem>,
 }
 
 fn pulse(current: InputValue, prev: InputValue, flag: InputFlags) -> bool {
@@ -185,8 +152,8 @@ impl CommonMenu {
         if current_input.0 & InputFlags::UP != None
             && (prev_input.0 & InputFlags::UP == None || *repeat_up > 0)
         {
-            if [0, 25].contains(repeat_up) && menu.cursor > 0 {
-                menu.cursor -= 1;
+            if [0, 25].contains(repeat_up) && menu.cursor() > 0 {
+                menu.set_cursor(menu.cursor() - 1);
                 th19.play_sound(th19.sound_manager(), 0x0a, 0);
             }
             *repeat_up += 1;
@@ -199,8 +166,8 @@ impl CommonMenu {
         if current_input.0 & InputFlags::DOWN != None
             && (prev_input.0 & InputFlags::DOWN == None || *repeat_down > 0)
         {
-            if [0, 25].contains(repeat_down) && menu.cursor < menu.items.len() - 1 {
-                menu.cursor += 1;
+            if [0, 25].contains(repeat_down) && menu.cursor() < menu.items().len() - 1 {
+                menu.set_cursor(menu.cursor() + 1);
                 th19.play_sound(th19.sound_manager(), 0x0a, 0);
             }
             *repeat_down += 1;
@@ -235,12 +202,12 @@ impl CommonMenu {
             }
             CurrentMenuResult::MenuDefine(menu) => menu,
         };
-        if menu.items.is_empty() {
+        if menu.items().is_empty() {
             return OnMenuInputResult::None;
         }
         if pulse(current_input, prev_input, InputFlags::SHOT) {
             let mut decide_count = self.decide_count;
-            let result = Self::decide(&mut decide_count, th19, &menu.items[menu.cursor].content);
+            let result = Self::decide(&mut decide_count, th19, menu.selected_item().content());
             self.decide_count = decide_count;
             return result;
         }
@@ -256,13 +223,13 @@ impl CommonMenu {
         };
 
         render_title(th19, text_renderer, label.as_bytes());
-        for (i, item) in menu.items.iter().enumerate() {
+        for (i, item) in menu.items().iter().enumerate() {
             render_menu_item(
                 th19,
                 text_renderer,
-                item.label.as_bytes(),
+                item.label().as_bytes(),
                 self.base_height + 56 * i as u32,
-                i == menu.cursor,
+                i == menu.cursor(),
             );
         }
     }
@@ -274,16 +241,16 @@ impl CommonMenu {
                 CurrentMenuResult::MenuDefine(&self.menu_define),
             );
         }
-        let item = &self.menu_define.items[self.menu_define.cursor];
-        let mut label = item.label;
-        let mut content = &item.content;
+        let item = self.menu_define.selected_item();
+        let mut label = item.label();
+        let mut content = item.content();
         for _ in 1..self.depth {
             let MenuContent::SubMenu(sub_menu) = content else {
                 unreachable!()
             };
-            let item = &sub_menu.items[sub_menu.cursor];
-            label = item.label;
-            content = &item.content;
+            let item = sub_menu.selected_item();
+            label = item.label();
+            content = item.content();
         }
         (
             label,
@@ -296,6 +263,7 @@ impl CommonMenu {
             },
         )
     }
+
     fn current_menu_mut(&mut self) -> (&'static str, CurrentMenuMutResult) {
         if self.depth == 0 {
             return (
@@ -307,16 +275,16 @@ impl CommonMenu {
                 ),
             );
         }
-        let item = &mut self.menu_define.items[self.menu_define.cursor];
-        let mut label = item.label;
-        let mut content = &mut item.content;
+        let item = self.menu_define.selected_item_mut();
+        let mut label = item.label();
+        let mut content = item.content_mut();
         for _ in 1..self.depth {
             let MenuContent::SubMenu(sub_menu) = content else {
                 unreachable!()
             };
-            let item = &mut sub_menu.items[sub_menu.cursor];
-            label = item.label;
-            content = &mut item.content;
+            let item = sub_menu.selected_item_mut();
+            label = item.label();
+            content = item.content_mut();
         }
         (
             label,
