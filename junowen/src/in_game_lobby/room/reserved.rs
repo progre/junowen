@@ -79,10 +79,8 @@ impl ReservedRoom {
                 None
             }
             OnMenuInputResult::Cancel => {
-                if matches!(waiting, Some(WaitingForMatch::SpectatorHost(_))) {
-                    *waiting = None;
-                    (self.menu_id, self.menu) = make_enter_menu();
-                }
+                *waiting = None;
+                (self.menu_id, self.menu) = make_enter_menu();
                 Some(LobbyScene::Root)
             }
             OnMenuInputResult::SubScene(_) => unreachable!(),
