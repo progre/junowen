@@ -98,7 +98,7 @@ impl PureP2pGuest {
                 self.reset();
                 Some(LobbyScene::Root)
             }
-            OnMenuInputResult::Action(MenuAction::SubScene(_)) => unreachable!(),
+            OnMenuInputResult::SubScene(_) => unreachable!(),
             OnMenuInputResult::Action(MenuAction::Action(action, _)) => {
                 match action {
                     0 => {

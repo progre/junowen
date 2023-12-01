@@ -21,7 +21,7 @@ pub enum LobbyScene {
 
 impl From<LobbyScene> for MenuContent {
     fn from(value: LobbyScene) -> Self {
-        MenuContent::Action(MenuAction::SubScene(value))
+        MenuContent::SubScene(value)
     }
 }
 
@@ -29,6 +29,7 @@ pub enum OnMenuInputResult {
     None,
     Cancel,
     Action(MenuAction),
+    SubScene(LobbyScene),
 }
 
 fn pulse(current: InputValue, prev: InputValue, flag: InputFlags) -> bool {
@@ -89,7 +90,7 @@ impl CommonMenu {
             self.depth += 1;
             if let (_, CurrentMenuResult::SubScene(scene)) = self.current_menu() {
                 self.depth -= 1;
-                return Some(OnMenuInputResult::Action(MenuAction::SubScene(scene)));
+                return Some(OnMenuInputResult::SubScene(scene));
             }
         } else {
             self.decide_count -= 1;
@@ -126,7 +127,7 @@ impl CommonMenu {
                 *decide_count += 1;
                 OnMenuInputResult::None
             }
-            MenuContent::Action(MenuAction::SubScene(_)) => {
+            MenuContent::SubScene(_) => {
                 th19.play_sound(th19.sound_manager(), 0x07, 0);
                 *decide_count += 1;
                 OnMenuInputResult::None
@@ -197,9 +198,7 @@ impl CommonMenu {
         }
         let (_label, result) = self.current_menu();
         let menu = match result {
-            CurrentMenuResult::SubScene(scene) => {
-                return OnMenuInputResult::Action(MenuAction::SubScene(scene))
-            }
+            CurrentMenuResult::SubScene(scene) => return OnMenuInputResult::SubScene(scene),
             CurrentMenuResult::MenuDefine(menu) => menu,
         };
         if menu.items().is_empty() {
@@ -256,9 +255,7 @@ impl CommonMenu {
             label,
             match content {
                 MenuContent::SubMenu(sub_menu) => CurrentMenuResult::MenuDefine(sub_menu),
-                MenuContent::Action(MenuAction::SubScene(scene)) => {
-                    CurrentMenuResult::SubScene(*scene)
-                }
+                MenuContent::SubScene(scene) => CurrentMenuResult::SubScene(*scene),
                 MenuContent::Action(MenuAction::Action(..)) => unreachable!(),
             },
         )
@@ -294,9 +291,7 @@ impl CommonMenu {
                     &mut self.repeat_up,
                     &mut self.repeat_down,
                 ),
-                MenuContent::Action(MenuAction::SubScene(scene)) => {
-                    CurrentMenuMutResult::SubScene(*scene)
-                }
+                MenuContent::SubScene(scene) => CurrentMenuMutResult::SubScene(*scene),
                 MenuContent::Action(MenuAction::Action(..)) => unreachable!(),
             },
         )

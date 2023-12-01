@@ -67,7 +67,7 @@ impl Root {
                 th19.menu_input_mut().set_current(InputFlags::PAUSE.into());
                 Some(LobbyScene::Root)
             }
-            OnMenuInputResult::Action(MenuAction::SubScene(scene)) => Some(scene),
+            OnMenuInputResult::SubScene(scene) => Some(scene),
             OnMenuInputResult::Action(MenuAction::Action(..)) => unreachable!(),
         }
     }

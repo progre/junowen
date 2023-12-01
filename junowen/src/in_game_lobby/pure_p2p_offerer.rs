@@ -113,7 +113,7 @@ where
                 }
                 Some(LobbyScene::Root)
             }
-            OnMenuInputResult::Action(MenuAction::SubScene(scene)) => Some(scene),
+            OnMenuInputResult::SubScene(_) => unreachable!(),
             OnMenuInputResult::Action(MenuAction::Action(action, _)) => {
                 if action == 0 {
                     self.reset();

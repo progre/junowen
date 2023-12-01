@@ -6,13 +6,13 @@ use super::LobbyScene;
 #[derive(Debug)]
 pub enum MenuAction {
     Action(u8, bool),
-    SubScene(LobbyScene),
 }
 
 #[derive(Debug)]
 pub enum MenuContent {
     Action(MenuAction),
     SubMenu(MenuDefine),
+    SubScene(LobbyScene),
 }
 
 impl From<MenuAction> for MenuContent {
