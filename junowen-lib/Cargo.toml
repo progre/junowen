@@ -10,13 +10,13 @@ anyhow.workspace = true
 async-trait = "0.1.73"
 base64 = "0.21.4"
 bytes = "1.5.0"
-clipboard-win = "4.5.0"
+clipboard-win = "5.0.0"
 derivative = "2.2.0"
 derive-new = "0.6.0"
 flagset = "0.4.4"
 flate2 = "1.0.27"
 getset = "0.1.2"
-http = "0.2.11"
+http = "^0.2.11"
 regex = "1.9.5"
 rmp-serde = "1.1.2"
 serde = "1.0.188"
@@ -29,7 +29,7 @@ toml = "0.8.0"
 tracing.workspace = true
 uuid = "1.5.0"
 webrtc = "0.9.0"
-windows = { version = "0.51.1", features = [
+windows = { version = "0.52.0", features = [
   "Win32_Foundation",
   "Win32_Graphics_Direct3D9",
   "Win32_Graphics_Gdi",
