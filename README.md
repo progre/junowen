@@ -26,21 +26,27 @@ It works in the same way as adonis and th075caster.
 
 ## How to use
 
-Two connection methods are currently supported.
+Three connection methods are currently supported.
 
 ### Shared Room
 
-This method connects with users whose room names match.
+This method connects to users whose room name matches the set room name.  
+While waiting for a connection, other functions can be used.
 
-1. Set the room name in "Online VS Mode".
-2. Select "Ju.N.Owen" -> "Shared Room".
-3. Press the shot button with "Enter" to start waiting for connection.
-    - Pressing the shot button while in the "Leave" state interrupts the connection waiting.
-    - Press the Cancel button to use other functions while waiting for connection.
+The room name should be set in "Online VS Mode".
+
+Pressing the shot button on the waiting for connection screen interrupts, and pressing the cancel button allows you to use other functions.
+
+### Reserved Room
+
+This method connects to users whose room name matches the set room name.  
+You can have other players spectate your matches.
 
 ### Pure P2P
 
 This method does not use a connection server, but exchanges connection information with opponents via chat or other means.
+
+#### Using Pure P2P competition
 
 1. Select "Ju.N.Owen" -> "Pure P2P”.
 2. Select "Connect as Host" if you want to wait for a connection as a host,
@@ -61,14 +67,7 @@ This method does not use a connection server, but exchanges connection informati
            Press the shot button to copy the string to the clipboard again.
         4. If all goes well, you will be redirected to the difficulty selection screen and the game will begin.
 
-### After connection
-
-- During the connection, the names of both parties are displayed at the top of the screen. When disconnected, the display will disappear.
-- The host can change the delay value with the number keys 0-9 during the game.
-
-### Spectate
-
-Currently, the game can only be watched via Pure P2P.
+#### Using Pure P2P spectate
 
 - Spectator
     1. Select “Ju.N.Owen" -> "Pure P2P” -> "Connect as Spectator"
@@ -88,16 +87,21 @@ Currently, the game can only be watched via Pure P2P.
        Send this string to your opponent via Discord or other means.
     5. If all goes well, you can let them spectate the game.
 
+### After connection
+
+- During the connection, the names of both parties are displayed at the top of the screen. When disconnected, the display will disappear.
+- The host can change the delay value with the number keys 0-9 during the game.
+
 ## Supplement
 
-- No ports need to be open. Even if a port is open, that port cannot be specified.
+- No ports need to be open.
+- Even if a port is open, that port cannot be specified.
 
 ## Current constraints
 
 - "Online VS Mode" must be released for the game to work properly.
 - Ju.N.Owen menu cannot be operated with the enter key
 - Spectators can only be added immediately after a player connects.
-- Only one spectator can be accepted per player.
 - The game may be freeze if communication is delayed or something not good happens.
 
 ## Author and distributor
