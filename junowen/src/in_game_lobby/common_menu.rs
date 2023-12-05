@@ -196,7 +196,9 @@ impl CommonMenu {
         if menu.items().is_empty() {
             return OnMenuInputResult::None;
         }
-        if pulse(current_input, prev_input, InputFlags::SHOT) {
+        if pulse(current_input, prev_input, InputFlags::SHOT)
+            || pulse(current_input, prev_input, InputFlags::ENTER)
+        {
             let mut decide_count = self.decide_count;
             let result = Self::decide(&mut decide_count, th19, menu.selected_item());
             self.decide_count = decide_count;

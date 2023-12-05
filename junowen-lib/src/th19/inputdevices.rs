@@ -12,6 +12,17 @@ flags! {
         LEFT,
         RIGHT,
         PAUSE,
+        _UNKNOWN1,
+        _UNKNOWN2,
+        _UNKNOWN3,
+        _UNKNOWN4,
+        _UNKNOWN5,
+        _UNKNOWN6,
+        _UNKNOWN7,
+        _UNKNOWN8,
+        _UNKNOWN9,
+        _UNKNOWN10,
+        ENTER,
     }
 }
 
@@ -29,6 +40,10 @@ impl InputValue {
 
     pub fn bits(&self) -> u32 {
         self.0.bits()
+    }
+
+    pub fn decide(&self) -> bool {
+        self.0 & (InputFlags::SHOT | InputFlags::ENTER) != None
     }
 }
 

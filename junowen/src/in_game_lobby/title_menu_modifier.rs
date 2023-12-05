@@ -59,7 +59,7 @@ impl TitleMenuModifier {
                 }
             }
             (2, true) => {
-                if th19.menu_input().current().0 & InputFlags::SHOT != None {
+                if th19.menu_input().current().decide() {
                     th19.menu_input_mut().set_current(InputFlags::SHOT.into());
                     menu.cursor = 1;
                 }
