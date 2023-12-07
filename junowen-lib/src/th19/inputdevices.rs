@@ -80,7 +80,8 @@ pub struct Input {
     left_repeat_count: u32,
     #[getset(get_copy = "pub")]
     right_repeat_count: u32,
-    // ambiguous remains...
+    _unknown1: [u8; 0x278],
+    _unknown2: [u8; 0x010],
 }
 
 /// 0x3d4
@@ -90,8 +91,6 @@ pub struct InputDevice {
     _unknown1: [u8; 0x010],
     #[getset(get = "pub", get_mut = "pub")]
     input: Input,
-    _unknown2: [u8; 0x278],
-    _unknown3: [u8; 0x010],
     #[getset(get = "pub")]
     raw_keys: [u8; 0x104],
 }
