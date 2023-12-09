@@ -1629,7 +1629,7 @@ dependencies = [
  "tracing-appender",
  "tracing-subscriber",
  "webrtc",
- "windows 0.51.1",
+ "windows 0.52.0",
 ]
 
 [[package]]

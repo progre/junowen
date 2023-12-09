@@ -1,3 +1,4 @@
+mod file;
 mod helper;
 mod in_game_lobby;
 mod session;
@@ -5,24 +6,19 @@ mod signaling;
 mod state;
 mod tracing_helper;
 
-use std::{ffi::c_void, path::PathBuf, slice};
+use std::{ffi::c_void, slice};
 
+use file::{log_dir_path_log_file_name_old_log_path, move_old_log_to_new_path};
 use junowen_lib::{
     hook_utils::WELL_KNOWN_VERSION_HASHES, Fn009fa0, Fn011560, Fn0b7d40, Fn0d5ae0, Fn0d6e10,
     Fn1049e0, Fn10f720, FnOfHookAssembly, RenderingText, Selection, Th19,
 };
 use once_cell::sync::Lazy;
 use state::State;
-use windows::{
-    core::PCWSTR,
-    Win32::{
-        Foundation::{HINSTANCE, HMODULE, MAX_PATH},
-        Graphics::Direct3D9::IDirect3D9,
-        System::{
-            Console::AllocConsole, LibraryLoader::GetModuleFileNameW,
-            SystemServices::DLL_PROCESS_ATTACH,
-        },
-    },
+use windows::Win32::{
+    Foundation::{HINSTANCE, HMODULE},
+    Graphics::Direct3D9::IDirect3D9,
+    System::{Console::AllocConsole, SystemServices::DLL_PROCESS_ATTACH},
 };
 
 static TOKIO_RUNTIME: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
@@ -131,19 +127,14 @@ fn init(module: HMODULE) {
         let _ = unsafe { AllocConsole() };
         std::env::set_var("RUST_BACKTRACE", "1");
     }
-    let dll_path = {
-        let mut buf = [0u16; MAX_PATH as usize];
-        if unsafe { GetModuleFileNameW(module, &mut buf) } == 0 {
-            panic!();
-        }
-        unsafe { PCWSTR::from_raw(buf.as_ptr()).to_string() }.unwrap()
-    };
-    let dll_path = PathBuf::from(dll_path);
-    tracing_helper::init_tracing(
-        dll_path.parent().unwrap().to_string_lossy().as_ref(),
-        &format!("{}.log", dll_path.file_stem().unwrap().to_string_lossy()),
-        false,
-    );
+    let (module_dir, log_file_name, old_log_path) =
+        TOKIO_RUNTIME.block_on(log_dir_path_log_file_name_old_log_path(module));
+    tracing_helper::init_tracing(&module_dir, &log_file_name, false);
+    TOKIO_RUNTIME.block_on(move_old_log_to_new_path(
+        &old_log_path,
+        &module_dir,
+        &log_file_name,
+    ));
 
     let mut th19 = Th19::new_hooked_process("th19.exe").unwrap();
 
