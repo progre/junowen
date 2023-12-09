@@ -11,7 +11,10 @@ use junowen_lib::{Fn011560, Fn0b7d40, Fn0d5ae0, Fn10f720, RenderingText, Selecti
 use tracing::debug;
 
 use self::junowen_state::JunowenState;
-use crate::in_game_lobby::{Lobby, TitleMenuModifier};
+use crate::{
+    file::SettingsRepo,
+    in_game_lobby::{Lobby, TitleMenuModifier},
+};
 
 #[derive(Getters, MutGetters)]
 pub struct State {
@@ -23,7 +26,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(th19: Th19) -> Self {
+    pub fn new(_settings_repo: SettingsRepo, th19: Th19) -> Self {
         Self {
             th19,
             title_menu_modifier: TitleMenuModifier::new(),

@@ -8,17 +8,23 @@ mod tracing_helper;
 
 use std::{ffi::c_void, slice};
 
-use file::{log_dir_path_log_file_name_old_log_path, move_old_log_to_new_path};
 use junowen_lib::{
     hook_utils::WELL_KNOWN_VERSION_HASHES, Fn009fa0, Fn011560, Fn0b7d40, Fn0d5ae0, Fn0d6e10,
     Fn1049e0, Fn10f720, FnOfHookAssembly, RenderingText, Selection, Th19,
 };
 use once_cell::sync::Lazy;
-use state::State;
 use windows::Win32::{
     Foundation::{HINSTANCE, HMODULE},
     Graphics::Direct3D9::IDirect3D9,
     System::{Console::AllocConsole, SystemServices::DLL_PROCESS_ATTACH},
+};
+
+use crate::{
+    file::{
+        ini_file_path_log_dir_path_log_file_name_old_log_path, move_old_log_to_new_path,
+        SettingsRepo,
+    },
+    state::State,
 };
 
 static TOKIO_RUNTIME: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
@@ -127,8 +133,9 @@ fn init(module: HMODULE) {
         let _ = unsafe { AllocConsole() };
         std::env::set_var("RUST_BACKTRACE", "1");
     }
-    let (module_dir, log_file_name, old_log_path) =
-        TOKIO_RUNTIME.block_on(log_dir_path_log_file_name_old_log_path(module));
+    let (ini_file_path, module_dir, log_file_name, old_log_path) = TOKIO_RUNTIME.block_on(
+        ini_file_path_log_dir_path_log_file_name_old_log_path(module),
+    );
     tracing_helper::init_tracing(&module_dir, &log_file_name, false);
     TOKIO_RUNTIME.block_on(move_old_log_to_new_path(
         &old_log_path,
@@ -167,7 +174,7 @@ fn init(module: HMODULE) {
             old_fn_from_13f9d0_0345,
             old_fn_from_13f9d0_0446,
         });
-        STATE = Some(State::new(th19));
+        STATE = Some(State::new(SettingsRepo::new(ini_file_path), th19));
     }
     let th19 = &mut state_mut().th19_mut();
     apply_hook_on_input_players(th19);

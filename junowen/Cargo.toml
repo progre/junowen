@@ -30,7 +30,7 @@ tokio = { version = "1.32.0", features = [
   "rt-multi-thread",
   "time"
 ] }
-toml = "0.8.0"
+toml_edit = "0.21.0"
 tracing.workspace = true
 tracing-appender = "0.2.2"
 tracing-subscriber.workspace = true

@@ -1624,7 +1624,7 @@ dependencies = [
  "thiserror",
  "time",
  "tokio",
- "toml 0.8.8",
+ "toml_edit",
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
