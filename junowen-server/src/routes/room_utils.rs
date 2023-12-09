@@ -1,4 +1,7 @@
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    string::FromUtf8Error,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use junowen_lib::signaling_server::room::{PostRoomKeepResponse, PutRoomResponse};
 use lambda_http::{Body, Response};
@@ -46,4 +49,8 @@ where
         PostRoomKeepResponse::Ok(body) => Body::Text(serde_json::to_string(&body).unwrap()),
     };
     to_response(status_code, body)
+}
+
+pub fn decode_room_name(encoded_room_name: &str) -> Result<String, FromUtf8Error> {
+    urlencoding::decode(&encoded_room_name.replace('+', "%20")).map(|x| x.to_string())
 }

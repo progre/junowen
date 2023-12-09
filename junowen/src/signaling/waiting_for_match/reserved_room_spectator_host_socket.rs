@@ -18,7 +18,7 @@ use tracing::info;
 
 use crate::signaling::waiting_for_match::socket::retry_after;
 
-use super::socket::sleep_or_abort_and_delete_room;
+use super::{socket::sleep_or_abort_and_delete_room, encode_room_name};
 
 pub struct SignalingServerReservedRoomSpectatorHostSocket {
     client: reqwest::Client,
@@ -30,13 +30,14 @@ pub struct SignalingServerReservedRoomSpectatorHostSocket {
 impl SignalingServerReservedRoomSpectatorHostSocket {
     pub fn new(
         origin: String,
-        room_name: String,
+        room_name: &str,
         key: String,
         abort_rx: watch::Receiver<bool>,
     ) -> Self {
+        let encoded_room_name = encode_room_name(room_name);
         Self {
             client: reqwest::Client::new(),
-            resource_url: format!("{}/reserved-room/{}", origin, room_name),
+            resource_url: format!("{}/reserved-room/{}", origin, encoded_room_name),
             key,
             abort_rx,
         }

@@ -18,7 +18,10 @@ use junowen_lib::{
 use tokio::sync::watch;
 use tracing::info;
 
-use super::socket::{retry_after, sleep_or_abort_and_delete_room};
+use super::{
+    encode_room_name,
+    socket::{retry_after, sleep_or_abort_and_delete_room},
+};
 
 pub struct SignalingServerReservedRoomOpponentSocket {
     client: reqwest::Client,
@@ -28,10 +31,11 @@ pub struct SignalingServerReservedRoomOpponentSocket {
 }
 
 impl SignalingServerReservedRoomOpponentSocket {
-    pub fn new(origin: String, room_name: String, abort_rx: watch::Receiver<bool>) -> Self {
+    pub fn new(origin: String, room_name: &str, abort_rx: watch::Receiver<bool>) -> Self {
+        let encoded_room_name = encode_room_name(room_name);
         Self {
             client: reqwest::Client::new(),
-            resource_url: format!("{}/reserved-room/{}", origin, room_name),
+            resource_url: format!("{}/reserved-room/{}", origin, encoded_room_name),
             key: None,
             abort_rx,
         }

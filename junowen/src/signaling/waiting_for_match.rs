@@ -17,6 +17,10 @@ pub use waiting_in_room::{
     WaitingForSpectatorHostInReservedRoom, WaitingInRoom,
 };
 
+fn encode_room_name(room_name: &str) -> String {
+    urlencoding::encode(room_name).replace("%20", "+")
+}
+
 #[derive(new)]
 pub struct WaitingForPureP2pOpponent {
     battle_session_rx: mpsc::Receiver<BattleSession>,

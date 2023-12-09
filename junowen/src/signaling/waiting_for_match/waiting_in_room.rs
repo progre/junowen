@@ -54,7 +54,7 @@ where
     TSession: Send + 'static,
 {
     fn internal_new<T>(
-        create_socket: impl FnOnce(String, String, watch::Receiver<bool>) -> T + Send + 'static,
+        create_socket: impl FnOnce(String, &str, watch::Receiver<bool>) -> T + Send + 'static,
         create_session: fn(
             conn: PeerConnection,
             data_channel: DataChannel,
@@ -78,7 +78,7 @@ where
                 } else {
                     "https://wxvo3rgklveqwyig4b3q5qupbq0mgvik.lambda-url.ap-northeast-1.on.aws"
                 };
-                let mut socket = create_socket(origin.into(), room_name, abort_rx.clone());
+                let mut socket = create_socket(origin.into(), &room_name, abort_rx.clone());
                 let (conn, dc, host) = loop {
                     match socket.receive_signaling().await {
                         Ok(ok) => break ok,

@@ -21,7 +21,7 @@ use self::{
 };
 
 use super::{
-    room_utils::{from_post_room_keep_response, from_put_room_response},
+    room_utils::{decode_room_name, from_post_room_keep_response, from_put_room_response},
     to_response, try_parse,
 };
 
@@ -32,6 +32,13 @@ pub async fn route(
 ) -> Result<Response<Body>> {
     let regex = Regex::new(r"^([^/]+)$").unwrap();
     if let Some(c) = regex.captures(relative_uri) {
+        let room_name = match decode_room_name(&c[1]) {
+            Ok(room_name) => room_name,
+            Err(err) => {
+                debug!("{:?}", err);
+                return Ok(to_response(StatusCode::NOT_FOUND, Body::Empty));
+            }
+        };
         return Ok(match *req.method() {
             Method::PUT => match try_parse(req.body()) {
                 Err(err) => {
@@ -39,12 +46,12 @@ pub async fn route(
                     to_response(StatusCode::BAD_REQUEST, Body::Empty)
                 }
                 Ok(body) => {
-                    let res = put_room(db, &c[1], body).await?;
+                    let res = put_room(db, &room_name, body).await?;
                     from_put_room_response(res)
                 }
             },
             Method::GET => {
-                let res = get_room(db, &c[1]).await?;
+                let res = get_room(db, &room_name).await?;
                 to_response(
                     res.status_code(),
                     res.to_body().map(Body::Text).unwrap_or_else(|| Body::Empty),
@@ -56,7 +63,7 @@ pub async fn route(
                     to_response(StatusCode::BAD_REQUEST, Body::Empty)
                 }
                 Ok(body) => {
-                    let res = delete_room(db, &c[1], body).await?;
+                    let res = delete_room(db, &room_name, body).await?;
                     to_response(res.status_code(), Body::Empty)
                 }
             },
@@ -65,6 +72,13 @@ pub async fn route(
     }
     let regex = Regex::new(r"^([^/]+)/join$").unwrap();
     if let Some(c) = regex.captures(relative_uri) {
+        let room_name = match decode_room_name(&c[1]) {
+            Ok(room_name) => room_name,
+            Err(err) => {
+                debug!("{:?}", err);
+                return Ok(to_response(StatusCode::NOT_FOUND, Body::Empty));
+            }
+        };
         return Ok(match *req.method() {
             Method::POST => match try_parse(req.body()) {
                 Err(err) => {
@@ -72,7 +86,7 @@ pub async fn route(
                     to_response(StatusCode::BAD_REQUEST, Body::Empty)
                 }
                 Ok(body) => {
-                    let res = post_room_join(db, &c[1], body).await?;
+                    let res = post_room_join(db, &room_name, body).await?;
                     to_response(res.status_code_old(), Body::Empty)
                 }
             },
@@ -81,6 +95,13 @@ pub async fn route(
     }
     let regex = Regex::new(r"^([^/]+)/spectate$").unwrap();
     if let Some(c) = regex.captures(relative_uri) {
+        let room_name = match decode_room_name(&c[1]) {
+            Ok(room_name) => room_name,
+            Err(err) => {
+                debug!("{:?}", err);
+                return Ok(to_response(StatusCode::NOT_FOUND, Body::Empty));
+            }
+        };
         return Ok(match *req.method() {
             Method::POST => match try_parse(req.body()) {
                 Err(err) => {
@@ -88,7 +109,7 @@ pub async fn route(
                     to_response(StatusCode::BAD_REQUEST, Body::Empty)
                 }
                 Ok(body) => {
-                    let res = post_room_spectate(db, &c[1], body).await?;
+                    let res = post_room_spectate(db, &room_name, body).await?;
                     to_response(res.status_code_old(), Body::Empty)
                 }
             },
@@ -97,6 +118,13 @@ pub async fn route(
     }
     let regex = Regex::new(r"^([^/]+)/keep$").unwrap();
     if let Some(c) = regex.captures(relative_uri) {
+        let room_name = match decode_room_name(&c[1]) {
+            Ok(room_name) => room_name,
+            Err(err) => {
+                debug!("{:?}", err);
+                return Ok(to_response(StatusCode::NOT_FOUND, Body::Empty));
+            }
+        };
         return Ok(match *req.method() {
             Method::POST => match try_parse(req.body()) {
                 Err(err) => {
@@ -104,7 +132,7 @@ pub async fn route(
                     to_response(StatusCode::BAD_REQUEST, Body::Empty)
                 }
                 Ok(body) => {
-                    let res = post_room_keep(db, &c[1], body).await?;
+                    let res = post_room_keep(db, &room_name, body).await?;
                     from_post_room_keep_response(res)
                 }
             },
