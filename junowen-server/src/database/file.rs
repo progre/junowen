@@ -1,4 +1,5 @@
 use anyhow::Result;
+use async_trait::async_trait;
 use junowen_lib::connection::signaling::CompressedSdp;
 use serde_json::Value;
 use tokio::fs;
@@ -24,6 +25,7 @@ impl File {
     }
 }
 
+#[async_trait]
 impl SharedRoomTables for File {
     async fn put_room(&self, offer: SharedRoom) -> Result<(), PutError> {
         let mut store = self.read().await.map_err(PutError::Unknown)?;
@@ -134,6 +136,7 @@ impl SharedRoomTables for File {
     }
 }
 
+#[async_trait]
 impl ReservedRoomTables for File {
     async fn put_room(&self, _offer: ReservedRoom) -> Result<(), PutError> {
         unimplemented!();

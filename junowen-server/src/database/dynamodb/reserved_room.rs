@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use async_trait::async_trait;
 use aws_sdk_dynamodb::{
     error::SdkError,
     types::{AttributeValue, ReturnValue},
@@ -12,6 +13,7 @@ use crate::database::{
 
 use super::DynamoDB;
 
+#[async_trait]
 impl database::ReservedRoomTables for DynamoDB {
     async fn put_room(&self, room: ReservedRoom) -> Result<(), PutError> {
         self.put_item(&self.table_name_reserved_room, room).await

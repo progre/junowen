@@ -1,10 +1,12 @@
 use anyhow::Result;
+use async_trait::async_trait;
 use aws_sdk_dynamodb::{error::SdkError, types::AttributeValue};
 
 use crate::database::{PutError, SharedRoom, SharedRoomOpponentAnswer, SharedRoomTables};
 
 use super::DynamoDB;
 
+#[async_trait]
 impl SharedRoomTables for DynamoDB {
     async fn put_room(&self, room: SharedRoom) -> Result<(), PutError> {
         self.put_item(&self.table_name_shared_room, room).await

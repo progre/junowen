@@ -1,6 +1,7 @@
 mod dynamodb;
 mod file;
 
+use async_trait::async_trait;
 use derive_new::new;
 pub use dynamodb::DynamoDB;
 pub use file::File;
@@ -57,6 +58,7 @@ pub enum PutError {
     Unknown(anyhow::Error),
 }
 
+#[async_trait]
 pub trait SharedRoomTables: Send + Sync + 'static {
     async fn put_room(&self, offer: SharedRoom) -> Result<(), PutError>;
     async fn find_room(&self, name: String) -> Result<Option<SharedRoom>>;
@@ -109,6 +111,7 @@ pub struct ReservedRoomOpponentAnswer(pub Answer);
 #[derive(Serialize, Deserialize)]
 pub struct ReservedRoomSpectatorAnswer(pub Answer);
 
+#[async_trait]
 pub trait ReservedRoomTables: Send + Sync + 'static {
     async fn put_room(&self, offer: ReservedRoom) -> Result<(), PutError>;
     async fn find_room(&self, name: String) -> Result<Option<ReservedRoom>>;

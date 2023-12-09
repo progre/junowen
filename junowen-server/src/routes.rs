@@ -2,7 +2,10 @@ mod custom;
 mod reserved_room;
 mod room_utils;
 
-use std::hash::{DefaultHasher, Hash, Hasher};
+use std::{
+    collections::hash_map::DefaultHasher,
+    hash::{Hash, Hasher},
+};
 
 use anyhow::{bail, Result};
 use base_custom::BaseCustom;
