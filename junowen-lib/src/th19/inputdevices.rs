@@ -92,14 +92,14 @@ pub struct InputDevice {
     #[getset(get = "pub", get_mut = "pub")]
     input: Input,
     #[getset(get = "pub")]
-    raw_keys: [u8; 0x104],
+    raw_keys: [u8; 0x100],
+    _unknown2: [u8; 0x04],
 }
 
 #[derive(CopyGetters, Getters, Setters)]
 #[repr(C)]
 pub struct InputDevices {
     _unknown1: [u8; 0x20],
-    #[getset(get = "pub")]
     input_device_array: [InputDevice; 3 + 9],
     _unknown2: [u8; 0x14],
     #[getset(get_copy = "pub", set = "pub")]
@@ -109,6 +109,10 @@ pub struct InputDevices {
 }
 
 impl InputDevices {
+    pub fn keyboard_input(&self) -> &InputDevice {
+        &self.input_device_array[0]
+    }
+
     pub fn p1_input(&self) -> &Input {
         &self.input_device_array[self.p1_idx as usize].input
     }
