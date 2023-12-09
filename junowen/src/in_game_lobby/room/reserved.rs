@@ -18,8 +18,8 @@ use super::{
 
 fn make_enter_menu(room_name: String) -> (u8, CommonMenu) {
     let items = vec![
-        MenuItem::simple_action("Enter as Player", 0, true),
-        MenuItem::simple_action("Enter as Spectator", 3, true),
+        MenuItem::simple_action("Enter as a Player", 0, true),
+        MenuItem::simple_action("Enter as a Spectator", 3, true),
         MenuItem::text_input("Change Room Name", 4, "Room name", room_name),
     ];
     (

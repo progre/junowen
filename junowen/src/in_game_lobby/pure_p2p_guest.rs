@@ -32,7 +32,7 @@ impl PureP2pGuest {
         let (session_tx, session_rx) = mpsc::channel(1);
         Self {
             common_menu: CommonMenu::new(
-                "Connect as Guest",
+                "Connect as a Guest",
                 false,
                 840,
                 MenuDefine::new(

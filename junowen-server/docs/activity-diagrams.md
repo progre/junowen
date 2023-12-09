@@ -183,12 +183,12 @@ flowchart TB
       2070 -- Room is full --> 2998
       %% goto
     %% case
-      2070 -- OK --> 2080(Connect as Guest)
+      2070 -- OK --> 2080(Connect as a Guest)
       2080 --> 2998{ }
       %% goto
   %% case
     2030 -- Answer --> 2200{ }
-    2200 --> 2210(Connect as Host)
+    2200 --> 2210(Connect as a Host)
     2210 --> 2998
     %% goto
   %% case
@@ -256,7 +256,7 @@ flowchart TB
       2070 -- Conflict --> 1000
       %% goto
     %% case
-      2070 -- OK --> 2080(Connect as Spectator)
+      2070 -- OK --> 2080(Connect as a Spectator)
       2080 --> 2998{ }
       %% goto
 

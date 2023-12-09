@@ -13,7 +13,7 @@ use super::{
 
 fn make_enter_menu(room_name: String) -> (u8, CommonMenu) {
     let items = vec![
-        MenuItem::simple_action("Enter Room", 0, true),
+        MenuItem::simple_action("Enter the Room", 0, true),
         MenuItem::text_input("Change Room Name", 4, "Room name", room_name),
     ];
     (

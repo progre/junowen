@@ -49,8 +49,8 @@ adonis や th075caster と同じような仕組みで動作します。
 #### Pure P2P での対戦の仕方
 
 1. 「Ju.N.Owen」→「Pure P2P」を選択します
-2. ホストとして接続を待ち受ける場合は「Connect as Host」を、
-   ゲストとして接続する場合は「Connect as Guset」を選択します
+2. ホストとして接続を待ち受ける場合は「Connect as a Host」を、
+   ゲストとして接続する場合は「Connect as a Guset」を選択します
     - ホスト
         1. `<offer>********</offer>` という長い文字列が表示され、自動的にクリップボードにコピーされるので、
            この文字列を Discord 等を使って対戦相手に送信してください  
@@ -70,7 +70,7 @@ adonis や th075caster と同じような仕組みで動作します。
 #### Pure P2P での観戦の仕方
 
 - 観戦者
-    1. 「Ju.N.Owen」→「Pure P2P」→「Connect as Spectator」を選択します
+    1. 「Ju.N.Owen」→「Pure P2P」→「Connect as a Spectator」を選択します
     2. `<s-offer>********</s-offer>` という長い文字列が表示され、自動的にクリップボードにコピーされるので、
        この文字列を Discord 等を使ってプレイヤーのどちらかに送信してください  
        「Copy your code」を選択すると再度クリップボードにコピーされます

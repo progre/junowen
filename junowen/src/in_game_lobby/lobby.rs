@@ -36,13 +36,16 @@ impl Root {
                     Some(MenuChild::SubMenu(MenuDefine::new(
                         0,
                         vec![
-                            MenuItem::simple_sub_scene("Connect as Host", LobbyScene::PureP2pHost),
                             MenuItem::simple_sub_scene(
-                                "Connect as Guest",
+                                "Connect as a Host",
+                                LobbyScene::PureP2pHost,
+                            ),
+                            MenuItem::simple_sub_scene(
+                                "Connect as a Guest",
                                 LobbyScene::PureP2pGuest,
                             ),
                             MenuItem::simple_sub_scene(
-                                "Connect as Spectator",
+                                "Connect as a Spectator",
                                 LobbyScene::PureP2pSpectator,
                             ),
                         ],

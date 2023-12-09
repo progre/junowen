@@ -215,7 +215,7 @@ pub fn pure_p2p_host() -> PureP2pOfferer<BattleSession> {
         SignalingCodeType::BattleOffer,
         SignalingCodeType::BattleAnswer,
         |pc, dc| BattleSession::new(pc, dc, true),
-        "Connect as Host",
+        "Connect as a Host",
         [
             "Share your signaling code with guest.",
             "Guest's signaling code:",
@@ -229,7 +229,7 @@ pub fn pure_p2p_spectator() -> PureP2pOfferer<SpectatorSession> {
         SignalingCodeType::SpectatorOffer,
         SignalingCodeType::SpectatorAnswer,
         SpectatorSession::new,
-        "Connect as Spectator",
+        "Connect as a Spectator",
         [
             "Share your signaling code with player.",
             "Player's signaling code:",

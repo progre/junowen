@@ -49,8 +49,8 @@ This method does not use a connection server, but exchanges connection informati
 #### Using Pure P2P competition
 
 1. Select "Ju.N.Owen" -> "Pure P2P”.
-2. Select "Connect as Host" if you want to wait for a connection as a host,
-   Select "Connect as Guset" to connect as a guest.
+2. Select "Connect as a Host" if you want to wait for a connection as a host,
+   Select "Connect as a Guset" to connect as a guest.
     - Host
         1. A long string `<offer>********</offer>` will be displayed and automatically copied to the clipboard,
            Send this string to your opponent using Discord or other means.
@@ -70,7 +70,7 @@ This method does not use a connection server, but exchanges connection informati
 #### Using Pure P2P spectate
 
 - Spectator
-    1. Select “Ju.N.Owen" -> "Pure P2P” -> "Connect as Spectator"
+    1. Select “Ju.N.Owen" -> "Pure P2P” -> "Connect as a Spectator"
     2. A long string `<s-offer>********</s-offer>` will be displayed and automatically copied to the clipboard,
        Send this string to one of the players via Discord or other means.
        Select "Copy your code" to copy it to the clipboard again.
