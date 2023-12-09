@@ -4,6 +4,7 @@ use getset::{Getters, MutGetters};
 use junowen_lib::{InputFlags, InputValue, Th19};
 
 use crate::{
+    file::SettingsRepo,
     session::{battle::BattleSession, spectator::SpectatorSession},
     signaling::waiting_for_match::{
         WaitingForMatch, WaitingForOpponent, WaitingForOpponentInReservedRoom,
@@ -81,6 +82,7 @@ impl Root {
 
 #[derive(MutGetters, Getters)]
 pub struct Lobby {
+    settings_repo: SettingsRepo,
     scene: LobbyScene,
     prev_scene: LobbyScene,
     root: Root,
@@ -95,8 +97,9 @@ pub struct Lobby {
 }
 
 impl Lobby {
-    pub fn new() -> Self {
+    pub fn new(settings_repo: SettingsRepo) -> Self {
         Self {
+            settings_repo,
             scene: LobbyScene::Root,
             prev_scene: LobbyScene::Root,
             root: Root::new(),
@@ -132,6 +135,7 @@ impl Lobby {
                     _ => None,
                 };
                 let ret = self.shared_room.on_input_menu(
+                    &self.settings_repo,
                     current_input,
                     self.prev_input,
                     th19,
@@ -143,6 +147,7 @@ impl Lobby {
                 ret
             }
             LobbyScene::ReservedRoom => self.reserved_room.on_input_menu(
+                &self.settings_repo,
                 current_input,
                 self.prev_input,
                 th19,

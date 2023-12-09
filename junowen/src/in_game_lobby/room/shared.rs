@@ -2,20 +2,22 @@ use std::ffi::c_void;
 
 use junowen_lib::{InputValue, Th19};
 
-use crate::signaling::waiting_for_match::WaitingForOpponentInSharedRoom;
+use crate::{
+    file::SettingsRepo, signaling::waiting_for_match::WaitingForOpponentInSharedRoom, TOKIO_RUNTIME,
+};
 
 use super::{
     super::common_menu::{CommonMenu, LobbyScene, MenuDefine, MenuItem, OnMenuInputResult},
     on_render_texts,
 };
 
-fn make_enter_menu() -> (u8, CommonMenu) {
+fn make_enter_menu(room_name: String) -> (u8, CommonMenu) {
     let items = vec![
-        MenuItem::simple_action("Enter", 0, true),
-        // MenuItem::simple_action("Change Room Name", 2, true),
+        MenuItem::simple_action("Enter Room", 0, true),
+        MenuItem::text_input("Change Room Name", 4, "Room name", room_name),
     ];
     (
-        0,
+        1,
         CommonMenu::new("Shared Room", false, 240 + 56, MenuDefine::new(0, items)),
     )
 }
@@ -23,7 +25,7 @@ fn make_enter_menu() -> (u8, CommonMenu) {
 fn make_leave_menu() -> (u8, CommonMenu) {
     let items = vec![MenuItem::simple_action("Leave", 1, true)];
     (
-        1,
+        2,
         CommonMenu::new("Shared Room", false, 240 + 56, MenuDefine::new(0, items)),
     )
 }
@@ -31,33 +33,43 @@ fn make_leave_menu() -> (u8, CommonMenu) {
 pub struct SharedRoom {
     menu_id: u8,
     menu: CommonMenu,
+    room_name: String,
 }
 
 impl SharedRoom {
     pub fn new() -> Self {
-        let (menu_id, menu) = make_enter_menu();
-        Self { menu_id, menu }
+        Self {
+            menu_id: 0,
+            menu: CommonMenu::new("", false, 0, MenuDefine::new(0, vec![])),
+            room_name: String::new(),
+        }
     }
 
     pub fn on_input_menu(
         &mut self,
+        settings_repo: &SettingsRepo,
         current_input: InputValue,
         prev_input: InputValue,
         th19: &Th19,
         waiting: &mut Option<WaitingForOpponentInSharedRoom>,
     ) -> Option<LobbyScene> {
+        if self.menu_id == 0 {
+            self.room_name = TOKIO_RUNTIME.block_on(settings_repo.shared_room_name(th19));
+            (self.menu_id, self.menu) = make_enter_menu(self.room_name.to_owned());
+        }
+
         if let Some(waiting) = waiting {
             waiting.recv();
         }
         match self.menu.on_input_menu(current_input, prev_input, th19) {
             OnMenuInputResult::None => {
                 if waiting.is_none() {
-                    if self.menu_id != 0 {
-                        (self.menu_id, self.menu) = make_enter_menu();
+                    if self.menu_id != 1 {
+                        (self.menu_id, self.menu) = make_enter_menu(self.room_name.to_owned());
                     }
                 } else {
                     //
-                    if self.menu_id != 1 {
+                    if self.menu_id != 2 {
                         (self.menu_id, self.menu) = make_leave_menu();
                     }
                 }
@@ -67,15 +79,20 @@ impl SharedRoom {
             OnMenuInputResult::SubScene(_) => unreachable!(),
             OnMenuInputResult::Action(action) => match action.id() {
                 0 => {
-                    *waiting = Some(WaitingForOpponentInSharedRoom::new(
-                        th19.online_vs_mode().room_name().to_owned(),
-                    ));
+                    let room_name = self.room_name.to_owned();
+                    *waiting = Some(WaitingForOpponentInSharedRoom::new(room_name));
                     (self.menu_id, self.menu) = make_leave_menu();
                     None
                 }
                 1 => {
                     *waiting = None;
-                    (self.menu_id, self.menu) = make_enter_menu();
+                    (self.menu_id, self.menu) = make_enter_menu(self.room_name.to_owned());
+                    None
+                }
+                4 => {
+                    let new_room_name = action.value().unwrap().to_owned();
+                    self.room_name = new_room_name.clone();
+                    TOKIO_RUNTIME.block_on(settings_repo.set_shared_room_name(new_room_name));
                     None
                 }
                 _ => unreachable!(),
@@ -89,6 +106,6 @@ impl SharedRoom {
         th19: &Th19,
         text_renderer: *const c_void,
     ) {
-        on_render_texts(&self.menu, waiting, th19, text_renderer);
+        on_render_texts(&self.menu, waiting, &self.room_name, th19, text_renderer);
     }
 }

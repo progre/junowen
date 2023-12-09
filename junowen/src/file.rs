@@ -1,6 +1,7 @@
 use std::{io::ErrorKind, path::PathBuf};
 
 use derive_new::new;
+use junowen_lib::Th19;
 use tokio::{
     fs::{self, read_to_string},
     io,
@@ -78,6 +79,9 @@ pub async fn move_old_log_to_new_path(old_log_path: &str, module_dir: &str, log_
     }
 }
 
+const SHARED_ROOM_NAME: &str = "shared_room_name";
+const RESERVED_ROOM_NAME: &str = "reserved_room_name";
+
 #[derive(new)]
 pub struct SettingsRepo {
     path: String,
@@ -111,5 +115,33 @@ impl SettingsRepo {
         if let Err(err) = tokio::fs::write(&self.path, doc.to_string()).await {
             error!("{}", err);
         }
+    }
+
+    pub async fn reserved_room_name(&self, th19: &Th19) -> String {
+        match self.read_string(RESERVED_ROOM_NAME).await {
+            Some(value) => value,
+            None => {
+                let value = th19.online_vs_mode().room_name().to_owned();
+                self.set_reserved_room_name(value.clone()).await;
+                value
+            }
+        }
+    }
+    pub async fn set_reserved_room_name(&self, value: String) {
+        self.write_string(RESERVED_ROOM_NAME, value).await;
+    }
+
+    pub async fn shared_room_name(&self, th19: &Th19) -> String {
+        match self.read_string(SHARED_ROOM_NAME).await {
+            Some(value) => value,
+            None => {
+                let value = th19.online_vs_mode().room_name().to_owned();
+                self.set_shared_room_name(value.clone()).await;
+                value
+            }
+        }
+    }
+    pub async fn set_shared_room_name(&self, value: String) {
+        self.write_string(SHARED_ROOM_NAME, value).await;
     }
 }

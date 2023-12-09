@@ -26,11 +26,11 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(_settings_repo: SettingsRepo, th19: Th19) -> Self {
+    pub fn new(settings_repo: SettingsRepo, th19: Th19) -> Self {
         Self {
             th19,
             title_menu_modifier: TitleMenuModifier::new(),
-            lobby: Lobby::new(),
+            lobby: Lobby::new(settings_repo),
             junowen_state: JunowenState::Standby,
         }
     }

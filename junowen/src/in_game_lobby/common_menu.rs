@@ -5,9 +5,9 @@ use std::ffi::c_void;
 use getset::{CopyGetters, Setters};
 use junowen_lib::{InputFlags, InputValue, Th19};
 
-use self::components::Action;
+use self::components::{Action, TextInput};
 
-use super::helper::{render_menu_item, render_title};
+use super::helper::render_title;
 
 pub use components::{MenuChild, MenuDefine, MenuItem};
 
@@ -32,13 +32,22 @@ fn pulse(current: InputValue, prev: InputValue, flag: InputFlags) -> bool {
     current.0 & flag != None && prev.0 & flag == None
 }
 
-enum CurrentMenuResult<'a> {
-    MenuDefine(&'a MenuDefine),
-    SubScene(LobbyScene),
+fn cancel(current_input: InputValue, prev_input: InputValue) -> bool {
+    pulse(current_input, prev_input, InputFlags::CHARGE)
+        || pulse(current_input, prev_input, InputFlags::BOMB)
+        || pulse(current_input, prev_input, InputFlags::PAUSE)
 }
-enum CurrentMenuMutResult<'a> {
-    MenuDefine(&'a mut MenuDefine, &'a mut u32, &'a mut u32),
-    SubScene(LobbyScene),
+
+enum CurrentMenuSceneResult<'a> {
+    Menu(&'static str, &'a MenuDefine),
+    SubScene(&'static str, LobbyScene),
+    TextInput(&'static str, &'a TextInput),
+}
+
+enum CurrentMenuSceneMutResult<'a> {
+    Menu(&'static str, &'a mut MenuDefine, &'a mut u32, &'a mut u32),
+    SubScene(&'static str, LobbyScene),
+    TextInput(&'static str, &'a mut TextInput),
 }
 
 #[derive(Setters, CopyGetters)]
@@ -84,7 +93,7 @@ impl CommonMenu {
             }
             self.decide_count = 0;
             self.depth += 1;
-            if let (_, CurrentMenuResult::SubScene(scene)) = self.current_menu() {
+            if let CurrentMenuSceneResult::SubScene(_, scene) = self.current_menu_scene() {
                 self.depth -= 1;
                 return Some(OnMenuInputResult::SubScene(scene));
             }
@@ -120,11 +129,7 @@ impl CommonMenu {
             return OnMenuInputResult::Action(action.clone());
         }
         match menu_item.child() {
-            Some(MenuChild::SubMenu(_)) => {
-                th19.play_sound(th19.sound_manager(), 0x07, 0);
-                *decide_count += 1;
-            }
-            Some(MenuChild::SubScene(_)) => {
+            Some(MenuChild::SubMenu(_) | MenuChild::SubScene(_) | MenuChild::TextInput(_)) => {
                 th19.play_sound(th19.sound_manager(), 0x07, 0);
                 *decide_count += 1;
             }
@@ -133,15 +138,14 @@ impl CommonMenu {
         OnMenuInputResult::None
     }
 
-    fn select(&mut self, current_input: InputValue, prev_input: InputValue, th19: &Th19) {
-        let (_label, result) = self.current_menu_mut();
-        let (menu, repeat_up, repeat_down) = match result {
-            CurrentMenuMutResult::SubScene(_) => unreachable!(),
-            CurrentMenuMutResult::MenuDefine(menu, repeat_up, repeat_down) => {
-                (menu, repeat_up, repeat_down)
-            }
-        };
-
+    fn select(
+        menu: &mut MenuDefine,
+        repeat_up: &mut u32,
+        repeat_down: &mut u32,
+        current_input: InputValue,
+        prev_input: InputValue,
+        th19: &Th19,
+    ) {
         if current_input.0 & InputFlags::UP != None
             && (prev_input.0 & InputFlags::UP == None || *repeat_up > 0)
         {
@@ -182,57 +186,85 @@ impl CommonMenu {
             return result;
         }
 
-        if pulse(current_input, prev_input, InputFlags::CHARGE)
-            || pulse(current_input, prev_input, InputFlags::BOMB)
-            || pulse(current_input, prev_input, InputFlags::PAUSE)
-        {
-            return self.cancel(th19);
+        match self.current_menu_scene() {
+            CurrentMenuSceneResult::SubScene(_, scene) => {
+                if cancel(current_input, prev_input) {
+                    return self.cancel(th19);
+                }
+                OnMenuInputResult::SubScene(scene)
+            }
+            CurrentMenuSceneResult::Menu(_, menu) => {
+                if cancel(current_input, prev_input) {
+                    return self.cancel(th19);
+                }
+                if menu.items().is_empty() {
+                    return OnMenuInputResult::None;
+                }
+                if pulse(current_input, prev_input, InputFlags::SHOT)
+                    || pulse(current_input, prev_input, InputFlags::ENTER)
+                {
+                    let mut decide_count = self.decide_count;
+                    let result = Self::decide(&mut decide_count, th19, menu.selected_item());
+                    self.decide_count = decide_count;
+                    return result;
+                }
+                let CurrentMenuSceneMutResult::Menu(_, menu, repeat_up, repeat_down) =
+                    self.current_menu_scene_mut()
+                else {
+                    unreachable!()
+                };
+                Self::select(
+                    menu,
+                    repeat_up,
+                    repeat_down,
+                    current_input,
+                    prev_input,
+                    th19,
+                );
+                OnMenuInputResult::None
+            }
+            CurrentMenuSceneResult::TextInput(_, _) => {
+                let CurrentMenuSceneMutResult::TextInput(_, text_input) =
+                    self.current_menu_scene_mut()
+                else {
+                    unreachable!()
+                };
+                let action_id = text_input.id();
+                match text_input.on_input_menu(th19) {
+                    components::OnMenuInputResult::None => OnMenuInputResult::None,
+                    components::OnMenuInputResult::Cancel => {
+                        th19.play_sound(th19.sound_manager(), 0x09, 0);
+                        self.decide_count -= 1;
+                        OnMenuInputResult::None
+                    }
+                    components::OnMenuInputResult::Decide(new_room_name) => {
+                        th19.play_sound(th19.sound_manager(), 0x07, 0);
+                        self.decide_count -= 1;
+                        let action = Action::new(action_id, false, Some(new_room_name));
+                        OnMenuInputResult::Action(action)
+                    }
+                }
+            }
         }
-        let (_label, result) = self.current_menu();
-        let menu = match result {
-            CurrentMenuResult::SubScene(scene) => return OnMenuInputResult::SubScene(scene),
-            CurrentMenuResult::MenuDefine(menu) => menu,
-        };
-        if menu.items().is_empty() {
-            return OnMenuInputResult::None;
-        }
-        if pulse(current_input, prev_input, InputFlags::SHOT)
-            || pulse(current_input, prev_input, InputFlags::ENTER)
-        {
-            let mut decide_count = self.decide_count;
-            let result = Self::decide(&mut decide_count, th19, menu.selected_item());
-            self.decide_count = decide_count;
-            return result;
-        }
-        self.select(current_input, prev_input, th19);
-        OnMenuInputResult::None
     }
 
     pub fn on_render_texts(&self, th19: &Th19, text_renderer: *const c_void) {
-        let (label, menu) = self.current_menu();
-        let menu = match menu {
-            CurrentMenuResult::SubScene(_) => unreachable!(),
-            CurrentMenuResult::MenuDefine(menu) => menu,
-        };
-
-        render_title(th19, text_renderer, label.as_bytes());
-        for (i, item) in menu.items().iter().enumerate() {
-            render_menu_item(
-                th19,
-                text_renderer,
-                item.label().as_bytes(),
-                self.base_height + 56 * i as u32,
-                i == menu.cursor(),
-            );
+        match self.current_menu_scene() {
+            CurrentMenuSceneResult::SubScene { .. } => unreachable!(),
+            CurrentMenuSceneResult::Menu(label, menu) => {
+                render_title(th19, text_renderer, label.as_bytes());
+                menu.on_render_texts(self.base_height, th19, text_renderer);
+            }
+            CurrentMenuSceneResult::TextInput(label, text_input) => {
+                render_title(th19, text_renderer, label.as_bytes());
+                text_input.on_render_texts(th19, text_renderer);
+            }
         }
     }
 
-    fn current_menu(&self) -> (&'static str, CurrentMenuResult) {
+    fn current_menu_scene(&self) -> CurrentMenuSceneResult {
         if self.depth == 0 {
-            return (
-                self.root_label,
-                CurrentMenuResult::MenuDefine(&self.menu_define),
-            );
+            return CurrentMenuSceneResult::Menu(self.root_label, &self.menu_define);
         }
         let item = self.menu_define.selected_item();
         let mut label = item.label();
@@ -245,24 +277,22 @@ impl CommonMenu {
             label = item.label();
             child = item.child().as_ref().unwrap();
         }
-        (
-            label,
-            match child {
-                MenuChild::SubMenu(sub_menu) => CurrentMenuResult::MenuDefine(sub_menu),
-                MenuChild::SubScene(scene) => CurrentMenuResult::SubScene(*scene),
-            },
-        )
+        match child {
+            MenuChild::SubMenu(sub_menu) => CurrentMenuSceneResult::Menu(label, sub_menu),
+            MenuChild::SubScene(scene) => CurrentMenuSceneResult::SubScene(label, *scene),
+            MenuChild::TextInput(text_input) => {
+                CurrentMenuSceneResult::TextInput(label, text_input)
+            }
+        }
     }
 
-    fn current_menu_mut(&mut self) -> (&'static str, CurrentMenuMutResult) {
+    fn current_menu_scene_mut(&mut self) -> CurrentMenuSceneMutResult {
         if self.depth == 0 {
-            return (
+            return CurrentMenuSceneMutResult::Menu(
                 self.root_label,
-                CurrentMenuMutResult::MenuDefine(
-                    &mut self.menu_define,
-                    &mut self.repeat_up,
-                    &mut self.repeat_down,
-                ),
+                &mut self.menu_define,
+                &mut self.repeat_up,
+                &mut self.repeat_down,
             );
         }
         let item = self.menu_define.selected_item_mut();
@@ -276,16 +306,17 @@ impl CommonMenu {
             label = item.label();
             child = item.child_mut().as_mut().unwrap();
         }
-        (
-            label,
-            match child {
-                MenuChild::SubMenu(sub_menu) => CurrentMenuMutResult::MenuDefine(
-                    sub_menu,
-                    &mut self.repeat_up,
-                    &mut self.repeat_down,
-                ),
-                MenuChild::SubScene(scene) => CurrentMenuMutResult::SubScene(*scene),
-            },
-        )
+        match child {
+            MenuChild::SubMenu(sub_menu) => CurrentMenuSceneMutResult::Menu(
+                label,
+                sub_menu,
+                &mut self.repeat_up,
+                &mut self.repeat_down,
+            ),
+            MenuChild::SubScene(scene) => CurrentMenuSceneMutResult::SubScene(label, *scene),
+            MenuChild::TextInput(text_input) => {
+                CurrentMenuSceneMutResult::TextInput(label, text_input)
+            }
+        }
     }
 }

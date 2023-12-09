@@ -7,7 +7,10 @@ use junowen_lib::{RenderingText, Th19};
 
 use crate::signaling::waiting_for_match::WaitingInRoom;
 
-use super::{common_menu::CommonMenu, helper::render_text_line};
+use super::{
+    common_menu::CommonMenu,
+    helper::{render_label_value, render_text_line},
+};
 
 fn progress_alphas(progress: f64) -> Vec<u8> {
     const LENGTH: f64 = 20.0;
@@ -90,26 +93,6 @@ fn progress_text(progress: f64) -> Vec<u8> {
     text
 }
 
-fn render_room_name(th19: &Th19, text_renderer: *const c_void, room_name: &str) {
-    let x = (320 * th19.screen_width().unwrap() / 1280) as f32;
-    let y = ((240 - 56) * th19.screen_height().unwrap() / 960) as f32;
-    let mut rt = RenderingText::default();
-    rt.set_text("Room name  :".as_bytes());
-    rt.x = x;
-    rt.y = y;
-    rt.color = 0xffffffff;
-    rt.font_type = 0;
-    rt.horizontal_align = 1;
-    rt.vertical_align = 1;
-    th19.render_text(text_renderer, &rt);
-
-    let x = (544 * th19.screen_width().unwrap() / 1280) as f32;
-    rt.set_text(room_name.as_bytes());
-    rt.color = 0xffffffa0;
-    rt.x = x;
-    th19.render_text(text_renderer, &rt);
-}
-
 fn render_progress_item(th19: &Th19, text_renderer: *const c_void, alpha: u8, text: &[u8]) {
     let x = (640 * th19.screen_width().unwrap() / 1280) as f32;
     let y = ((160 + 32 * 11) * th19.screen_height().unwrap() / 960) as f32;
@@ -135,14 +118,14 @@ fn render_progress(th19: &Th19, text_renderer: *const c_void, progress: f64) {
 pub fn on_render_texts<T>(
     menu: &CommonMenu,
     waiting: Option<&WaitingInRoom<T>>,
+    room_name: &str,
     th19: &Th19,
     text_renderer: *const c_void,
 ) {
     menu.on_render_texts(th19, text_renderer);
 
     if waiting.is_none() {
-        let room_name = th19.online_vs_mode().room_name();
-        render_room_name(th19, text_renderer, room_name);
+        render_label_value(th19, text_renderer, 240 - 56, 1, "Room name", room_name);
     }
 
     if let Some(waiting) = waiting {

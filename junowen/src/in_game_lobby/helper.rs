@@ -85,3 +85,30 @@ pub fn menu_item_color(font_type: u32, selected: bool) -> u32 {
         }
     }
 }
+
+pub fn render_label_value(
+    th19: &Th19,
+    text_renderer: *const c_void,
+    height: u32,
+    vertical_align: u32,
+    label: &str,
+    value: &str,
+) {
+    let x = (320 * th19.screen_width().unwrap() / 1280) as f32;
+    let y = (height * th19.screen_height().unwrap() / 960) as f32;
+    let mut rt = RenderingText::default();
+    rt.set_text(format!("{:<11}:", label).as_bytes());
+    rt.x = x;
+    rt.y = y;
+    rt.color = 0xffffffff;
+    rt.font_type = 0;
+    rt.horizontal_align = 1;
+    rt.vertical_align = vertical_align;
+    th19.render_text(text_renderer, &rt);
+
+    let x = (544 * th19.screen_width().unwrap() / 1280) as f32;
+    rt.set_text(value.as_bytes());
+    rt.color = 0xffffffa0;
+    rt.x = x;
+    th19.render_text(text_renderer, &rt);
+}
