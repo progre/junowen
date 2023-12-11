@@ -106,6 +106,7 @@ impl ReservedRoom {
                 }
                 1 => {
                     *waiting = None;
+                    self.menu.controller_mut().force_cancel();
                     None
                 }
                 3 => {
@@ -142,9 +143,12 @@ impl ReservedRoom {
         th19: &Th19,
         text_renderer: *const c_void,
     ) {
+        let mut room_name = Some(self.room_name.as_str());
         if !self.menu.menu().decided() {
             waiting = None;
+        } else if waiting.is_none() {
+            room_name = None;
         }
-        on_render_texts(&self.menu, waiting, &self.room_name, th19, text_renderer);
+        on_render_texts(&self.menu, waiting, room_name, th19, text_renderer);
     }
 }

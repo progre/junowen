@@ -52,6 +52,7 @@ pub struct CommonMenu {
     menu: Menu,
     instant_exit: bool,
     base_height: u32,
+    #[getset(get_mut = "pub")]
     controller: MenuController,
 }
 

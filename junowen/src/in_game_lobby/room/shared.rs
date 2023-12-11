@@ -116,6 +116,12 @@ impl SharedRoom {
         th19: &Th19,
         text_renderer: *const c_void,
     ) {
-        on_render_texts(&self.menu, waiting, &self.room_name, th19, text_renderer);
+        on_render_texts(
+            &self.menu,
+            waiting,
+            Some(&self.room_name),
+            th19,
+            text_renderer,
+        );
     }
 }

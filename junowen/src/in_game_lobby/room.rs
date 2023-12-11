@@ -118,15 +118,11 @@ fn render_progress(th19: &Th19, text_renderer: *const c_void, progress: f64) {
 pub fn on_render_texts<T>(
     menu: &CommonMenu,
     waiting: Option<&WaitingInRoom<T>>,
-    room_name: &str,
+    room_name: Option<&str>,
     th19: &Th19,
     text_renderer: *const c_void,
 ) {
     menu.on_render_texts(th19, text_renderer);
-
-    if waiting.is_none() {
-        render_label_value(th19, text_renderer, 240 - 56, 1, "Room name", room_name);
-    }
 
     if let Some(waiting) = waiting {
         let elapsed = waiting.elapsed();
@@ -135,5 +131,7 @@ pub fn on_render_texts<T>(
             let error_msg = format!("Failed: {}", error);
             render_text_line(th19, text_renderer, 13 + i as u32, error_msg.as_bytes());
         }
+    } else if let Some(room_name) = room_name {
+        render_label_value(th19, text_renderer, 240 - 56, 1, "Room name", room_name);
     }
 }
