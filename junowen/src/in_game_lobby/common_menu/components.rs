@@ -7,7 +7,7 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{MapVirtualKeyW, ToUnicode, MAP
 
 use crate::in_game_lobby::helper::{render_label_value, render_menu_item};
 
-use super::LobbyScene;
+use super::{menu_controller::MenuControllerInputResult, LobbyScene};
 
 #[derive(Clone, Debug, CopyGetters, Getters, new)]
 pub struct Action {
@@ -145,7 +145,6 @@ pub struct MenuItem {
     #[get_copy = "pub"]
     label: &'static str,
     action: Option<Action>,
-    #[getset(get = "pub", get_mut = "pub")]
     child: Option<MenuChild>,
 }
 
@@ -174,17 +173,35 @@ impl MenuItem {
     pub fn action(&self) -> Option<&Action> {
         self.action.as_ref()
     }
+
+    pub fn child(&self) -> Option<&MenuChild> {
+        self.child.as_ref()
+    }
+
+    pub fn child_mut(&mut self) -> Option<&mut MenuChild> {
+        self.child.as_mut()
+    }
 }
 
-#[derive(Debug, CopyGetters, Getters, Setters, new)]
+#[derive(Debug, CopyGetters, Getters, Setters)]
 pub struct MenuDefine {
-    #[getset(get_copy = "pub", set = "pub")]
+    #[get_copy = "pub"]
     cursor: usize,
+    #[get_copy = "pub"]
+    decided: bool,
     #[get = "pub"]
     items: Vec<MenuItem>,
 }
 
 impl MenuDefine {
+    pub fn new(cursor: usize, items: Vec<MenuItem>) -> Self {
+        Self {
+            cursor,
+            decided: false,
+            items,
+        }
+    }
+
     pub fn selected_item(&self) -> &MenuItem {
         &self.items[self.cursor]
     }
@@ -193,11 +210,95 @@ impl MenuDefine {
         &mut self.items[self.cursor]
     }
 
+    pub fn dig(&mut self) -> Option<LobbyScene> {
+        if !self.decided {
+            if let Some(MenuChild::SubScene(scene)) = self.selected_item().child() {
+                return Some(*scene);
+            }
+            self.decided = true;
+            return None;
+        }
+        let MenuChild::SubMenu(sub_menu) = self.selected_item_mut().child_mut().unwrap() else {
+            unreachable!()
+        };
+        sub_menu.dig()
+    }
+
+    pub fn bury(&mut self) -> bool {
+        if !self.decided {
+            return false;
+        }
+        let MenuChild::SubMenu(sub_menu) = self.selected_item_mut().child_mut().unwrap() else {
+            self.decided = false;
+            return true;
+        };
+        if !sub_menu.decided {
+            self.decided = false;
+            return true;
+        }
+        sub_menu.bury()
+    }
+
     pub fn on_render_texts(&self, base_height: u32, th19: &Th19, text_renderer: *const c_void) {
         for (i, item) in self.items().iter().enumerate() {
             let label = item.label().as_bytes();
             let height = base_height + 56 * i as u32;
             render_menu_item(th19, text_renderer, label, height, i == self.cursor());
+        }
+    }
+
+    fn increment_cursor(&mut self) -> bool {
+        if self.cursor() >= self.items().len() - 1 {
+            return false;
+        }
+        self.cursor += 1;
+        true
+    }
+
+    fn decrement_cursor(&mut self) -> bool {
+        if self.cursor == 0 {
+            return false;
+        }
+        self.cursor -= 1;
+        true
+    }
+
+    pub fn input(
+        &mut self,
+        input_result: MenuControllerInputResult,
+        ignore_decide: bool,
+        play_decide_sound: bool,
+        th19: &Th19,
+    ) -> Option<Action> {
+        match input_result {
+            MenuControllerInputResult::None => None,
+            MenuControllerInputResult::Cancel => {
+                th19.play_sound(th19.sound_manager(), 0x09, 0);
+                None
+            }
+            MenuControllerInputResult::Decide => {
+                if ignore_decide {
+                    return None;
+                }
+                if play_decide_sound {
+                    th19.play_sound(th19.sound_manager(), 0x07, 0);
+                }
+                self.selected_item().action().cloned()
+            }
+            MenuControllerInputResult::Up => {
+                if !self.decrement_cursor() {
+                    return None;
+                }
+                th19.play_sound(th19.sound_manager(), 0x0a, 0);
+                None
+            }
+            MenuControllerInputResult::Down => {
+                if !self.increment_cursor() {
+                    return None;
+                }
+                th19.play_sound(th19.sound_manager(), 0x0a, 0);
+                None
+            }
         }
     }
 }
