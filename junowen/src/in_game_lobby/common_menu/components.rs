@@ -144,21 +144,37 @@ pub enum MenuChild {
 pub struct MenuItem {
     #[get_copy = "pub"]
     label: &'static str,
-    action: Option<Action>,
+    decided_action: Option<Action>,
     child: Option<MenuChild>,
 }
 
 impl MenuItem {
-    pub fn new(label: &'static str, action: Option<Action>, child: Option<MenuChild>) -> Self {
+    pub fn new(
+        label: &'static str,
+        decided_action: Option<Action>,
+        child: Option<MenuChild>,
+    ) -> Self {
         Self {
             label,
-            action,
+            decided_action,
             child,
         }
     }
 
     pub fn simple_action(label: &'static str, id: u8, play_sound: bool) -> Self {
         Self::new(label, Some(Action::new(id, play_sound, None)), None)
+    }
+
+    pub fn sub_menu(
+        label: &'static str,
+        decided_action: Option<u8>,
+        menu_define: MenuDefine,
+    ) -> Self {
+        Self::new(
+            label,
+            decided_action.map(|x| Action::new(x, true, None)),
+            Some(MenuChild::SubMenu(menu_define)),
+        )
     }
 
     pub fn simple_sub_scene(label: &'static str, scene: LobbyScene) -> Self {
@@ -171,7 +187,7 @@ impl MenuItem {
     }
 
     pub fn action(&self) -> Option<&Action> {
-        self.action.as_ref()
+        self.decided_action.as_ref()
     }
 
     pub fn child(&self) -> Option<&MenuChild> {
@@ -186,19 +202,29 @@ impl MenuItem {
 #[derive(Debug, CopyGetters, Getters, Setters)]
 pub struct MenuDefine {
     #[get_copy = "pub"]
+    title: &'static str,
+    canceled_action: Option<u8>,
+    #[get = "pub"]
+    items: Vec<MenuItem>,
+    #[get_copy = "pub"]
     cursor: usize,
     #[get_copy = "pub"]
     decided: bool,
-    #[get = "pub"]
-    items: Vec<MenuItem>,
 }
 
 impl MenuDefine {
-    pub fn new(cursor: usize, items: Vec<MenuItem>) -> Self {
+    pub fn new(
+        title: &'static str,
+        canceled_action: Option<u8>,
+        items: Vec<MenuItem>,
+        cursor: usize,
+    ) -> Self {
         Self {
+            title,
+            canceled_action,
+            items,
             cursor,
             decided: false,
-            items,
         }
     }
 
@@ -274,7 +300,7 @@ impl MenuDefine {
             MenuControllerInputResult::None => None,
             MenuControllerInputResult::Cancel => {
                 th19.play_sound(th19.sound_manager(), 0x09, 0);
-                None
+                self.canceled_action.map(|id| Action::new(id, false, None))
             }
             MenuControllerInputResult::Decide => {
                 if ignore_decide {

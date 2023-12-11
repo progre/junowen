@@ -18,7 +18,11 @@ fn make_enter_menu(room_name: String) -> (u8, CommonMenu) {
     ];
     (
         1,
-        CommonMenu::new("Shared Room", false, 240 + 56, MenuDefine::new(0, items)),
+        CommonMenu::new(
+            false,
+            240 + 56,
+            MenuDefine::new("Shared Room", None, items, 0),
+        ),
     )
 }
 
@@ -26,7 +30,11 @@ fn make_leave_menu() -> (u8, CommonMenu) {
     let items = vec![MenuItem::simple_action("Leave", 1, true)];
     (
         2,
-        CommonMenu::new("Shared Room", false, 240 + 56, MenuDefine::new(0, items)),
+        CommonMenu::new(
+            false,
+            240 + 56,
+            MenuDefine::new("Shared Room", None, items, 0),
+        ),
     )
 }
 
@@ -40,7 +48,7 @@ impl SharedRoom {
     pub fn new() -> Self {
         Self {
             menu_id: 0,
-            menu: CommonMenu::new("", false, 0, MenuDefine::new(0, vec![])),
+            menu: CommonMenu::new(false, 0, MenuDefine::new("", None, vec![], 0)),
             room_name: String::new(),
         }
     }

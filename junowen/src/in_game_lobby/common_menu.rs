@@ -3,7 +3,7 @@ mod menu_controller;
 
 use std::ffi::c_void;
 
-use getset::{CopyGetters, Setters};
+use getset::Getters;
 use junowen_lib::{InputValue, Th19};
 
 use self::{
@@ -35,7 +35,7 @@ pub enum OnMenuInputResult {
 }
 
 enum CurrentMenuSceneResult<'a> {
-    Menu(&'static str, &'a MenuDefine),
+    Menu(&'a MenuDefine),
     SubScene(&'static str, LobbyScene),
     TextInput(&'static str, &'a TextInput),
 }
@@ -46,10 +46,9 @@ enum CurrentMenuSceneMutResult<'a> {
     TextInput(&'a mut TextInput),
 }
 
-#[derive(Setters, CopyGetters)]
+#[derive(Getters)]
 pub struct CommonMenu {
-    #[get_copy = "pub"]
-    root_label: &'static str,
+    #[get = "pub"]
     menu_define: MenuDefine,
     instant_exit: bool,
     base_height: u32,
@@ -57,19 +56,17 @@ pub struct CommonMenu {
 }
 
 impl CommonMenu {
-    pub fn new(
-        root_label: &'static str,
-        instant_exit: bool,
-        base_height: u32,
-        menu_define: MenuDefine,
-    ) -> Self {
+    pub fn new(instant_exit: bool, base_height: u32, menu_define: MenuDefine) -> Self {
         Self {
-            root_label,
             menu_define,
             instant_exit,
             base_height,
             controller: MenuController::default(),
         }
+    }
+
+    pub fn root_title(&self) -> &'static str {
+        self.menu_define.title()
     }
 
     fn apply_decide_count(&mut self) -> Option<OnMenuInputResult> {
@@ -103,7 +100,7 @@ impl CommonMenu {
 
         match self.current_menu_scene() {
             CurrentMenuSceneResult::SubScene(_, scene) => OnMenuInputResult::SubScene(scene),
-            CurrentMenuSceneResult::Menu(_, menu) => {
+            CurrentMenuSceneResult::Menu(menu) => {
                 let ignore_decide = menu.items().is_empty();
                 let instant_decide = ignore_decide || menu.selected_item().child().is_none();
                 let play_decide_sound = !ignore_decide
@@ -162,8 +159,8 @@ impl CommonMenu {
     pub fn on_render_texts(&self, th19: &Th19, text_renderer: *const c_void) {
         match self.current_menu_scene() {
             CurrentMenuSceneResult::SubScene { .. } => unreachable!(),
-            CurrentMenuSceneResult::Menu(label, menu) => {
-                render_title(th19, text_renderer, label.as_bytes());
+            CurrentMenuSceneResult::Menu(menu) => {
+                render_title(th19, text_renderer, menu.title().as_bytes());
                 menu.on_render_texts(self.base_height, th19, text_renderer);
             }
             CurrentMenuSceneResult::TextInput(label, text_input) => {
@@ -175,7 +172,7 @@ impl CommonMenu {
 
     fn current_menu_scene(&self) -> CurrentMenuSceneResult {
         if !self.menu_define.decided() {
-            return CurrentMenuSceneResult::Menu(self.root_label, &self.menu_define);
+            return CurrentMenuSceneResult::Menu(&self.menu_define);
         }
         let mut menu = &self.menu_define;
         loop {
@@ -188,7 +185,7 @@ impl CommonMenu {
                         menu = sub_menu;
                         continue;
                     }
-                    return CurrentMenuSceneResult::Menu(label, sub_menu);
+                    return CurrentMenuSceneResult::Menu(sub_menu);
                 }
                 MenuChild::SubScene(scene) => {
                     return CurrentMenuSceneResult::SubScene(label, *scene);

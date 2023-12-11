@@ -53,16 +53,17 @@ where
             create_session,
             messages,
             common_menu: CommonMenu::new(
-                label,
                 false,
                 720,
                 MenuDefine::new(
-                    2,
+                    label,
+                    None,
                     vec![
                         MenuItem::simple_action("Regenerate", 0, true),
                         MenuItem::simple_action("Copy your code", 1, true),
                         MenuItem::simple_action("Paste guest's code", 2, false),
                     ],
+                    2,
                 ),
             ),
             signaling: Signaling::new(session_tx, create_session),
@@ -139,10 +140,9 @@ where
                         .unwrap();
                     *session_rx = self.session_rx.take();
                     self.common_menu = CommonMenu::new(
-                        self.common_menu.root_label(),
                         false,
                         720,
-                        MenuDefine::new(0, vec![]),
+                        MenuDefine::new(self.common_menu.root_title(), None, vec![], 0),
                     )
                 }
                 None
@@ -204,7 +204,7 @@ where
             self.offer_type,
             self.answer_type,
             self.create_session,
-            self.common_menu.root_label(),
+            self.common_menu.root_title(),
             self.messages,
         );
     }

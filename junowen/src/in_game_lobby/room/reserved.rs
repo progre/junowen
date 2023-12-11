@@ -16,24 +16,36 @@ use super::{
     on_render_texts,
 };
 
-fn make_enter_menu(room_name: String) -> (u8, CommonMenu) {
-    let items = vec![
-        MenuItem::simple_action("Enter as a Player", 0, true),
-        MenuItem::simple_action("Enter as a Spectator", 3, true),
-        MenuItem::text_input("Change Room Name", 4, "Room name", room_name),
-    ];
-    (
-        1,
-        CommonMenu::new("Reserved Room", false, 240 + 56, MenuDefine::new(0, items)),
-    )
-}
-
-fn make_leave_menu() -> (u8, CommonMenu) {
-    let items = vec![MenuItem::simple_action("Leave", 1, true)];
-    (
-        2,
-        CommonMenu::new("Reserved Room", false, 240 + 56, MenuDefine::new(0, items)),
-    )
+fn make_menu(room_name: String) -> (u8, CommonMenu) {
+    let menu = MenuDefine::new(
+        "Reserved Room",
+        None,
+        vec![
+            MenuItem::sub_menu(
+                "Enter as a Player",
+                Some(0),
+                MenuDefine::new(
+                    "Reserved Room",
+                    Some(1),
+                    vec![MenuItem::simple_action("Leave", 1, true)],
+                    0,
+                ),
+            ),
+            MenuItem::sub_menu(
+                "Enter as a Spectator",
+                Some(3),
+                MenuDefine::new(
+                    "Reserved Room",
+                    Some(1),
+                    vec![MenuItem::simple_action("Leave", 1, true)],
+                    0,
+                ),
+            ),
+            MenuItem::text_input("Change Room Name", 4, "Room name", room_name),
+        ],
+        0,
+    );
+    (1, CommonMenu::new(false, 240 + 56, menu))
 }
 
 pub struct ReservedRoom {
@@ -46,7 +58,7 @@ impl ReservedRoom {
     pub fn new() -> Self {
         Self {
             menu_id: 0,
-            menu: CommonMenu::new("", false, 0, MenuDefine::new(0, vec![])),
+            menu: CommonMenu::new(false, 0, MenuDefine::new("", None, vec![], 0)),
             room_name: String::new(),
         }
     }
@@ -61,7 +73,7 @@ impl ReservedRoom {
     ) -> Option<LobbyScene> {
         if self.menu_id == 0 {
             self.room_name = TOKIO_RUNTIME.block_on(settings_repo.reserved_room_name(th19));
-            (self.menu_id, self.menu) = make_enter_menu(self.room_name.to_owned());
+            (self.menu_id, self.menu) = make_menu(self.room_name.to_owned());
         }
         match waiting {
             Some(WaitingForMatch::Opponent(WaitingForOpponent::ReservedRoom(waiting))) => {
@@ -78,22 +90,10 @@ impl ReservedRoom {
         }
 
         match self.menu.on_input_menu(current_input, prev_input, th19) {
-            OnMenuInputResult::None => {
-                if waiting.is_none() {
-                    if self.menu_id != 1 {
-                        (self.menu_id, self.menu) = make_enter_menu(self.room_name.to_owned());
-                    }
-                } else {
-                    //
-                    if self.menu_id != 2 {
-                        (self.menu_id, self.menu) = make_leave_menu();
-                    }
-                }
-                None
-            }
+            OnMenuInputResult::None => None,
             OnMenuInputResult::Cancel => {
                 *waiting = None;
-                (self.menu_id, self.menu) = make_enter_menu(self.room_name.to_owned());
+                (self.menu_id, self.menu) = make_menu(self.room_name.to_owned());
                 Some(LobbyScene::Root)
             }
             OnMenuInputResult::SubScene(_) => unreachable!(),
@@ -102,12 +102,11 @@ impl ReservedRoom {
                     *waiting = Some(WaitingForMatch::Opponent(WaitingForOpponent::ReservedRoom(
                         WaitingForOpponentInReservedRoom::new(self.room_name.to_owned()),
                     )));
-                    (self.menu_id, self.menu) = make_leave_menu();
                     None
                 }
                 1 => {
                     *waiting = None;
-                    (self.menu_id, self.menu) = make_enter_menu(self.room_name.to_owned());
+                    (self.menu_id, self.menu) = make_menu(self.room_name.to_owned());
                     None
                 }
                 3 => {
@@ -116,7 +115,6 @@ impl ReservedRoom {
                             WaitingForSpectatorHostInReservedRoom::new(self.room_name.to_owned()),
                         ),
                     ));
-                    (self.menu_id, self.menu) = make_leave_menu();
                     None
                 }
                 4 => {
@@ -132,10 +130,13 @@ impl ReservedRoom {
 
     pub fn on_render_texts<T>(
         &self,
-        waiting: Option<&WaitingInRoom<T>>,
+        mut waiting: Option<&WaitingInRoom<T>>,
         th19: &Th19,
         text_renderer: *const c_void,
     ) {
+        if !self.menu.menu_define().decided() {
+            waiting = None;
+        }
         on_render_texts(&self.menu, waiting, &self.room_name, th19, text_renderer);
     }
 }

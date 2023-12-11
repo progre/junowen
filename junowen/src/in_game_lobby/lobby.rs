@@ -26,7 +26,8 @@ pub struct Root {
 impl Root {
     pub fn new() -> Self {
         let menu_define = MenuDefine::new(
-            0,
+            "Ju.N.Owen",
+            None,
             vec![
                 MenuItem::simple_sub_scene("Shared Room", LobbyScene::SharedRoom),
                 MenuItem::simple_sub_scene("Reserved Room", LobbyScene::ReservedRoom),
@@ -34,7 +35,8 @@ impl Root {
                     "Pure P2P",
                     None,
                     Some(MenuChild::SubMenu(MenuDefine::new(
-                        0,
+                        "Pure P2P",
+                        None,
                         vec![
                             MenuItem::simple_sub_scene(
                                 "Connect as a Host",
@@ -49,12 +51,14 @@ impl Root {
                                 LobbyScene::PureP2pSpectator,
                             ),
                         ],
+                        0,
                     ))),
                 ),
             ],
+            0,
         );
         Self {
-            common_menu: CommonMenu::new("Ju.N.Owen", true, 240, menu_define),
+            common_menu: CommonMenu::new(true, 240, menu_define),
         }
     }
 

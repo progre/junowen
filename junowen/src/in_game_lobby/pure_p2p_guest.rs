@@ -32,12 +32,13 @@ impl PureP2pGuest {
         let (session_tx, session_rx) = mpsc::channel(1);
         Self {
             common_menu: CommonMenu::new(
-                "Connect as a Guest",
                 false,
                 840,
                 MenuDefine::new(
-                    0,
+                    "Connect as a Guest",
+                    None,
                     vec![MenuItem::simple_action("Press SHOT to Paste", 0, false)],
+                    0,
                 ),
             ),
             signaling: Signaling::new(session_tx, |conn, dc| BattleSession::new(conn, dc, false)),
@@ -64,12 +65,13 @@ impl PureP2pGuest {
                 self.answer_generated = true;
                 set_clipboard_string(&SignalingCodeType::BattleAnswer.to_string(answer)).unwrap();
                 self.common_menu = CommonMenu::new(
-                    self.common_menu.root_label(),
                     false,
                     840,
                     MenuDefine::new(
-                        0,
+                        self.common_menu.root_title(),
+                        None,
                         vec![MenuItem::simple_action("Press SHOT to Copy again", 1, true)],
+                        0,
                     ),
                 )
             }
@@ -77,10 +79,9 @@ impl PureP2pGuest {
         if !self.error_received && self.signaling.error().is_some() {
             self.error_received = true;
             self.common_menu = CommonMenu::new(
-                self.common_menu.root_label(),
                 false,
                 0,
-                MenuDefine::new(0, vec![]),
+                MenuDefine::new(self.common_menu.root_title(), None, vec![], 0),
             )
         }
         match self
@@ -115,10 +116,9 @@ impl PureP2pGuest {
                             .unwrap();
                         *session_rx = self.session_rx.take();
                         self.common_menu = CommonMenu::new(
-                            self.common_menu.root_label(),
                             false,
                             0,
-                            MenuDefine::new(0, vec![]),
+                            MenuDefine::new(self.common_menu.root_title(), None, vec![], 0),
                         )
                     }
                     1 => {
