@@ -12,32 +12,32 @@ use crate::{
 };
 
 use super::{
-    super::common_menu::{CommonMenu, LobbyScene, MenuDefine, MenuItem, OnMenuInputResult},
+    super::common_menu::{CommonMenu, LobbyScene, Menu, MenuItem, OnMenuInputResult},
     on_render_texts,
 };
 
 fn make_menu(room_name: String) -> (u8, CommonMenu) {
-    let menu = MenuDefine::new(
+    let menu = Menu::new(
         "Reserved Room",
         None,
         vec![
             MenuItem::sub_menu(
                 "Enter as a Player",
                 Some(0),
-                MenuDefine::new(
+                Menu::new(
                     "Reserved Room",
                     Some(1),
-                    vec![MenuItem::simple_action("Leave", 1, true)],
+                    vec![MenuItem::plain("Leave", 1, true)],
                     0,
                 ),
             ),
             MenuItem::sub_menu(
                 "Enter as a Spectator",
                 Some(3),
-                MenuDefine::new(
+                Menu::new(
                     "Reserved Room",
                     Some(1),
-                    vec![MenuItem::simple_action("Leave", 1, true)],
+                    vec![MenuItem::plain("Leave", 1, true)],
                     0,
                 ),
             ),
@@ -58,7 +58,7 @@ impl ReservedRoom {
     pub fn new() -> Self {
         Self {
             menu_id: 0,
-            menu: CommonMenu::new(false, 0, MenuDefine::new("", None, vec![], 0)),
+            menu: CommonMenu::new(false, 0, Menu::new("", None, vec![], 0)),
             room_name: String::new(),
         }
     }
@@ -134,7 +134,7 @@ impl ReservedRoom {
         th19: &Th19,
         text_renderer: *const c_void,
     ) {
-        if !self.menu.menu_define().decided() {
+        if !self.menu.menu().decided() {
             waiting = None;
         }
         on_render_texts(&self.menu, waiting, &self.room_name, th19, text_renderer);

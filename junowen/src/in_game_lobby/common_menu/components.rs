@@ -135,7 +135,7 @@ impl TextInput {
 
 #[derive(Debug)]
 pub enum MenuChild {
-    SubMenu(MenuDefine),
+    SubMenu(Menu),
     SubScene(LobbyScene),
     TextInput(Box<TextInput>),
 }
@@ -149,11 +149,7 @@ pub struct MenuItem {
 }
 
 impl MenuItem {
-    pub fn new(
-        label: &'static str,
-        decided_action: Option<Action>,
-        child: Option<MenuChild>,
-    ) -> Self {
+    fn new(label: &'static str, decided_action: Option<Action>, child: Option<MenuChild>) -> Self {
         Self {
             label,
             decided_action,
@@ -161,23 +157,19 @@ impl MenuItem {
         }
     }
 
-    pub fn simple_action(label: &'static str, id: u8, play_sound: bool) -> Self {
+    pub fn plain(label: &'static str, id: u8, play_sound: bool) -> Self {
         Self::new(label, Some(Action::new(id, play_sound, None)), None)
     }
 
-    pub fn sub_menu(
-        label: &'static str,
-        decided_action: Option<u8>,
-        menu_define: MenuDefine,
-    ) -> Self {
+    pub fn sub_menu(label: &'static str, decided_action: Option<u8>, menu: Menu) -> Self {
         Self::new(
             label,
             decided_action.map(|x| Action::new(x, true, None)),
-            Some(MenuChild::SubMenu(menu_define)),
+            Some(MenuChild::SubMenu(menu)),
         )
     }
 
-    pub fn simple_sub_scene(label: &'static str, scene: LobbyScene) -> Self {
+    pub fn sub_scene(label: &'static str, scene: LobbyScene) -> Self {
         Self::new(label, None, Some(MenuChild::SubScene(scene)))
     }
 
@@ -200,7 +192,7 @@ impl MenuItem {
 }
 
 #[derive(Debug, CopyGetters, Getters, Setters)]
-pub struct MenuDefine {
+pub struct Menu {
     #[get_copy = "pub"]
     title: &'static str,
     canceled_action: Option<u8>,
@@ -212,7 +204,7 @@ pub struct MenuDefine {
     decided: bool,
 }
 
-impl MenuDefine {
+impl Menu {
     pub fn new(
         title: &'static str,
         canceled_action: Option<u8>,

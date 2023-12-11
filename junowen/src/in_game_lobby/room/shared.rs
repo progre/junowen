@@ -7,34 +7,26 @@ use crate::{
 };
 
 use super::{
-    super::common_menu::{CommonMenu, LobbyScene, MenuDefine, MenuItem, OnMenuInputResult},
+    super::common_menu::{CommonMenu, LobbyScene, Menu, MenuItem, OnMenuInputResult},
     on_render_texts,
 };
 
 fn make_enter_menu(room_name: String) -> (u8, CommonMenu) {
     let items = vec![
-        MenuItem::simple_action("Enter the Room", 0, true),
+        MenuItem::plain("Enter the Room", 0, true),
         MenuItem::text_input("Change Room Name", 4, "Room name", room_name),
     ];
     (
         1,
-        CommonMenu::new(
-            false,
-            240 + 56,
-            MenuDefine::new("Shared Room", None, items, 0),
-        ),
+        CommonMenu::new(false, 240 + 56, Menu::new("Shared Room", None, items, 0)),
     )
 }
 
 fn make_leave_menu() -> (u8, CommonMenu) {
-    let items = vec![MenuItem::simple_action("Leave", 1, true)];
+    let items = vec![MenuItem::plain("Leave", 1, true)];
     (
         2,
-        CommonMenu::new(
-            false,
-            240 + 56,
-            MenuDefine::new("Shared Room", None, items, 0),
-        ),
+        CommonMenu::new(false, 240 + 56, Menu::new("Shared Room", None, items, 0)),
     )
 }
 
@@ -48,7 +40,7 @@ impl SharedRoom {
     pub fn new() -> Self {
         Self {
             menu_id: 0,
-            menu: CommonMenu::new(false, 0, MenuDefine::new("", None, vec![], 0)),
+            menu: CommonMenu::new(false, 0, Menu::new("", None, vec![], 0)),
             room_name: String::new(),
         }
     }

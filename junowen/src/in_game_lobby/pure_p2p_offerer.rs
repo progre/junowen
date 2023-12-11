@@ -18,7 +18,7 @@ use crate::session::{battle::BattleSession, spectator::SpectatorSession};
 
 use super::{
     super::signaling::Signaling,
-    common_menu::{CommonMenu, LobbyScene, MenuDefine, MenuItem, OnMenuInputResult},
+    common_menu::{CommonMenu, LobbyScene, Menu, MenuItem, OnMenuInputResult},
     helper::{render_small_text_line, render_text_line},
 };
 
@@ -55,13 +55,13 @@ where
             common_menu: CommonMenu::new(
                 false,
                 720,
-                MenuDefine::new(
+                Menu::new(
                     label,
                     None,
                     vec![
-                        MenuItem::simple_action("Regenerate", 0, true),
-                        MenuItem::simple_action("Copy your code", 1, true),
-                        MenuItem::simple_action("Paste guest's code", 2, false),
+                        MenuItem::plain("Regenerate", 0, true),
+                        MenuItem::plain("Copy your code", 1, true),
+                        MenuItem::plain("Paste guest's code", 2, false),
                     ],
                     2,
                 ),
@@ -142,7 +142,7 @@ where
                     self.common_menu = CommonMenu::new(
                         false,
                         720,
-                        MenuDefine::new(self.common_menu.root_title(), None, vec![], 0),
+                        Menu::new(self.common_menu.root_title(), None, vec![], 0),
                     )
                 }
                 None

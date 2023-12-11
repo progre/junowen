@@ -13,7 +13,7 @@ use crate::{
 };
 
 use super::{
-    common_menu::{CommonMenu, LobbyScene, MenuChild, MenuDefine, MenuItem, OnMenuInputResult},
+    common_menu::{CommonMenu, LobbyScene, Menu, MenuItem, OnMenuInputResult},
     pure_p2p_guest::PureP2pGuest,
     pure_p2p_offerer::{pure_p2p_host, pure_p2p_spectator, PureP2pOfferer},
     room::{reserved::ReservedRoom, shared::SharedRoom},
@@ -25,40 +25,34 @@ pub struct Root {
 
 impl Root {
     pub fn new() -> Self {
-        let menu_define = MenuDefine::new(
+        let menu = Menu::new(
             "Ju.N.Owen",
             None,
             vec![
-                MenuItem::simple_sub_scene("Shared Room", LobbyScene::SharedRoom),
-                MenuItem::simple_sub_scene("Reserved Room", LobbyScene::ReservedRoom),
-                MenuItem::new(
+                MenuItem::sub_scene("Shared Room", LobbyScene::SharedRoom),
+                MenuItem::sub_scene("Reserved Room", LobbyScene::ReservedRoom),
+                MenuItem::sub_menu(
                     "Pure P2P",
                     None,
-                    Some(MenuChild::SubMenu(MenuDefine::new(
+                    Menu::new(
                         "Pure P2P",
                         None,
                         vec![
-                            MenuItem::simple_sub_scene(
-                                "Connect as a Host",
-                                LobbyScene::PureP2pHost,
-                            ),
-                            MenuItem::simple_sub_scene(
-                                "Connect as a Guest",
-                                LobbyScene::PureP2pGuest,
-                            ),
-                            MenuItem::simple_sub_scene(
+                            MenuItem::sub_scene("Connect as a Host", LobbyScene::PureP2pHost),
+                            MenuItem::sub_scene("Connect as a Guest", LobbyScene::PureP2pGuest),
+                            MenuItem::sub_scene(
                                 "Connect as a Spectator",
                                 LobbyScene::PureP2pSpectator,
                             ),
                         ],
                         0,
-                    ))),
+                    ),
                 ),
             ],
             0,
         );
         Self {
-            common_menu: CommonMenu::new(true, 240, menu_define),
+            common_menu: CommonMenu::new(true, 240, menu),
         }
     }
 

@@ -15,7 +15,7 @@ use self::{
 
 use super::helper::render_title;
 
-pub use components::{MenuChild, MenuDefine, MenuItem};
+pub use components::{Menu, MenuChild, MenuItem};
 
 #[derive(Clone, Copy, Debug)]
 pub enum LobbyScene {
@@ -35,13 +35,13 @@ pub enum OnMenuInputResult {
 }
 
 enum CurrentMenuSceneResult<'a> {
-    Menu(&'a MenuDefine),
+    Menu(&'a Menu),
     SubScene(&'static str, LobbyScene),
     TextInput(&'static str, &'a TextInput),
 }
 
 enum CurrentMenuSceneMutResult<'a> {
-    Menu(&'a mut MenuDefine),
+    Menu(&'a mut Menu),
     SubScene(LobbyScene),
     TextInput(&'a mut TextInput),
 }
@@ -49,16 +49,16 @@ enum CurrentMenuSceneMutResult<'a> {
 #[derive(Getters)]
 pub struct CommonMenu {
     #[get = "pub"]
-    menu_define: MenuDefine,
+    menu: Menu,
     instant_exit: bool,
     base_height: u32,
     controller: MenuController,
 }
 
 impl CommonMenu {
-    pub fn new(instant_exit: bool, base_height: u32, menu_define: MenuDefine) -> Self {
+    pub fn new(instant_exit: bool, base_height: u32, menu: Menu) -> Self {
         Self {
-            menu_define,
+            menu,
             instant_exit,
             base_height,
             controller: MenuController::default(),
@@ -66,7 +66,7 @@ impl CommonMenu {
     }
 
     pub fn root_title(&self) -> &'static str {
-        self.menu_define.title()
+        self.menu.title()
     }
 
     fn apply_decide_count(&mut self) -> Option<OnMenuInputResult> {
@@ -74,13 +74,13 @@ impl CommonMenu {
             MenuControllerUpdateDecideResult::None => None,
             MenuControllerUpdateDecideResult::Wait => Some(OnMenuInputResult::None),
             MenuControllerUpdateDecideResult::Decide => {
-                if let Some(scene) = self.menu_define.dig() {
+                if let Some(scene) = self.menu.dig() {
                     return Some(OnMenuInputResult::SubScene(scene));
                 }
                 None
             }
             MenuControllerUpdateDecideResult::Cancel => {
-                if !self.menu_define.bury() {
+                if !self.menu.bury() {
                     return Some(OnMenuInputResult::Cancel);
                 }
                 None
@@ -109,7 +109,7 @@ impl CommonMenu {
                         .action()
                         .map(|x| x.play_sound())
                         .unwrap_or(true);
-                let root_cancel = !self.menu_define.decided() && self.instant_exit;
+                let root_cancel = !self.menu.decided() && self.instant_exit;
 
                 let input_result =
                     self.controller
@@ -171,10 +171,10 @@ impl CommonMenu {
     }
 
     fn current_menu_scene(&self) -> CurrentMenuSceneResult {
-        if !self.menu_define.decided() {
-            return CurrentMenuSceneResult::Menu(&self.menu_define);
+        if !self.menu.decided() {
+            return CurrentMenuSceneResult::Menu(&self.menu);
         }
-        let mut menu = &self.menu_define;
+        let mut menu = &self.menu;
         loop {
             let decided_item = menu.selected_item();
             let label = decided_item.label();
@@ -198,10 +198,10 @@ impl CommonMenu {
     }
 
     fn current_menu_scene_mut(&mut self) -> CurrentMenuSceneMutResult {
-        if !self.menu_define.decided() {
-            return CurrentMenuSceneMutResult::Menu(&mut self.menu_define);
+        if !self.menu.decided() {
+            return CurrentMenuSceneMutResult::Menu(&mut self.menu);
         }
-        let mut menu = &mut self.menu_define;
+        let mut menu = &mut self.menu;
         loop {
             let decided_item = menu.selected_item_mut();
             let child = decided_item.child_mut().unwrap();

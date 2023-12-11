@@ -14,7 +14,7 @@ use crate::session::battle::BattleSession;
 
 use super::{
     super::signaling::Signaling,
-    common_menu::{CommonMenu, LobbyScene, MenuDefine, MenuItem, OnMenuInputResult},
+    common_menu::{CommonMenu, LobbyScene, Menu, MenuItem, OnMenuInputResult},
     helper::{render_small_text_line, render_text_line},
 };
 
@@ -34,10 +34,10 @@ impl PureP2pGuest {
             common_menu: CommonMenu::new(
                 false,
                 840,
-                MenuDefine::new(
+                Menu::new(
                     "Connect as a Guest",
                     None,
-                    vec![MenuItem::simple_action("Press SHOT to Paste", 0, false)],
+                    vec![MenuItem::plain("Press SHOT to Paste", 0, false)],
                     0,
                 ),
             ),
@@ -67,10 +67,10 @@ impl PureP2pGuest {
                 self.common_menu = CommonMenu::new(
                     false,
                     840,
-                    MenuDefine::new(
+                    Menu::new(
                         self.common_menu.root_title(),
                         None,
-                        vec![MenuItem::simple_action("Press SHOT to Copy again", 1, true)],
+                        vec![MenuItem::plain("Press SHOT to Copy again", 1, true)],
                         0,
                     ),
                 )
@@ -81,7 +81,7 @@ impl PureP2pGuest {
             self.common_menu = CommonMenu::new(
                 false,
                 0,
-                MenuDefine::new(self.common_menu.root_title(), None, vec![], 0),
+                Menu::new(self.common_menu.root_title(), None, vec![], 0),
             )
         }
         match self
@@ -118,7 +118,7 @@ impl PureP2pGuest {
                         self.common_menu = CommonMenu::new(
                             false,
                             0,
-                            MenuDefine::new(self.common_menu.root_title(), None, vec![], 0),
+                            Menu::new(self.common_menu.root_title(), None, vec![], 0),
                         )
                     }
                     1 => {
