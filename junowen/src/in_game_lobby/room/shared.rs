@@ -3,7 +3,8 @@ use std::ffi::c_void;
 use junowen_lib::{InputValue, Th19};
 
 use crate::{
-    file::SettingsRepo, signaling::waiting_for_match::WaitingForOpponentInSharedRoom, TOKIO_RUNTIME,
+    file::SettingsRepo, in_game_lobby::common_menu::MenuChild,
+    signaling::waiting_for_match::WaitingForOpponentInSharedRoom, TOKIO_RUNTIME,
 };
 
 use super::{
@@ -11,10 +12,10 @@ use super::{
     on_render_texts,
 };
 
-fn make_enter_menu(room_name: String) -> (u8, CommonMenu) {
+fn make_enter_menu() -> (u8, CommonMenu) {
     let items = vec![
         MenuItem::plain("Enter the Room", 0, true),
-        MenuItem::text_input("Change Room Name", 4, "Room name", room_name),
+        MenuItem::text_input("Change Room Name", 11, 12, "Room name"),
     ];
     (
         1,
@@ -55,7 +56,7 @@ impl SharedRoom {
     ) -> Option<LobbyScene> {
         if self.menu_id == 0 {
             self.room_name = TOKIO_RUNTIME.block_on(settings_repo.shared_room_name(th19));
-            (self.menu_id, self.menu) = make_enter_menu(self.room_name.to_owned());
+            (self.menu_id, self.menu) = make_enter_menu();
         }
 
         if let Some(waiting) = waiting {
@@ -65,7 +66,7 @@ impl SharedRoom {
             OnMenuInputResult::None => {
                 if waiting.is_none() {
                     if self.menu_id != 1 {
-                        (self.menu_id, self.menu) = make_enter_menu(self.room_name.to_owned());
+                        (self.menu_id, self.menu) = make_enter_menu();
                     }
                 } else {
                     //
@@ -86,10 +87,19 @@ impl SharedRoom {
                 }
                 1 => {
                     *waiting = None;
-                    (self.menu_id, self.menu) = make_enter_menu(self.room_name.to_owned());
+                    (self.menu_id, self.menu) = make_enter_menu();
                     None
                 }
-                4 => {
+                11 => {
+                    let Some(MenuChild::TextInput(text_input)) =
+                        self.menu.menu_mut().selected_item_mut().child_mut()
+                    else {
+                        unreachable!()
+                    };
+                    text_input.set_value(self.room_name.to_owned());
+                    None
+                }
+                12 => {
                     let new_room_name = action.value().unwrap().to_owned();
                     self.room_name = new_room_name.clone();
                     TOKIO_RUNTIME.block_on(settings_repo.set_shared_room_name(new_room_name));

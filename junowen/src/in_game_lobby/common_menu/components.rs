@@ -83,26 +83,24 @@ impl TextInputState {
 pub enum OnMenuInputResult {
     None,
     Cancel,
-    Decide(String),
+    Decide(u8, String),
 }
 
-#[derive(Debug, CopyGetters)]
+#[derive(Debug, Setters)]
 pub struct TextInput {
-    #[get_copy = "pub"]
-    id: u8,
+    changed_action: u8,
     name: &'static str,
-    default_value: String,
+    #[set = "pub"]
     value: String,
     state: TextInputState,
 }
 
 impl TextInput {
-    pub fn new(id: u8, name: &'static str, default_value: String) -> Self {
+    pub fn new(changed_action: u8, name: &'static str) -> Self {
         Self {
-            id,
+            changed_action,
             name,
-            default_value: default_value.clone(),
-            value: default_value,
+            value: String::new(),
             state: TextInputState::new(),
         }
     }
@@ -118,10 +116,9 @@ impl TextInput {
                 self.value.pop();
             } else if ascii == 0x0d {
                 // CR
-                return OnMenuInputResult::Decide(self.value.clone());
+                return OnMenuInputResult::Decide(self.changed_action, self.value.clone());
             } else if ascii == 0x1b {
                 // ESC
-                self.value = self.default_value.clone();
                 return OnMenuInputResult::Cancel;
             }
         }
@@ -173,9 +170,18 @@ impl MenuItem {
         Self::new(label, None, Some(MenuChild::SubScene(scene)))
     }
 
-    pub fn text_input(label: &'static str, id: u8, name: &'static str, value: String) -> Self {
-        let menu_child = MenuChild::TextInput(Box::new(TextInput::new(id, name, value)));
-        Self::new(label, None, Some(menu_child))
+    pub fn text_input(
+        label: &'static str,
+        decided_action: u8,
+        changed_action: u8,
+        name: &'static str,
+    ) -> Self {
+        let menu_child = MenuChild::TextInput(Box::new(TextInput::new(changed_action, name)));
+        Self::new(
+            label,
+            Some(Action::new(decided_action, true, None)),
+            Some(menu_child),
+        )
     }
 
     pub fn action(&self) -> Option<&Action> {

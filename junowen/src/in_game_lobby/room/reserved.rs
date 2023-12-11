@@ -4,6 +4,7 @@ use junowen_lib::{InputValue, Th19};
 
 use crate::{
     file::SettingsRepo,
+    in_game_lobby::common_menu::MenuChild,
     signaling::waiting_for_match::{
         WaitingForMatch, WaitingForOpponent, WaitingForOpponentInReservedRoom,
         WaitingForSpectatorHost, WaitingForSpectatorHostInReservedRoom, WaitingInRoom,
@@ -16,7 +17,7 @@ use super::{
     on_render_texts,
 };
 
-fn make_menu(room_name: String) -> (u8, CommonMenu) {
+fn make_menu() -> (u8, CommonMenu) {
     let menu = Menu::new(
         "Reserved Room",
         None,
@@ -41,7 +42,7 @@ fn make_menu(room_name: String) -> (u8, CommonMenu) {
                     0,
                 ),
             ),
-            MenuItem::text_input("Change Room Name", 4, "Room name", room_name),
+            MenuItem::text_input("Change Room Name", 11, 12, "Room name"),
         ],
         0,
     );
@@ -73,7 +74,7 @@ impl ReservedRoom {
     ) -> Option<LobbyScene> {
         if self.menu_id == 0 {
             self.room_name = TOKIO_RUNTIME.block_on(settings_repo.reserved_room_name(th19));
-            (self.menu_id, self.menu) = make_menu(self.room_name.to_owned());
+            (self.menu_id, self.menu) = make_menu();
         }
         match waiting {
             Some(WaitingForMatch::Opponent(WaitingForOpponent::ReservedRoom(waiting))) => {
@@ -93,7 +94,6 @@ impl ReservedRoom {
             OnMenuInputResult::None => None,
             OnMenuInputResult::Cancel => {
                 *waiting = None;
-                (self.menu_id, self.menu) = make_menu(self.room_name.to_owned());
                 Some(LobbyScene::Root)
             }
             OnMenuInputResult::SubScene(_) => unreachable!(),
@@ -106,7 +106,6 @@ impl ReservedRoom {
                 }
                 1 => {
                     *waiting = None;
-                    (self.menu_id, self.menu) = make_menu(self.room_name.to_owned());
                     None
                 }
                 3 => {
@@ -117,7 +116,16 @@ impl ReservedRoom {
                     ));
                     None
                 }
-                4 => {
+                11 => {
+                    let Some(MenuChild::TextInput(text_input)) =
+                        self.menu.menu_mut().selected_item_mut().child_mut()
+                    else {
+                        unreachable!()
+                    };
+                    text_input.set_value(self.room_name.to_owned());
+                    None
+                }
+                12 => {
                     let new_room_name = action.value().unwrap().to_owned();
                     self.room_name = new_room_name.clone();
                     TOKIO_RUNTIME.block_on(settings_repo.set_reserved_room_name(new_room_name));

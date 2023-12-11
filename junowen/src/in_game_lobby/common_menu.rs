@@ -3,7 +3,7 @@ mod menu_controller;
 
 use std::ffi::c_void;
 
-use getset::Getters;
+use getset::{Getters, MutGetters};
 use junowen_lib::{InputValue, Th19};
 
 use self::{
@@ -46,9 +46,9 @@ enum CurrentMenuSceneMutResult<'a> {
     TextInput(&'a mut TextInput),
 }
 
-#[derive(Getters)]
+#[derive(Getters, MutGetters)]
 pub struct CommonMenu {
-    #[get = "pub"]
+    #[getset(get = "pub", get_mut = "pub")]
     menu: Menu,
     instant_exit: bool,
     base_height: u32,
@@ -137,7 +137,6 @@ impl CommonMenu {
                 else {
                     unreachable!()
                 };
-                let action_id = text_input.id();
                 match text_input.on_input_menu(th19) {
                     components::OnMenuInputResult::None => OnMenuInputResult::None,
                     components::OnMenuInputResult::Cancel => {
@@ -145,10 +144,10 @@ impl CommonMenu {
                         self.controller.force_cancel();
                         OnMenuInputResult::None
                     }
-                    components::OnMenuInputResult::Decide(new_room_name) => {
+                    components::OnMenuInputResult::Decide(changed_action, new_room_name) => {
                         th19.play_sound(th19.sound_manager(), 0x07, 0);
                         self.controller.force_cancel();
-                        let action = Action::new(action_id, false, Some(new_room_name));
+                        let action = Action::new(changed_action, false, Some(new_room_name));
                         OnMenuInputResult::Action(action)
                     }
                 }
