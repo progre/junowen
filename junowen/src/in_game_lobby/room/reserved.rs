@@ -4,7 +4,6 @@ use junowen_lib::{InputValue, Th19};
 
 use crate::{
     file::SettingsRepo,
-    in_game_lobby::common_menu::MenuChild,
     signaling::waiting_for_match::{
         WaitingForMatch, WaitingForOpponent, WaitingForOpponentInReservedRoom,
         WaitingForSpectatorHost, WaitingForSpectatorHostInReservedRoom, WaitingInRoom,
@@ -118,12 +117,14 @@ impl ReservedRoom {
                     None
                 }
                 11 => {
-                    let Some(MenuChild::TextInput(text_input)) =
-                        self.menu.menu_mut().selected_item_mut().child_mut()
+                    let MenuItem::TextInput(text_input_item) =
+                        self.menu.menu_mut().selected_item_mut()
                     else {
                         unreachable!()
                     };
-                    text_input.set_value(self.room_name.to_owned());
+                    text_input_item
+                        .text_input_mut()
+                        .set_value(self.room_name.to_owned());
                     None
                 }
                 12 => {
