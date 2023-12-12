@@ -16,7 +16,7 @@ use super::{
     on_render_texts,
 };
 
-fn make_menu() -> (u8, CommonMenu) {
+fn make_menu() -> CommonMenu {
     let menu = Menu::new(
         "Reserved Room",
         None,
@@ -45,22 +45,26 @@ fn make_menu() -> (u8, CommonMenu) {
         ],
         0,
     );
-    (1, CommonMenu::new(false, 240 + 56, menu))
+    CommonMenu::new(false, 240 + 56, menu)
 }
 
 pub struct ReservedRoom {
-    menu_id: u8,
     menu: CommonMenu,
-    room_name: String,
+    enter: bool,
+    room_name: Option<String>,
 }
 
 impl ReservedRoom {
     pub fn new() -> Self {
         Self {
-            menu_id: 0,
-            menu: CommonMenu::new(false, 0, Menu::new("", None, vec![], 0)),
-            room_name: String::new(),
+            menu: make_menu(),
+            enter: false,
+            room_name: None,
         }
+    }
+
+    fn room_name(&self) -> &str {
+        self.room_name.as_ref().unwrap()
     }
 
     pub fn on_input_menu(
@@ -71,9 +75,12 @@ impl ReservedRoom {
         th19: &Th19,
         waiting: &mut Option<WaitingForMatch>,
     ) -> Option<LobbyScene> {
-        if self.menu_id == 0 {
-            self.room_name = TOKIO_RUNTIME.block_on(settings_repo.reserved_room_name(th19));
-            (self.menu_id, self.menu) = make_menu();
+        if self.room_name.is_none() {
+            self.room_name = Some(TOKIO_RUNTIME.block_on(settings_repo.reserved_room_name(th19)));
+        }
+        if waiting.is_none() && self.enter {
+            self.enter = false;
+            assert!(self.menu.menu_mut().bury());
         }
         match waiting {
             Some(WaitingForMatch::Opponent(WaitingForOpponent::ReservedRoom(waiting))) => {
@@ -92,44 +99,47 @@ impl ReservedRoom {
         match self.menu.on_input_menu(current_input, prev_input, th19) {
             OnMenuInputResult::None => None,
             OnMenuInputResult::Cancel => {
+                self.enter = false;
                 *waiting = None;
                 Some(LobbyScene::Root)
             }
             OnMenuInputResult::SubScene(_) => unreachable!(),
             OnMenuInputResult::Action(action) => match action.id() {
                 0 => {
+                    self.enter = true;
                     *waiting = Some(WaitingForMatch::Opponent(WaitingForOpponent::ReservedRoom(
-                        WaitingForOpponentInReservedRoom::new(self.room_name.to_owned()),
+                        WaitingForOpponentInReservedRoom::new(self.room_name().to_owned()),
                     )));
                     None
                 }
                 1 => {
+                    self.enter = false;
                     *waiting = None;
                     self.menu.controller_mut().force_cancel();
                     None
                 }
                 3 => {
+                    self.enter = true;
                     *waiting = Some(WaitingForMatch::SpectatorHost(
                         WaitingForSpectatorHost::ReservedRoom(
-                            WaitingForSpectatorHostInReservedRoom::new(self.room_name.to_owned()),
+                            WaitingForSpectatorHostInReservedRoom::new(self.room_name().to_owned()),
                         ),
                     ));
                     None
                 }
                 11 => {
+                    let room_name = self.room_name().to_owned();
                     let MenuItem::TextInput(text_input_item) =
                         self.menu.menu_mut().selected_item_mut()
                     else {
                         unreachable!()
                     };
-                    text_input_item
-                        .text_input_mut()
-                        .set_value(self.room_name.to_owned());
+                    text_input_item.text_input_mut().set_value(room_name);
                     None
                 }
                 12 => {
                     let new_room_name = action.value().unwrap().to_owned();
-                    self.room_name = new_room_name.clone();
+                    self.room_name = Some(new_room_name.clone());
                     TOKIO_RUNTIME.block_on(settings_repo.set_reserved_room_name(new_room_name));
                     None
                 }
@@ -144,7 +154,7 @@ impl ReservedRoom {
         th19: &Th19,
         text_renderer: *const c_void,
     ) {
-        let mut room_name = Some(self.room_name.as_str());
+        let mut room_name = Some(self.room_name());
         if !self.menu.menu().decided() {
             waiting = None;
         } else if waiting.is_none() {

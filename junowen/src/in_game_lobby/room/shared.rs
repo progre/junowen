@@ -11,39 +11,42 @@ use super::{
     on_render_texts,
 };
 
-fn make_menu() -> (u8, CommonMenu) {
+fn make_menu() -> CommonMenu {
     let items = vec![
         MenuItem::plain("Enter the Room", 0, true),
         MenuItem::text_input("Change Room Name", 11, 12, "Room name"),
     ];
-    (
-        1,
-        CommonMenu::new(false, 240 + 56, Menu::new("Shared Room", None, items, 0)),
-    )
+    CommonMenu::new(false, 240 + 56, Menu::new("Shared Room", None, items, 0))
 }
 
 pub struct SharedRoom {
-    menu_id: u8,
     menu: CommonMenu,
-    room_name: String,
+    enter: bool,
+    room_name: Option<String>,
 }
 
 impl SharedRoom {
     pub fn new() -> Self {
         Self {
-            menu_id: 0,
-            menu: CommonMenu::new(false, 0, Menu::new("", None, vec![], 0)),
-            room_name: String::new(),
+            menu: make_menu(),
+            enter: false,
+            room_name: None,
         }
     }
 
+    fn room_name(&self) -> &str {
+        self.room_name.as_ref().unwrap()
+    }
+
     fn change_menu_to_enter(&mut self) {
+        self.enter = false;
         let item = &mut self.menu.menu_mut().items_mut()[0];
         item.set_label("Enter the Room");
         let item = &mut self.menu.menu_mut().items_mut()[1];
         item.set_enabled(true);
     }
     fn change_menu_to_leave(&mut self) {
+        self.enter = true;
         let item = &mut self.menu.menu_mut().items_mut()[0];
         item.set_label("Leave the Room");
         let item = &mut self.menu.menu_mut().items_mut()[1];
@@ -58,14 +61,15 @@ impl SharedRoom {
         th19: &Th19,
         waiting: &mut Option<WaitingForOpponentInSharedRoom>,
     ) -> Option<LobbyScene> {
-        if self.menu_id == 0 {
-            self.room_name = TOKIO_RUNTIME.block_on(settings_repo.shared_room_name(th19));
-            (self.menu_id, self.menu) = make_menu();
-            if waiting.is_none() {
-                self.change_menu_to_enter();
-            } else {
+        if self.room_name.is_none() {
+            self.room_name = Some(TOKIO_RUNTIME.block_on(settings_repo.shared_room_name(th19)));
+        }
+        if waiting.is_some() != self.enter {
+            if waiting.is_some() {
                 self.change_menu_to_leave();
-            };
+            } else {
+                self.change_menu_to_enter();
+            }
         }
 
         if let Some(waiting) = waiting {
@@ -78,7 +82,7 @@ impl SharedRoom {
             OnMenuInputResult::Action(action) => match action.id() {
                 0 => {
                     if waiting.is_none() {
-                        let room_name = self.room_name.to_owned();
+                        let room_name = self.room_name().to_owned();
                         *waiting = Some(WaitingForOpponentInSharedRoom::new(room_name));
                         self.change_menu_to_leave();
                     } else {
@@ -88,19 +92,18 @@ impl SharedRoom {
                     None
                 }
                 11 => {
+                    let room_name = self.room_name().to_owned();
                     let MenuItem::TextInput(text_input_item) =
                         self.menu.menu_mut().selected_item_mut()
                     else {
                         unreachable!()
                     };
-                    text_input_item
-                        .text_input_mut()
-                        .set_value(self.room_name.to_owned());
+                    text_input_item.text_input_mut().set_value(room_name);
                     None
                 }
                 12 => {
                     let new_room_name = action.value().unwrap().to_owned();
-                    self.room_name = new_room_name.clone();
+                    self.room_name = Some(new_room_name.clone());
                     TOKIO_RUNTIME.block_on(settings_repo.set_shared_room_name(new_room_name));
                     None
                 }
@@ -118,7 +121,7 @@ impl SharedRoom {
         on_render_texts(
             &self.menu,
             waiting,
-            Some(&self.room_name),
+            Some(self.room_name()),
             th19,
             text_renderer,
         );
