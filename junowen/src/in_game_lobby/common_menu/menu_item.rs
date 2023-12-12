@@ -1,40 +1,41 @@
-use getset::{CopyGetters, Getters, MutGetters};
+use getset::{CopyGetters, Getters, MutGetters, Setters};
 
 use super::{menu::Menu, text_input::TextInput, Action, LobbyScene};
 
-#[derive(Debug)]
+#[derive(Debug, Setters)]
 pub struct MenuPlainItem {
+    #[set = "pub"]
     label: &'static str,
-    // enabled: bool,
+    enabled: bool,
     decided_action: u8,
     play_sound: bool,
 }
 
-#[derive(Debug, Getters, MutGetters)]
+#[derive(Debug, Getters, MutGetters, Setters)]
 pub struct MenuSubMenuItem {
+    #[set = "pub"]
     label: &'static str,
-    // enabled: bool,
-    // wait: bool,
+    enabled: bool,
     decided_action: Option<u8>,
     #[getset(get = "pub", get_mut = "pub")]
     sub_menu: Menu,
 }
 
-#[derive(CopyGetters, Debug, Getters, MutGetters)]
+#[derive(CopyGetters, Debug, Getters, MutGetters, Setters)]
 pub struct MenuTextInputItem {
-    #[get_copy = "pub"]
+    #[getset(get_copy = "pub", set = "pub")]
     label: &'static str,
-    // enabled: bool,
+    enabled: bool,
     decided_action: u8,
     #[getset(get = "pub", get_mut = "pub")]
     text_input: Box<TextInput>,
 }
 
-#[derive(CopyGetters, Debug)]
+#[derive(CopyGetters, Debug, Setters)]
 pub struct MenuSubSceneItem {
-    #[get_copy = "pub"]
+    #[getset(get_copy = "pub", set = "pub")]
     label: &'static str,
-    // enabled: bool,
+    enabled: bool,
     #[get_copy = "pub"]
     sub_scene: LobbyScene,
 }
@@ -51,6 +52,7 @@ impl MenuItem {
     pub fn plain(label: &'static str, decided_action: u8, play_sound: bool) -> Self {
         Self::Plain(MenuPlainItem {
             label,
+            enabled: true,
             decided_action,
             play_sound,
         })
@@ -59,13 +61,18 @@ impl MenuItem {
     pub fn sub_menu(label: &'static str, decided_action: Option<u8>, sub_menu: Menu) -> Self {
         Self::SubMenu(MenuSubMenuItem {
             label,
+            enabled: true,
             decided_action,
             sub_menu,
         })
     }
 
     pub fn sub_scene(label: &'static str, sub_scene: LobbyScene) -> Self {
-        Self::SubScene(MenuSubSceneItem { label, sub_scene })
+        Self::SubScene(MenuSubSceneItem {
+            label,
+            enabled: true,
+            sub_scene,
+        })
     }
 
     pub fn text_input(
@@ -76,6 +83,7 @@ impl MenuItem {
     ) -> Self {
         Self::TextInput(MenuTextInputItem {
             label,
+            enabled: true,
             decided_action,
             text_input: Box::new(TextInput::new(changed_action, name)),
         })
@@ -89,6 +97,31 @@ impl MenuItem {
             Self::SubMenu(item) => item.label,
             Self::TextInput(item) => item.label,
             Self::SubScene(scene) => scene.label,
+        }
+    }
+    pub fn set_label(&mut self, label: &'static str) {
+        match self {
+            Self::Plain(item) => item.label = label,
+            Self::SubMenu(item) => item.label = label,
+            Self::TextInput(item) => item.label = label,
+            Self::SubScene(scene) => scene.label = label,
+        }
+    }
+
+    pub fn enabled(&self) -> bool {
+        match self {
+            Self::Plain(item) => item.enabled,
+            Self::SubMenu(item) => item.enabled,
+            Self::TextInput(item) => item.enabled,
+            Self::SubScene(scene) => scene.enabled,
+        }
+    }
+    pub fn set_enabled(&mut self, enabled: bool) {
+        match self {
+            Self::Plain(item) => item.enabled = enabled,
+            Self::SubMenu(item) => item.enabled = enabled,
+            Self::TextInput(item) => item.enabled = enabled,
+            Self::SubScene(scene) => scene.enabled = enabled,
         }
     }
 

@@ -25,6 +25,7 @@ pub fn render_menu_item(
     text_renderer: *const c_void,
     text: &[u8],
     y: u32,
+    enabled: bool,
     selected: bool,
 ) {
     let x = (640 * th19.screen_width().unwrap() / 1280) as f32;
@@ -33,12 +34,12 @@ pub fn render_menu_item(
     rt.set_text(text);
     rt.x = x;
     rt.y = y;
-    rt.color = menu_item_color(9, selected);
+    rt.color = menu_item_color(9, enabled, selected);
     rt.font_type = 9;
     rt.horizontal_align = 0;
     th19.render_text(text_renderer, &rt);
 
-    rt.color = menu_item_color(7, selected);
+    rt.color = menu_item_color(7, enabled, selected);
     rt.font_type = 7;
     th19.render_text(text_renderer, &rt);
 }
@@ -70,8 +71,14 @@ pub fn render_small_text_line(th19: &Th19, text_renderer: *const c_void, line: u
     th19.render_text(text_renderer, &rt);
 }
 
-pub fn menu_item_color(font_type: u32, selected: bool) -> u32 {
-    if selected {
+pub fn menu_item_color(font_type: u32, enabled: bool, selected: bool) -> u32 {
+    if !enabled {
+        match font_type {
+            9 => 0x40ffffff,
+            7 => 0xff808080,
+            _ => unreachable!(),
+        }
+    } else if selected {
         match font_type {
             9 => 0xff000000,
             7 => 0xffffff80,

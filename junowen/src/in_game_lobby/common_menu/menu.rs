@@ -1,18 +1,18 @@
 use std::ffi::c_void;
 
-use getset::{CopyGetters, Getters, Setters};
+use getset::{CopyGetters, Getters, MutGetters, Setters};
 use junowen_lib::Th19;
 
 use crate::in_game_lobby::helper::render_menu_item;
 
 use super::{menu_controller::MenuControllerInputResult, menu_item::MenuItem, Action, LobbyScene};
 
-#[derive(CopyGetters, Debug, Getters, Setters)]
+#[derive(CopyGetters, Debug, Getters, MutGetters, Setters)]
 pub struct Menu {
     #[get_copy = "pub"]
     title: &'static str,
     canceled_action: Option<u8>,
-    #[get = "pub"]
+    #[getset(get = "pub", get_mut = "pub")]
     items: Vec<MenuItem>,
     #[get_copy = "pub"]
     cursor: usize,
@@ -77,23 +77,35 @@ impl Menu {
         for (i, item) in self.items().iter().enumerate() {
             let label = item.label().as_bytes();
             let height = base_height + 56 * i as u32;
-            render_menu_item(th19, text_renderer, label, height, i == self.cursor());
+            render_menu_item(
+                th19,
+                text_renderer,
+                label,
+                height,
+                item.enabled(),
+                i == self.cursor(),
+            );
         }
     }
 
     fn increment_cursor(&mut self) -> bool {
-        if self.cursor() >= self.items().len() - 1 {
+        let Some(new_cursor) = (self.cursor + 1..self.items.len())
+            .find(|&new_cursor| self.items[new_cursor].enabled())
+        else {
             return false;
-        }
-        self.cursor += 1;
+        };
+        self.cursor = new_cursor;
         true
     }
 
     fn decrement_cursor(&mut self) -> bool {
-        if self.cursor == 0 {
+        let Some(new_cursor) = (0..self.cursor)
+            .rev()
+            .find(|&new_cursor| self.items[new_cursor].enabled())
+        else {
             return false;
-        }
-        self.cursor -= 1;
+        };
+        self.cursor = new_cursor;
         true
     }
 

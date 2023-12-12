@@ -11,21 +11,13 @@ use super::{
     on_render_texts,
 };
 
-fn make_enter_menu() -> (u8, CommonMenu) {
+fn make_menu() -> (u8, CommonMenu) {
     let items = vec![
         MenuItem::plain("Enter the Room", 0, true),
         MenuItem::text_input("Change Room Name", 11, 12, "Room name"),
     ];
     (
         1,
-        CommonMenu::new(false, 240 + 56, Menu::new("Shared Room", None, items, 0)),
-    )
-}
-
-fn make_leave_menu() -> (u8, CommonMenu) {
-    let items = vec![MenuItem::plain("Leave", 1, true)];
-    (
-        2,
         CommonMenu::new(false, 240 + 56, Menu::new("Shared Room", None, items, 0)),
     )
 }
@@ -45,6 +37,19 @@ impl SharedRoom {
         }
     }
 
+    fn change_menu_to_enter(&mut self) {
+        let item = &mut self.menu.menu_mut().items_mut()[0];
+        item.set_label("Enter the Room");
+        let item = &mut self.menu.menu_mut().items_mut()[1];
+        item.set_enabled(true);
+    }
+    fn change_menu_to_leave(&mut self) {
+        let item = &mut self.menu.menu_mut().items_mut()[0];
+        item.set_label("Leave the Room");
+        let item = &mut self.menu.menu_mut().items_mut()[1];
+        item.set_enabled(false);
+    }
+
     pub fn on_input_menu(
         &mut self,
         settings_repo: &SettingsRepo,
@@ -55,38 +60,31 @@ impl SharedRoom {
     ) -> Option<LobbyScene> {
         if self.menu_id == 0 {
             self.room_name = TOKIO_RUNTIME.block_on(settings_repo.shared_room_name(th19));
-            (self.menu_id, self.menu) = make_enter_menu();
+            (self.menu_id, self.menu) = make_menu();
+            if waiting.is_none() {
+                self.change_menu_to_enter();
+            } else {
+                self.change_menu_to_leave();
+            };
         }
 
         if let Some(waiting) = waiting {
             waiting.recv();
         }
         match self.menu.on_input_menu(current_input, prev_input, th19) {
-            OnMenuInputResult::None => {
-                if waiting.is_none() {
-                    if self.menu_id != 1 {
-                        (self.menu_id, self.menu) = make_enter_menu();
-                    }
-                } else {
-                    //
-                    if self.menu_id != 2 {
-                        (self.menu_id, self.menu) = make_leave_menu();
-                    }
-                }
-                None
-            }
+            OnMenuInputResult::None => None,
             OnMenuInputResult::Cancel => Some(LobbyScene::Root),
             OnMenuInputResult::SubScene(_) => unreachable!(),
             OnMenuInputResult::Action(action) => match action.id() {
                 0 => {
-                    let room_name = self.room_name.to_owned();
-                    *waiting = Some(WaitingForOpponentInSharedRoom::new(room_name));
-                    (self.menu_id, self.menu) = make_leave_menu();
-                    None
-                }
-                1 => {
-                    *waiting = None;
-                    (self.menu_id, self.menu) = make_enter_menu();
+                    if waiting.is_none() {
+                        let room_name = self.room_name.to_owned();
+                        *waiting = Some(WaitingForOpponentInSharedRoom::new(room_name));
+                        self.change_menu_to_leave();
+                    } else {
+                        *waiting = None;
+                        self.change_menu_to_enter();
+                    }
                     None
                 }
                 11 => {

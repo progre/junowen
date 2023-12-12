@@ -176,7 +176,9 @@ pub struct RenderingText {
     pub _unknown2: [u8; 0x08],
     pub font_type: u32,
     pub drop_shadow: bool,
-    pub _unknown3: [u8; 8],
+    pub _padding_drop_shadow: [u8; 0x03],
+    pub _unknown3: u32,
+    pub hide: u32,
     /// 0: center, 1: left, 2: right
     #[derivative(Default(value = "1"))]
     pub horizontal_align: u32,
@@ -199,7 +201,9 @@ impl fmt::Debug for RenderingText {
             .field("_unknown2", &self._unknown2)
             .field("font_type", &self.font_type)
             .field("drop_shadow", &self.drop_shadow)
-            .field("_unknown4", &self._unknown3)
+            .field("_padding_drop_shadow", &self._padding_drop_shadow)
+            .field("_unknown3", &self._unknown3)
+            .field("hide", &self.hide)
             .field("horizontal_align", &self.horizontal_align)
             .field("vertical_align", &self.vertical_align)
             .finish()
