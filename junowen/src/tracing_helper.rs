@@ -31,7 +31,8 @@ pub fn init_tracing(dir: &str, file_name: &str, ansi: bool) {
     let layer = default_layer().with_ansi(false).with_writer(writer);
 
     if cfg!(debug_assertions) {
-        let make_filter = || EnvFilter::new(concat!(env!("CARGO_CRATE_NAME"), "=trace"));
+        const DIRECTIVES: &str = concat!(env!("CARGO_CRATE_NAME"), "=trace,junowen_lib=trace");
+        let make_filter = || EnvFilter::new(DIRECTIVES);
         tracing::subscriber::set_global_default(
             tracing_subscriber::registry().with(
                 layer
@@ -41,7 +42,8 @@ pub fn init_tracing(dir: &str, file_name: &str, ansi: bool) {
         )
         .unwrap();
     } else {
-        let make_filter = || EnvFilter::new(concat!(env!("CARGO_CRATE_NAME"), "=info"));
+        const DIRECTIVES: &str = concat!(env!("CARGO_CRATE_NAME"), "=info,junowen_lib=info");
+        let make_filter = || EnvFilter::new(DIRECTIVES);
         tracing::subscriber::set_global_default(
             tracing_subscriber::registry().with(layer.with_filter(make_filter())),
         )
