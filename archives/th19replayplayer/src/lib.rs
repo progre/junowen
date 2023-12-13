@@ -198,7 +198,7 @@ fn move_to_battle_menu_input(
     inits: &InitialBattleInformation,
 ) -> bool {
     let screen_id = main_menu.screen_id();
-    let menu = main_menu;
+    let menu = main_menu.menu_mut();
     match (
         screen_id,
         th19.selection().game_mode,
@@ -208,7 +208,7 @@ fn move_to_battle_menu_input(
         | (ScreenId::Title, _, _)
         | (ScreenId::PlayerMatchupSelect, _, _) => {
             AutomaticInputs::TransitionToLocalVersusDifficultySelect(inits.player_matchup)
-                .on_input_menu(th19, menu);
+                .on_input_menu(th19, main_menu);
             false
         }
         (
@@ -242,7 +242,7 @@ fn move_to_battle_player_inputs(
 ) -> bool {
     let input_devices = th19.input_devices_mut();
     let screen_id = main_menu.screen_id();
-    let menu = main_menu;
+    let menu = main_menu.menu_mut();
     match (
         screen_id,
         th19.selection().game_mode,

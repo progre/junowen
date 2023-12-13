@@ -166,7 +166,7 @@ fn resolve_input_device_conflict(th19: &mut Th19, main_menu: &mut MainMenu) -> b
         return true;
     }
     let screen_id = main_menu.screen_id();
-    let menu = main_menu;
+    let menu = main_menu.menu_mut();
     let menu_input = match (
         screen_id,
         th19.selection().game_mode,
@@ -204,7 +204,7 @@ fn transfer_to_local_versus_difficulty_select(
     target_player_matchup: PlayerMatchup,
 ) -> bool {
     let screen_id = main_menu.screen_id();
-    let menu = main_menu;
+    let menu = main_menu.menu_mut();
     th19.menu_input_mut().set_current(
         match (
             screen_id,

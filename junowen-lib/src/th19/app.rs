@@ -44,6 +44,7 @@ pub enum ScreenId {
     Unknown16,
 }
 
+#[derive(Debug)]
 #[repr(C)]
 pub struct CharacterCursor {
     pub cursor: u32,
@@ -51,8 +52,27 @@ pub struct CharacterCursor {
     _unknown1: [u8; 0xd0],
 }
 
+#[derive(CopyGetters, Debug, MutGetters, Setters)]
 #[repr(C)]
+pub struct Menu {
+    #[getset(get_copy = "pub", get_mut = "pub", set = "pub")]
+    cursor: u32,
+    _prev_cursor: u32,
+    #[get_copy = "pub"]
+    max_cursor: u32,
+    _unknown1: [u8; 0x84],
+    _disabled_menus: [u32; 16], // cursor+90h
+    _loop: bool,
+    #[get_copy = "pub"]
+    num_disabled: u32,
+    #[getset(get = "pub", get_mut = "pub")]
+    p1_cursor: CharacterCursor,
+    #[getset(get = "pub", get_mut = "pub")]
+    p2_cursor: CharacterCursor,
+}
+
 #[derive(CopyGetters, Getters, MutGetters, Setters)]
+#[repr(C)]
 pub struct MainMenu {
     _unknown1: [u8; 0x18],
     #[get_copy = "pub"]
@@ -61,16 +81,8 @@ pub struct MainMenu {
     _unknown2: u32,
     _unknown3: u32,
     _unknown4: u32,
-    #[getset(get_copy = "pub", get_mut = "pub", set = "pub")]
-    cursor: u32,
-    _prev_cursor: u32,
-    #[get_copy = "pub"]
-    max_cursor: u32,
-    _unknown5: [u8; 0xcc],
     #[getset(get = "pub", get_mut = "pub")]
-    p1_cursor: CharacterCursor,
-    #[getset(get = "pub", get_mut = "pub")]
-    p2_cursor: CharacterCursor,
+    menu: Menu,
 }
 
 #[derive(CopyGetters, Setters)]

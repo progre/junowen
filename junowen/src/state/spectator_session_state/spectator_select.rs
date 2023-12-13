@@ -74,7 +74,7 @@ impl SpectatorSelect {
         if main_menu.screen_id() != ScreenId::DifficultySelect {
             return Ok(());
         }
-        let menu = main_menu;
+        let menu = main_menu.menu_mut();
         if self.initializing_state == 1 {
             let init = self.session.spectator_initial().unwrap();
             trace!("spectator_initial: {:?}", init);
