@@ -48,6 +48,9 @@ impl TitleMenuModifier {
     pub fn on_input_menu(&mut self, main_menu: &mut MainMenu, th19: &mut Th19) {
         debug_assert_eq!(main_menu.screen_id(), ScreenId::Title);
         let menu = main_menu.menu_mut();
+        if menu.num_disabled() > 0 {
+            return;
+        }
         if self.first_time {
             self.first_time = false;
             if self.selected_junowen {
@@ -98,6 +101,9 @@ impl TitleMenuModifier {
             return old(text_renderer, rendering_text);
         }
         let menu = main_menu.menu();
+        if menu.num_disabled() > 0 {
+            return old(text_renderer, rendering_text);
+        }
         let text = rendering_text.text().unwrap().to_string_lossy().to_string();
         if ["Story Mode", "VS Mode", "Online VS Mode"].contains(&text.as_str()) {
             rendering_text.y -= (50 * th19.screen_height().unwrap() / 960) as f32;
