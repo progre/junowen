@@ -1,16 +1,16 @@
 use std::ffi::c_void;
 
-use junowen_lib::{Fn0b7d40, Fn0d5ae0, Menu, RenderingText, ScreenId, Th19};
+use junowen_lib::{Fn0b7d40, Fn0d5ae0, MainMenu, RenderingText, ScreenId, Th19};
 
 use crate::in_game_lobby::{Lobby, TitleMenuModifier};
 use crate::signaling::waiting_for_match::{WaitingForMatch, WaitingForOpponent, WaitingInRoom};
 
-fn is_title(menu: &Menu) -> bool {
-    menu.screen_id == ScreenId::Title
+fn is_title(main_menu: &MainMenu) -> bool {
+    main_menu.screen_id() == ScreenId::Title
 }
 
-fn is_lobby(menu: &Menu, title_menu_modifier: &TitleMenuModifier) -> bool {
-    menu.screen_id == ScreenId::PlayerMatchupSelect && title_menu_modifier.selected_junowen()
+fn is_lobby(main_menu: &MainMenu, title_menu_modifier: &TitleMenuModifier) -> bool {
+    main_menu.screen_id() == ScreenId::PlayerMatchupSelect && title_menu_modifier.selected_junowen()
 }
 
 pub fn update_th19_on_input_menu(
@@ -18,12 +18,12 @@ pub fn update_th19_on_input_menu(
     title_menu_modifier: &mut TitleMenuModifier,
     lobby: &mut Lobby,
 ) {
-    let Some(menu) = th19.app_mut().main_loop_tasks_mut().find_menu_mut() else {
+    let Some(main_menu) = th19.app_mut().main_loop_tasks_mut().find_main_menu_mut() else {
         return;
     };
-    if is_title(menu) {
-        title_menu_modifier.on_input_menu(menu, th19);
-    } else if title_menu_modifier.start_lobby(menu) {
+    if is_title(main_menu) {
+        title_menu_modifier.on_input_menu(main_menu, th19);
+    } else if title_menu_modifier.start_lobby(main_menu) {
         lobby.on_input_menu(th19);
     }
 }
@@ -35,10 +35,10 @@ pub fn render_text(
     text_renderer: *const c_void,
     text: &mut junowen_lib::RenderingText,
 ) -> u32 {
-    let Some(menu) = th19.app().main_loop_tasks().find_menu() else {
+    let Some(main_menu) = th19.app().main_loop_tasks().find_main_menu() else {
         return old(text_renderer, text);
     };
-    title_menu_modifier.render_text(menu, th19, old, text_renderer, text)
+    title_menu_modifier.render_text(main_menu, th19, old, text_renderer, text)
 }
 
 fn render_message(text_renderer: *const c_void, th19: &Th19, msg: &str, color: u32) {
@@ -84,10 +84,10 @@ pub fn on_render_texts(
             render_waiting_message("Reserved", waiting, th19, text_renderer);
         }
     }
-    let Some(menu) = th19.app().main_loop_tasks().find_menu() else {
+    let Some(main_menu) = th19.app().main_loop_tasks().find_main_menu() else {
         return;
     };
-    if is_lobby(menu, title_menu_modifier) {
+    if is_lobby(main_menu, title_menu_modifier) {
         lobby.on_render_texts(th19, text_renderer);
     }
 }

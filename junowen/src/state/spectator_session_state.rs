@@ -5,7 +5,7 @@ mod spectator_select;
 use std::{ffi::c_void, mem, sync::mpsc::RecvError};
 
 use anyhow::Result;
-use junowen_lib::{GameSettings, InputFlags, Menu, ScreenId, Th19};
+use junowen_lib::{GameSettings, InputFlags, MainMenu, ScreenId, Th19};
 
 use crate::session::spectator::SpectatorSession;
 
@@ -71,33 +71,33 @@ impl SpectatorSessionState {
         }
     }
 
-    pub fn update_state(&mut self, th19: &Th19) -> Option<Option<&'static Menu>> {
+    pub fn update_state(&mut self, th19: &Th19) -> Option<Option<&'static MainMenu>> {
         match self {
             Self::Null => unreachable!(),
             Self::Prepare(prepare) => {
-                let Some(menu) = th19.app().main_loop_tasks().find_menu() else {
+                let Some(main_menu) = th19.app().main_loop_tasks().find_main_menu() else {
                     return Some(None);
                 };
-                if prepare.update_state(menu, th19) {
+                if prepare.update_state(main_menu, th19) {
                     self.change_to_select();
                 }
-                Some(Some(menu))
+                Some(Some(main_menu))
             }
             Self::Select { .. } => {
-                let menu = th19.app().main_loop_tasks().find_menu().unwrap();
-                match menu.screen_id {
+                let main_menu = th19.app().main_loop_tasks().find_main_menu().unwrap();
+                match main_menu.screen_id() {
                     ScreenId::PlayerMatchupSelect => None,
                     ScreenId::CharacterSelect => {
                         if th19.input_devices().p1_input().current().0 & InputFlags::PAUSE != None {
                             return None;
                         }
-                        Some(Some(menu))
+                        Some(Some(main_menu))
                     }
                     ScreenId::GameLoading => {
                         self.change_to_game_loading();
-                        Some(Some(menu))
+                        Some(Some(main_menu))
                     }
-                    _ => Some(Some(menu)),
+                    _ => Some(Some(main_menu)),
                 }
             }
             Self::GameLoading { .. } => {
@@ -121,21 +121,21 @@ impl SpectatorSessionState {
                 Some(None)
             }
             Self::BackToSelect { .. } => {
-                let Some(menu) = th19.app().main_loop_tasks().find_menu() else {
+                let Some(main_menu) = th19.app().main_loop_tasks().find_main_menu() else {
                     return Some(None);
                 };
-                if menu.screen_id != ScreenId::CharacterSelect {
-                    return Some(Some(menu));
+                if main_menu.screen_id() != ScreenId::CharacterSelect {
+                    return Some(Some(main_menu));
                 }
                 self.change_to_select();
-                Some(Some(menu))
+                Some(Some(main_menu))
             }
         }
     }
 
     pub fn update_th19_on_input_players(
         &mut self,
-        menu: Option<&Menu>,
+        menu: Option<&MainMenu>,
         th19: &mut Th19,
     ) -> Result<(), RecvError> {
         match self {
@@ -154,17 +154,17 @@ impl SpectatorSessionState {
             Self::Null => unreachable!(),
             Self::Prepare(prepare) => prepare.update_th19_on_input_menu(th19),
             Self::Select(select) => {
-                let menu = th19
+                let main_menu = th19
                     .app_mut()
                     .main_loop_tasks_mut()
-                    .find_menu_mut()
+                    .find_main_menu_mut()
                     .unwrap();
-                if menu.screen_id == ScreenId::DifficultySelect
+                if main_menu.screen_id() == ScreenId::DifficultySelect
                     && th19.menu_input().current().0 & InputFlags::PAUSE != None
                 {
                     return Ok(false);
                 }
-                select.update_th19_on_input_menu(menu, th19)?;
+                select.update_th19_on_input_menu(main_menu, th19)?;
             }
             Self::GameLoading { .. } => {}
             Self::Game { .. } => {}

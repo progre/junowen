@@ -1,7 +1,9 @@
 use std::ffi::c_void;
 
 use getset::CopyGetters;
-use junowen_lib::{Fn0d5ae0, Input, InputFlags, InputValue, Menu, RenderingText, ScreenId, Th19};
+use junowen_lib::{
+    Fn0d5ae0, Input, InputFlags, InputValue, MainMenu, RenderingText, ScreenId, Th19,
+};
 
 use super::helper::menu_item_color;
 
@@ -34,8 +36,8 @@ impl TitleMenuModifier {
         }
     }
 
-    pub fn start_lobby(&mut self, menu: &Menu) -> bool {
-        if menu.screen_id == ScreenId::PlayerMatchupSelect && self.selected_junowen {
+    pub fn start_lobby(&mut self, main_menu: &MainMenu) -> bool {
+        if main_menu.screen_id() == ScreenId::PlayerMatchupSelect && self.selected_junowen {
             self.first_time = true;
             true
         } else {
@@ -43,29 +45,30 @@ impl TitleMenuModifier {
         }
     }
 
-    pub fn on_input_menu(&mut self, menu: &mut Menu, th19: &mut Th19) {
-        debug_assert_eq!(menu.screen_id, ScreenId::Title);
+    pub fn on_input_menu(&mut self, main_menu: &mut MainMenu, th19: &mut Th19) {
+        debug_assert_eq!(main_menu.screen_id(), ScreenId::Title);
+        let menu = main_menu;
         if self.first_time {
             self.first_time = false;
             if self.selected_junowen {
-                menu.cursor = 2;
+                menu.set_cursor(2);
             }
         }
-        match (menu.cursor, self.selected_junowen) {
+        match (menu.cursor(), self.selected_junowen) {
             (2, false) => {
                 if direction(th19.menu_input(), InputFlags::DOWN) {
                     self.selected_junowen = true;
-                    menu.cursor = 1;
+                    menu.set_cursor(1);
                 }
             }
             (2, true) => {
                 if th19.menu_input().current().decide() {
                     th19.menu_input_mut().set_current(InputFlags::SHOT.into());
-                    menu.cursor = 1;
+                    menu.set_cursor(1);
                 }
                 if direction(th19.menu_input(), InputFlags::UP) {
                     self.selected_junowen = false;
-                    menu.cursor = 3;
+                    menu.set_cursor(3);
                 }
                 if direction(th19.menu_input(), InputFlags::DOWN) {
                     self.selected_junowen = false;
@@ -85,20 +88,21 @@ impl TitleMenuModifier {
 
     pub fn render_text(
         &self,
-        menu: &Menu,
+        main_menu: &MainMenu,
         th19: &Th19,
         old: Fn0d5ae0,
         text_renderer: *const c_void,
         rendering_text: &mut RenderingText,
     ) -> u32 {
-        if menu.screen_id != ScreenId::Title {
+        if main_menu.screen_id() != ScreenId::Title {
             return old(text_renderer, rendering_text);
         }
+        let menu = main_menu;
         let text = rendering_text.text().unwrap().to_string_lossy().to_string();
         if ["Story Mode", "VS Mode", "Online VS Mode"].contains(&text.as_str()) {
             rendering_text.y -= (50 * th19.screen_height().unwrap() / 960) as f32;
         }
-        let selected_junowen = [1, 2].contains(&menu.cursor) && self.selected_junowen;
+        let selected_junowen = [1, 2].contains(&menu.cursor()) && self.selected_junowen;
         if text == "VS Mode" && selected_junowen {
             // disable decide
             rendering_text.color = menu_item_color(rendering_text.font_type, true, false);

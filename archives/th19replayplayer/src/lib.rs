@@ -11,7 +11,7 @@ use bytes::{Buf, BytesMut};
 use interprocess::os::windows::named_pipe::{ByteReaderPipeStream, PipeListenerOptions, PipeMode};
 use junowen_lib::{
     th19_helpers::{select_cursor, shot_repeatedly, AutomaticInputs},
-    Difficulty, FnOfHookAssembly, GameMode, GameSettings, InputDevices, InputValue, Menu,
+    Difficulty, FnOfHookAssembly, GameMode, GameSettings, InputDevices, InputValue, MainMenu,
     PlayerMatchup, Round, ScreenId, Th19,
 };
 use th19replayplayer_lib::{FileInputList, ReplayFile};
@@ -194,11 +194,13 @@ fn tick_battle(input_devices: &mut InputDevices, battle: &Round, replay_file: &R
 
 fn move_to_battle_menu_input(
     th19: &mut Th19,
-    menu: &mut Menu,
+    main_menu: &mut MainMenu,
     inits: &InitialBattleInformation,
 ) -> bool {
+    let screen_id = main_menu.screen_id();
+    let menu = main_menu;
     match (
-        menu.screen_id,
+        screen_id,
         th19.selection().game_mode,
         th19.selection().player_matchup,
     ) {
@@ -216,7 +218,7 @@ fn move_to_battle_menu_input(
         ) => {
             th19.menu_input_mut().set_current(select_cursor(
                 th19.menu_input().prev(),
-                &mut menu.cursor,
+                menu.cursor_mut(),
                 inits.difficulty as u32,
             ));
             false
@@ -227,7 +229,7 @@ fn move_to_battle_menu_input(
         }
         (ScreenId::GameLoading, GameMode::Versus, _) => true,
         _ => {
-            eprintln!("unknown screen {}", menu.screen_id as u32);
+            eprintln!("unknown screen {}", screen_id as u32);
             false
         }
     }
@@ -235,12 +237,14 @@ fn move_to_battle_menu_input(
 
 fn move_to_battle_player_inputs(
     th19: &mut Th19,
-    menu: &mut Menu,
+    main_menu: &mut MainMenu,
     inits: &InitialBattleInformation,
 ) -> bool {
     let input_devices = th19.input_devices_mut();
+    let screen_id = main_menu.screen_id();
+    let menu = main_menu;
     match (
-        menu.screen_id,
+        screen_id,
         th19.selection().game_mode,
         th19.selection().player_matchup,
     ) {
@@ -257,9 +261,9 @@ fn move_to_battle_player_inputs(
             false
         }
         (ScreenId::CharacterSelect, GameMode::Versus, _) => {
-            menu.p1_cursor.cursor = inits.p1_character as u32;
+            menu.p1_cursor_mut().cursor = inits.p1_character as u32;
             th19.selection_mut().p1_mut().card = inits.p1_card as u32;
-            menu.p2_cursor.cursor = inits.p2_character as u32;
+            menu.p2_cursor_mut().cursor = inits.p2_character as u32;
             th19.selection_mut().p2_mut().card = inits.p2_card as u32;
             th19.put_game_settings_in_game(inits.battle_settings)
                 .unwrap();
@@ -271,7 +275,7 @@ fn move_to_battle_player_inputs(
         }
         (ScreenId::GameLoading, GameMode::Versus, _) => true,
         _ => {
-            eprintln!("unknown screen {}", menu.screen_id as u32);
+            eprintln!("unknown screen {}", screen_id as u32);
             false
         }
     }
@@ -288,12 +292,12 @@ fn on_input_players_internal() {
             on_input_players_internal();
         }
         ReplayPlayerState::Prepare { th19, replay_file } => {
-            let Some(menu) = th19.app_mut().main_loop_tasks_mut().find_menu_mut() else {
+            let Some(main_menu) = th19.app_mut().main_loop_tasks_mut().find_main_menu_mut() else {
                 return;
             };
             if move_to_battle_player_inputs(
                 th19,
-                menu,
+                main_menu,
                 &InitialBattleInformation {
                     difficulty: replay_file.difficulty,
                     player_matchup: replay_file.player_matchup,
@@ -335,12 +339,12 @@ extern "fastcall" fn on_input_menu() {
             return;
         }
         ReplayPlayerState::Prepare { th19, replay_file } => {
-            let Some(menu) = th19.app_mut().main_loop_tasks_mut().find_menu_mut() else {
+            let Some(main_menu) = th19.app_mut().main_loop_tasks_mut().find_main_menu_mut() else {
                 return;
             };
             move_to_battle_menu_input(
                 th19,
-                menu,
+                main_menu,
                 &InitialBattleInformation {
                     difficulty: replay_file.difficulty,
                     player_matchup: replay_file.player_matchup,

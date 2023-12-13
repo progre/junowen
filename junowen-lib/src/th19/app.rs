@@ -52,19 +52,25 @@ pub struct CharacterCursor {
 }
 
 #[repr(C)]
-pub struct Menu {
+#[derive(CopyGetters, Getters, MutGetters, Setters)]
+pub struct MainMenu {
     _unknown1: [u8; 0x18],
-    pub screen_id: ScreenId,
+    #[get_copy = "pub"]
+    screen_id: ScreenId,
     _prev_screen_id: ScreenId,
     _unknown2: u32,
     _unknown3: u32,
     _unknown4: u32,
-    pub cursor: u32,
+    #[getset(get_copy = "pub", get_mut = "pub", set = "pub")]
+    cursor: u32,
     _prev_cursor: u32,
-    pub max_cursor: u32,
+    #[get_copy = "pub"]
+    max_cursor: u32,
     _unknown5: [u8; 0xcc],
-    pub p1_cursor: CharacterCursor,
-    pub p2_cursor: CharacterCursor,
+    #[getset(get = "pub", get_mut = "pub")]
+    p1_cursor: CharacterCursor,
+    #[getset(get = "pub", get_mut = "pub")]
+    p2_cursor: CharacterCursor,
 }
 
 #[derive(CopyGetters, Setters)]
@@ -135,10 +141,10 @@ impl MainLoopTasksLinkedList {
         self.find_mut(MainLoopTaskId::ControllerSelect)
     }
 
-    pub fn find_menu(&self) -> Option<&Menu> {
+    pub fn find_main_menu(&self) -> Option<&MainMenu> {
         self.find(MainLoopTaskId::Menu)
     }
-    pub fn find_menu_mut(&mut self) -> Option<&mut Menu> {
+    pub fn find_main_menu_mut(&mut self) -> Option<&mut MainMenu> {
         self.find_mut(MainLoopTaskId::Menu)
     }
 

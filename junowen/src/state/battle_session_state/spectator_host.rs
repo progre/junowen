@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 use getset::Getters;
-use junowen_lib::{Menu, ScreenId, Selection, Th19};
+use junowen_lib::{MainMenu, ScreenId, Selection, Th19};
 use tracing::info;
 
 use crate::{
@@ -92,21 +92,21 @@ impl SpectatorHostState {
         &self,
         session: &SpectatorHostSession,
         battle_session: &BattleSession,
-        menu: Option<&Menu>,
+        main_menu: Option<&MainMenu>,
         th19: &Th19,
     ) -> Result<()> {
-        let Some(menu) = menu else {
+        let Some(main_menu) = main_menu else {
             bail!("spectator not supported yet.");
         };
         let selection = th19.selection();
-        if menu.screen_id != ScreenId::DifficultySelect
+        if main_menu.screen_id() != ScreenId::DifficultySelect
             || selection.p1().card != 0
             || selection.p2().card != 0
         {
             bail!("spectator not supported yet.");
         }
         session.send_init_spectator(create_spectator_initial(
-            menu.screen_id,
+            main_menu.screen_id(),
             selection,
             battle_session,
             th19.online_vs_mode().player_name().to_string(),
@@ -123,14 +123,14 @@ impl SpectatorHostState {
     pub fn update(
         &mut self,
         pushed: bool,
-        menu: Option<&Menu>,
+        main_menu: Option<&MainMenu>,
         th19: &Th19,
         battle_session: &BattleSession,
         p1_input: u16,
         p2_input: u16,
     ) {
-        if let Some(session) = self.waiting.try_recv_session(pushed, menu, th19) {
-            if let Err(err) = self.init_session(&session, battle_session, menu, th19) {
+        if let Some(session) = self.waiting.try_recv_session(pushed, main_menu, th19) {
+            if let Err(err) = self.init_session(&session, battle_session, main_menu, th19) {
                 info!("initialize spectator failed: {:?}", err);
             } else {
                 self.sessions.push(session);

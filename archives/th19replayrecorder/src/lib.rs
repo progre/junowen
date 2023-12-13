@@ -140,10 +140,10 @@ fn on_input() {
 
     let state = state_mut();
     if !state.in_game {
-        let Some(menu) = props.th19.app().main_loop_tasks().find_menu() else {
+        let Some(main_menu) = props.th19.app().main_loop_tasks().find_main_menu() else {
             return;
         };
-        if menu.screen_id == ScreenId::GameLoading {
+        if main_menu.screen_id() == ScreenId::GameLoading {
             start_recording(props, state);
             state.in_game = true;
         }

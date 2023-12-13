@@ -1,6 +1,6 @@
 use derive_new::new;
 use getset::{CopyGetters, Getters, MutGetters, Setters};
-use junowen_lib::{th19_helpers::AutomaticInputs, Menu, PlayerMatchup, ScreenId, Th19};
+use junowen_lib::{th19_helpers::AutomaticInputs, MainMenu, PlayerMatchup, ScreenId, Th19};
 
 fn to_automatic_inputs(prepare_state: u8) -> AutomaticInputs {
     match prepare_state {
@@ -31,17 +31,17 @@ impl<T> Prepare<T> {
     }
 
     pub fn update_th19_on_input_menu(&self, th19: &mut Th19) {
-        let Some(menu) = th19.app_mut().main_loop_tasks_mut().find_menu_mut() else {
+        let Some(main_menu) = th19.app_mut().main_loop_tasks_mut().find_main_menu_mut() else {
             return;
         };
-        let no_wait = to_automatic_inputs(self.state).on_input_menu(th19, menu);
+        let no_wait = to_automatic_inputs(self.state).on_input_menu(th19, main_menu);
         th19.set_no_wait(no_wait);
     }
 
-    pub fn update_state(&mut self, menu: &Menu, th19: &Th19) -> bool {
+    pub fn update_state(&mut self, main_menu: &MainMenu, th19: &Th19) -> bool {
         match self.state {
             0 => {
-                if menu.screen_id != ScreenId::Title {
+                if main_menu.screen_id() != ScreenId::Title {
                     return false;
                 }
                 let new_state = if th19.input_devices().is_conflict_input_device() {
@@ -60,7 +60,7 @@ impl<T> Prepare<T> {
                 false
             }
             2 => {
-                if menu.screen_id != ScreenId::DifficultySelect {
+                if main_menu.screen_id() != ScreenId::DifficultySelect {
                     return false;
                 }
                 true

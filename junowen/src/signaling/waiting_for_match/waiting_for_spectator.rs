@@ -7,7 +7,7 @@ use junowen_lib::{
         parse_signaling_code, socket::async_read_write_socket::SignalingServerMessage,
         SignalingCodeType,
     },
-    Menu, ScreenId, Th19,
+    MainMenu, ScreenId, Th19,
 };
 use tokio::sync::mpsc::{self, error::TryRecvError};
 use tracing::info;
@@ -87,13 +87,13 @@ impl WaitingForPureP2pSpectator {
     fn update_inner(
         &mut self,
         current_pushed: bool,
-        menu: Option<&Menu>,
+        main_menu: Option<&MainMenu>,
         th19: &Th19,
     ) -> Result<()> {
         let selection = th19.selection();
         self.set_ready(
-            menu.is_some()
-                && menu.unwrap().screen_id == ScreenId::DifficultySelect
+            main_menu.is_some()
+                && main_menu.unwrap().screen_id() == ScreenId::DifficultySelect
                 && selection.p1().card == 0
                 && selection.p2().card == 0,
         );
@@ -158,7 +158,7 @@ impl WaitingForPureP2pSpectator {
         }
     }
 
-    pub fn update(&mut self, pushed: bool, menu: Option<&Menu>, th19: &Th19) {
+    pub fn update(&mut self, pushed: bool, menu: Option<&MainMenu>, th19: &Th19) {
         if let Err(err) = self.update_inner(pushed, menu, th19) {
             info!("spectator host error: {:?}", err);
             *self = Self::Standby {
@@ -178,7 +178,7 @@ impl WaitingForSpectator {
     pub fn try_recv_session(
         &mut self,
         pushed: bool,
-        menu: Option<&Menu>,
+        menu: Option<&MainMenu>,
         th19: &Th19,
     ) -> Option<SpectatorHostSession> {
         match self {

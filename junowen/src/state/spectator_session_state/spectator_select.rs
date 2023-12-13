@@ -3,7 +3,7 @@ use std::sync::mpsc::RecvError;
 use anyhow::Result;
 use derive_new::new;
 use getset::{Getters, MutGetters};
-use junowen_lib::{th19_helpers::reset_cursors, InputValue, Menu, ScreenId, Th19};
+use junowen_lib::{th19_helpers::reset_cursors, InputValue, MainMenu, ScreenId, Th19};
 use tracing::trace;
 
 use crate::session::spectator::{self, SpectatorSession};
@@ -23,7 +23,7 @@ impl SpectatorSelect {
 
     pub fn update_th19_on_input_players(
         &mut self,
-        menu: &Menu,
+        main_menu: &MainMenu,
         th19: &mut Th19,
     ) -> Result<(), RecvError> {
         if self.initializing_state == 0 {
@@ -40,7 +40,7 @@ impl SpectatorSelect {
             th19.set_rand_seed3(round_initial.seed3).unwrap();
             th19.set_rand_seed4(round_initial.seed4).unwrap();
         }
-        if menu.screen_id == ScreenId::DifficultySelect {
+        if main_menu.screen_id() == ScreenId::DifficultySelect {
             return Ok(());
         }
         if self.initializing_state == 1 {
@@ -68,20 +68,21 @@ impl SpectatorSelect {
 
     pub fn update_th19_on_input_menu(
         &mut self,
-        menu: &mut Menu,
+        main_menu: &mut MainMenu,
         th19: &mut Th19,
     ) -> Result<(), RecvError> {
-        if menu.screen_id != ScreenId::DifficultySelect {
+        if main_menu.screen_id() != ScreenId::DifficultySelect {
             return Ok(());
         }
+        let menu = main_menu;
         if self.initializing_state == 1 {
             let init = self.session.spectator_initial().unwrap();
             trace!("spectator_initial: {:?}", init);
             let initial_state = init.initial_state();
             match initial_state.screen() {
                 spectator::Screen::DifficultySelect => {
-                    if menu.cursor != initial_state.difficulty() as u32 {
-                        menu.cursor = initial_state.difficulty() as u32;
+                    if menu.cursor() != initial_state.difficulty() as u32 {
+                        menu.set_cursor(initial_state.difficulty() as u32);
                         th19.menu_input_mut().set_current(InputValue::empty());
                         return Ok(());
                     }

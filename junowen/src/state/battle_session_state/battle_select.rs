@@ -3,7 +3,7 @@ use std::sync::mpsc::RecvError;
 use anyhow::Result;
 use derive_new::new;
 use getset::{Getters, MutGetters};
-use junowen_lib::{th19_helpers::reset_cursors, Menu, ScreenId, Th19};
+use junowen_lib::{th19_helpers::reset_cursors, MainMenu, ScreenId, Th19};
 use tracing::trace;
 
 use crate::{
@@ -77,7 +77,7 @@ impl BattleSelect {
 
     pub fn update_th19_on_input_players(
         &mut self,
-        menu: &Menu,
+        main_menu: &MainMenu,
         th19: &mut Th19,
     ) -> Result<(), RecvError> {
         if self.first_time {
@@ -89,7 +89,7 @@ impl BattleSelect {
             self.spectator_host_state.send_init_round_if_connected(th19);
         }
 
-        if menu.screen_id == ScreenId::DifficultySelect {
+        if main_menu.screen_id() == ScreenId::DifficultySelect {
             return Ok(());
         }
 
@@ -110,14 +110,14 @@ impl BattleSelect {
             .set_current((p2 as u32).try_into().unwrap());
 
         self.spectator_host_state
-            .update(false, Some(menu), th19, &self.session, p1, p2);
+            .update(false, Some(main_menu), th19, &self.session, p1, p2);
 
         Ok(())
     }
 
     pub fn update_th19_on_input_menu(&mut self, th19: &mut Th19) -> Result<(), RecvError> {
-        let menu = th19.app().main_loop_tasks().find_menu().unwrap();
-        if menu.screen_id != ScreenId::DifficultySelect {
+        let main_menu = th19.app().main_loop_tasks().find_main_menu().unwrap();
+        if main_menu.screen_id() != ScreenId::DifficultySelect {
             return Ok(());
         }
 
@@ -135,8 +135,14 @@ impl BattleSelect {
         menu_input.set_current((input as u32).try_into().unwrap());
 
         let current_pushed = pushed_f1(input_devices);
-        self.spectator_host_state
-            .update(current_pushed, Some(menu), th19, &self.session, p1, p2);
+        self.spectator_host_state.update(
+            current_pushed,
+            Some(main_menu),
+            th19,
+            &self.session,
+            p1,
+            p2,
+        );
 
         Ok(())
     }

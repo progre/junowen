@@ -6,7 +6,7 @@ mod spectator_host;
 use std::{ffi::c_void, mem, sync::mpsc::RecvError};
 
 use anyhow::Result;
-use junowen_lib::{GameSettings, Menu, ScreenId, Th19};
+use junowen_lib::{GameSettings, MainMenu, ScreenId, Th19};
 
 use crate::{session::battle::BattleSession, signaling::waiting_for_match::WaitingForSpectator};
 
@@ -98,27 +98,27 @@ impl BattleSessionState {
         }
     }
 
-    pub fn update_state(&mut self, th19: &Th19) -> Option<Option<&'static Menu>> {
+    pub fn update_state(&mut self, th19: &Th19) -> Option<Option<&'static MainMenu>> {
         match self {
             Self::Null => unreachable!(),
             Self::Prepare(prepare) => {
-                let Some(menu) = th19.app().main_loop_tasks().find_menu() else {
+                let Some(main_menu) = th19.app().main_loop_tasks().find_main_menu() else {
                     return Some(None);
                 };
-                if prepare.update_state(menu, th19) {
+                if prepare.update_state(main_menu, th19) {
                     self.change_to_select();
                 }
-                Some(Some(menu))
+                Some(Some(main_menu))
             }
             Self::Select { .. } => {
-                let menu = th19.app().main_loop_tasks().find_menu().unwrap();
-                match menu.screen_id {
+                let main_menu = th19.app().main_loop_tasks().find_main_menu().unwrap();
+                match main_menu.screen_id() {
                     ScreenId::GameLoading => {
                         self.change_to_game_loading();
-                        Some(Some(menu))
+                        Some(Some(main_menu))
                     }
                     ScreenId::PlayerMatchupSelect => None,
-                    _ => Some(Some(menu)),
+                    _ => Some(Some(main_menu)),
                 }
             }
             Self::GameLoading { .. } => {
@@ -139,21 +139,21 @@ impl BattleSessionState {
                 Some(None)
             }
             Self::BackToSelect { .. } => {
-                let Some(menu) = th19.app().main_loop_tasks().find_menu() else {
+                let Some(main_menu) = th19.app().main_loop_tasks().find_main_menu() else {
                     return Some(None);
                 };
-                if menu.screen_id != ScreenId::CharacterSelect {
-                    return Some(Some(menu));
+                if main_menu.screen_id() != ScreenId::CharacterSelect {
+                    return Some(Some(main_menu));
                 }
                 self.change_to_select();
-                Some(Some(menu))
+                Some(Some(main_menu))
             }
         }
     }
 
     pub fn update_th19_on_input_players(
         &mut self,
-        menu: Option<&Menu>,
+        menu: Option<&MainMenu>,
         th19: &mut Th19,
     ) -> Result<(), RecvError> {
         match self {

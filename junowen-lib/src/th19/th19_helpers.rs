@@ -2,7 +2,7 @@ use tracing::{trace, warn};
 
 use crate::{GameMode, InputFlags, InputValue, PlayerMatchup, Th19};
 
-use super::app::{Menu, ScreenId};
+use super::app::{MainMenu, ScreenId};
 
 pub fn shot_repeatedly(prev: InputValue) -> InputValue {
     if prev == InputFlags::SHOT.into() {
@@ -68,12 +68,12 @@ impl AutomaticInputs {
         }
     }
 
-    pub fn on_input_menu(&self, th19: &mut Th19, menu: &mut Menu) -> bool {
+    pub fn on_input_menu(&self, th19: &mut Th19, main_menu: &mut MainMenu) -> bool {
         match self {
-            Self::TransitionToTitle => transfer_to_title_on_input_menu(th19, menu),
-            Self::ResolveKeyboardFullConflict => resolve_input_device_conflict(th19, menu),
+            Self::TransitionToTitle => transfer_to_title_on_input_menu(th19, main_menu),
+            Self::ResolveKeyboardFullConflict => resolve_input_device_conflict(th19, main_menu),
             Self::TransitionToLocalVersusDifficultySelect(target_player_matchup) => {
-                transfer_to_local_versus_difficulty_select(th19, menu, *target_player_matchup)
+                transfer_to_local_versus_difficulty_select(th19, main_menu, *target_player_matchup)
             }
         }
     }
@@ -81,8 +81,9 @@ impl AutomaticInputs {
 
 fn transfer_to_title_on_input_players(th19: &mut Th19) {
     let input_devices = th19.input_devices_mut();
-    let (p1, p2) = if let Some(menu) = th19.app_mut().main_loop_tasks_mut().find_menu_mut() {
-        match menu.screen_id {
+    let main_menu = th19.app_mut().main_loop_tasks_mut().find_main_menu_mut();
+    let (p1, p2) = if let Some(main_menu) = main_menu {
+        match main_menu.screen_id() {
             ScreenId::CharacterSelect => (
                 escape_repeatedly(input_devices.p1_input().prev()),
                 escape_repeatedly(input_devices.p2_input().prev()),
@@ -123,9 +124,9 @@ fn transfer_to_title_on_input_players(th19: &mut Th19) {
     input_devices.p2_input_mut().set_current(p2);
 }
 
-fn transfer_to_title_on_input_menu(th19: &mut Th19, menu: &Menu) -> bool {
-    trace!("menu.screen_id: {:x?}", menu.screen_id);
-    let menu_input = match menu.screen_id {
+fn transfer_to_title_on_input_menu(th19: &mut Th19, main_menu: &MainMenu) -> bool {
+    trace!("menu.screen_id: {:x?}", main_menu.screen_id());
+    let menu_input = match main_menu.screen_id() {
         ScreenId::TitleLoading => return false,
         ScreenId::Title => InputValue::empty(),
         ScreenId::ControllerSelect => 'a: {
@@ -160,18 +161,20 @@ fn transfer_to_title_on_input_menu(th19: &mut Th19, menu: &Menu) -> bool {
     true
 }
 
-fn resolve_input_device_conflict(th19: &mut Th19, menu: &mut Menu) -> bool {
+fn resolve_input_device_conflict(th19: &mut Th19, main_menu: &mut MainMenu) -> bool {
     if !th19.input_devices().is_conflict_input_device() {
         return true;
     }
+    let screen_id = main_menu.screen_id();
+    let menu = main_menu;
     let menu_input = match (
-        menu.screen_id,
+        screen_id,
         th19.selection().game_mode,
         th19.selection().player_matchup,
     ) {
-        (ScreenId::Title, _, _) => select_cursor(th19.menu_input().prev(), &mut menu.cursor, 1),
+        (ScreenId::Title, _, _) => select_cursor(th19.menu_input().prev(), menu.cursor_mut(), 1),
         (ScreenId::PlayerMatchupSelect, _, _) => {
-            select_cursor(th19.menu_input().prev(), &mut menu.cursor, 4)
+            select_cursor(th19.menu_input().prev(), menu.cursor_mut(), 4)
         }
         (ScreenId::ControllerSelect, _, _) => {
             if let Some(ctrler_select) = th19
@@ -197,18 +200,20 @@ fn resolve_input_device_conflict(th19: &mut Th19, menu: &mut Menu) -> bool {
 
 fn transfer_to_local_versus_difficulty_select(
     th19: &mut Th19,
-    menu: &mut Menu,
+    main_menu: &mut MainMenu,
     target_player_matchup: PlayerMatchup,
 ) -> bool {
+    let screen_id = main_menu.screen_id();
+    let menu = main_menu;
     th19.menu_input_mut().set_current(
         match (
-            menu.screen_id,
+            screen_id,
             th19.selection().game_mode,
             th19.selection().player_matchup,
         ) {
             (ScreenId::TitleLoading, _, _) => InputValue::empty(),
             (ScreenId::Title, _, _) => {
-                select_cursor(th19.menu_input_mut().prev(), &mut menu.cursor, 1)
+                select_cursor(th19.menu_input_mut().prev(), menu.cursor_mut(), 1)
             }
             (ScreenId::PlayerMatchupSelect, _, _) => {
                 let target = if target_player_matchup == PlayerMatchup::HumanVsCpu {
@@ -216,7 +221,7 @@ fn transfer_to_local_versus_difficulty_select(
                 } else {
                     0
                 };
-                select_cursor(th19.menu_input_mut().prev(), &mut menu.cursor, target)
+                select_cursor(th19.menu_input_mut().prev(), menu.cursor_mut(), target)
             }
             (
                 ScreenId::DifficultySelect,
@@ -224,7 +229,7 @@ fn transfer_to_local_versus_difficulty_select(
                 PlayerMatchup::HumanVsHuman | PlayerMatchup::HumanVsCpu | PlayerMatchup::CpuVsCpu,
             ) => InputValue::empty(),
             _ => {
-                warn!("unsupported screen {}", menu.screen_id as u32);
+                warn!("unsupported screen {}", screen_id as u32);
                 InputValue::empty()
             }
         },

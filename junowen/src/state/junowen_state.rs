@@ -5,8 +5,8 @@ use std::{ffi::c_void, sync::mpsc::RecvError};
 
 use anyhow::Result;
 use junowen_lib::{
-    Fn011560, Fn0b7d40, Fn0d5ae0, Fn10f720, GameSettings, Menu, RenderingText, ScreenId, Selection,
-    Th19,
+    Fn011560, Fn0b7d40, Fn0d5ae0, Fn10f720, GameSettings, MainMenu, RenderingText, ScreenId,
+    Selection, Th19,
 };
 use tracing::trace;
 
@@ -61,14 +61,14 @@ impl JunowenState {
         &mut self,
         th19: &Th19,
         waiting_for_match: &mut Option<WaitingForMatch>,
-    ) -> Option<&'static Menu> {
+    ) -> Option<&'static MainMenu> {
         match self {
             Self::Standby => {
                 let Some(old_waiting) = waiting_for_match.take() else {
                     return None;
                 };
-                if let Some(menu) = th19.app().main_loop_tasks().find_menu() {
-                    if menu.screen_id == ScreenId::OnlineVSMode {
+                if let Some(main_menu) = th19.app().main_loop_tasks().find_main_menu() {
+                    if main_menu.screen_id() == ScreenId::OnlineVSMode {
                         return None;
                     }
                 }
@@ -118,7 +118,7 @@ impl JunowenState {
 
     fn update_th19_on_input_players(
         &mut self,
-        menu: Option<&Menu>,
+        menu: Option<&MainMenu>,
         th19: &mut Th19,
     ) -> Result<(), RecvError> {
         match self {
