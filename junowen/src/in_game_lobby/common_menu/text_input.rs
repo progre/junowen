@@ -23,12 +23,14 @@ struct TextInputState {
 }
 
 impl TextInputState {
-    pub fn new() -> Self {
-        Self {
+    pub fn new(current: &[u8; 256]) -> Self {
+        let mut zelf = Self {
             prev: [0; 256],
             current_vk: 0,
             current_vk_count: 0,
-        }
+        };
+        zelf.tick(current);
+        zelf
     }
 
     pub fn tick(&mut self, current: &[u8; 256]) -> Vec<u8> {
@@ -74,7 +76,7 @@ pub struct TextInput {
     name: &'static str,
     #[getset(set = "pub")]
     value: String,
-    state: TextInputState,
+    state: Option<TextInputState>,
 }
 
 impl TextInput {
@@ -83,7 +85,7 @@ impl TextInput {
             changed_action,
             name,
             value: String::new(),
-            state: TextInputState::new(),
+            state: None,
         }
     }
 
@@ -91,9 +93,19 @@ impl TextInput {
         &self.value
     }
 
+    fn state_mut(&mut self) -> &mut TextInputState {
+        self.state.as_mut().unwrap()
+    }
+
     pub fn on_input_menu(&mut self, th19: &Th19) -> OnMenuInputResult {
+        if self.state.is_none() {
+            self.state = Some(TextInputState::new(
+                th19.input_devices().keyboard_input().raw_keys(),
+            ));
+            return OnMenuInputResult::None;
+        }
         for ascii in self
-            .state
+            .state_mut()
             .tick(th19.input_devices().keyboard_input().raw_keys())
         {
             if (0x20..0x7f).contains(&ascii) {

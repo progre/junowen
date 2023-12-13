@@ -41,10 +41,6 @@ impl InputValue {
     pub fn bits(&self) -> u32 {
         self.0.bits()
     }
-
-    pub fn decide(&self) -> bool {
-        self.0 & (InputFlags::SHOT | InputFlags::ENTER) != None
-    }
 }
 
 impl TryFrom<u32> for InputValue {
@@ -82,6 +78,14 @@ pub struct Input {
     right_repeat_count: u32,
     _unknown1: [u8; 0x278],
     _unknown2: [u8; 0x010],
+}
+
+impl Input {
+    pub fn decide(&self) -> bool {
+        [InputFlags::SHOT, InputFlags::ENTER]
+            .into_iter()
+            .any(|flag| self.prev.0 & flag == None && self.current.0 & flag != None)
+    }
 }
 
 /// 0x3d4
