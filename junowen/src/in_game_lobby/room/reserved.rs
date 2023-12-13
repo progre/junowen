@@ -27,7 +27,7 @@ fn make_menu() -> CommonMenu {
                 Menu::new(
                     "Reserved Room",
                     Some(1),
-                    vec![MenuItem::plain("Leave", 1, true)],
+                    vec![MenuItem::plain("Leave", 1, false)],
                     0,
                 ),
             ),
@@ -37,7 +37,7 @@ fn make_menu() -> CommonMenu {
                 Menu::new(
                     "Reserved Room",
                     Some(1),
-                    vec![MenuItem::plain("Leave", 1, true)],
+                    vec![MenuItem::plain("Leave", 1, false)],
                     0,
                 ),
             ),
@@ -115,6 +115,7 @@ impl ReservedRoom {
                 1 => {
                     self.enter = false;
                     *waiting = None;
+                    th19.play_sound(th19.sound_manager(), 0x09, 0);
                     self.menu.controller_mut().force_cancel();
                     None
                 }
