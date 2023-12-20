@@ -8,13 +8,10 @@ use tracing::trace;
 
 use crate::{
     helper::{inputed_number, pushed_f1},
-    session::{
-        battle::{BattleSession, MatchInitial},
-        RoundInitial,
-    },
+    session::battle::{BattleSession, MatchInitial},
 };
 
-use super::spectator_host::SpectatorHostState;
+use super::{spectator_host::SpectatorHostState, utils::init_round};
 
 fn init_match(th19: &mut Th19, battle_session: &mut BattleSession) -> Result<(), RecvError> {
     trace!("init_match");
@@ -35,25 +32,6 @@ fn init_match(th19: &mut Th19, battle_session: &mut BattleSession) -> Result<(),
         battle_session.set_remote_player_name(remote_player_name);
         debug_assert!(opt.is_some());
         battle_session.set_match_initial(opt);
-    }
-    Ok(())
-}
-
-fn init_round(th19: &mut Th19, battle_session: &mut BattleSession) -> Result<(), RecvError> {
-    if battle_session.host() {
-        let opt = battle_session.init_round(Some(RoundInitial {
-            seed1: th19.rand_seed1().unwrap(),
-            seed2: th19.rand_seed2().unwrap(),
-            seed3: th19.rand_seed3().unwrap(),
-            seed4: th19.rand_seed4().unwrap(),
-        }))?;
-        debug_assert!(opt.is_none());
-    } else {
-        let init = battle_session.init_round(None)?.unwrap();
-        th19.set_rand_seed1(init.seed1).unwrap();
-        th19.set_rand_seed2(init.seed2).unwrap();
-        th19.set_rand_seed3(init.seed3).unwrap();
-        th19.set_rand_seed4(init.seed4).unwrap();
     }
     Ok(())
 }
@@ -83,8 +61,7 @@ impl BattleSelect {
             if self.session.match_initial().is_none() {
                 init_match(th19, &mut self.session)?;
             }
-            init_round(th19, &mut self.session)?;
-            self.spectator_host_state.send_init_round_if_connected(th19);
+            init_round(th19, &mut self.session, &mut self.spectator_host_state)?;
         }
 
         if main_menu.screen_id() == ScreenId::DifficultySelect {

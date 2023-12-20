@@ -2,6 +2,7 @@ mod battle_game;
 mod battle_select;
 mod in_session;
 mod spectator_host;
+mod utils;
 
 use std::{ffi::c_void, mem, sync::mpsc::RecvError};
 

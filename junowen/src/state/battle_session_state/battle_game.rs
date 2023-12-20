@@ -5,12 +5,9 @@ use derive_new::new;
 use getset::{Getters, MutGetters};
 use junowen_lib::{InputValue, Th19};
 
-use crate::{
-    helper::inputed_number,
-    session::{battle::BattleSession, RoundInitial},
-};
+use crate::{helper::inputed_number, session::battle::BattleSession};
 
-use super::spectator_host::SpectatorHostState;
+use super::{spectator_host::SpectatorHostState, utils::init_round};
 
 #[derive(new, Getters, MutGetters)]
 pub struct BattleGame {
@@ -60,21 +57,6 @@ impl BattleGame {
     }
 
     pub fn on_round_over(&mut self, th19: &mut Th19) -> Result<(), RecvError> {
-        if self.session.host() {
-            let init = self.session.init_round(Some(RoundInitial {
-                seed1: th19.rand_seed1().unwrap(),
-                seed2: th19.rand_seed2().unwrap(),
-                seed3: th19.rand_seed3().unwrap(),
-                seed4: th19.rand_seed4().unwrap(),
-            }))?;
-            assert!(init.is_none());
-        } else {
-            let init = self.session.init_round(None)?.unwrap();
-            th19.set_rand_seed1(init.seed1).unwrap();
-            th19.set_rand_seed2(init.seed2).unwrap();
-            th19.set_rand_seed3(init.seed3).unwrap();
-            th19.set_rand_seed4(init.seed4).unwrap();
-        }
-        Ok(())
+        init_round(th19, &mut self.session, &mut self.spectator_host_state)
     }
 }
