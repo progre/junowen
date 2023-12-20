@@ -98,18 +98,23 @@ impl SpectatorHostState {
         let Some(main_menu) = main_menu else {
             bail!("spectator not supported yet.");
         };
-        let selection = th19.selection();
+        let vs_mode = th19.vs_mode();
         if main_menu.screen_id() != ScreenId::DifficultySelect
-            || selection.p1().card != 0
-            || selection.p2().card != 0
+            || vs_mode.p1_card() != 0
+            || vs_mode.p2_card() != 0
         {
-            bail!("spectator not supported yet.");
+            bail!(
+                "spectator not supported yet. screen={:?}, p1_card={}, p2_card={}",
+                main_menu.screen_id(),
+                vs_mode.p1_card(),
+                vs_mode.p2_card()
+            );
         }
         session.send_init_spectator(create_spectator_initial(
             main_menu.screen_id(),
-            selection,
+            th19.selection(),
             battle_session,
-            th19.online_vs_mode().player_name().to_string(),
+            th19.vs_mode().player_name().to_string(),
         ))?;
         session.send_init_round(RoundInitial {
             seed1: th19.rand_seed1().unwrap(),

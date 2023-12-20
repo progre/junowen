@@ -6,7 +6,7 @@ use std::{
 
 use anyhow::{bail, Result};
 use derivative::Derivative;
-use getset::{Getters, MutGetters};
+use getset::{CopyGetters, Getters, MutGetters};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -37,17 +37,25 @@ impl Round {
     }
 }
 
+#[derive(CopyGetters)]
 #[repr(C)]
-pub struct OnlineVSMode {
+pub struct VSMode {
     _unknown1: [u8; 0x02E868],
     _unknown2: [u8; 0x08],
     _unknown3: [u8; 0x58],
     player_name: [u8; 0x22],
     room_name: [u8; 0x22],
+    _unknown4: [u8; 0x0108],
+    /// Readonly
+    #[get_copy = "pub"]
+    p1_card: u8, // +2ea14h
+    /// Readonly
+    #[get_copy = "pub"]
+    p2_card: u8,
     // unknown remains...
 }
 
-impl OnlineVSMode {
+impl VSMode {
     pub fn player_name(&self) -> &str {
         CStr::from_bytes_until_nul(&self.player_name)
             .unwrap_or_default()

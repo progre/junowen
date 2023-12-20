@@ -24,16 +24,14 @@ fn init_match(th19: &mut Th19, battle_session: &mut BattleSession) -> Result<(),
         let init = MatchInitial {
             game_settings: th19.game_settings_in_menu().unwrap(),
         };
-        let (remote_player_name, opt) = battle_session.init_match(
-            th19.online_vs_mode().player_name().to_string(),
-            Some(init.clone()),
-        )?;
+        let (remote_player_name, opt) = battle_session
+            .init_match(th19.vs_mode().player_name().to_string(), Some(init.clone()))?;
         battle_session.set_remote_player_name(remote_player_name);
         debug_assert!(opt.is_none());
         battle_session.set_match_initial(Some(init));
     } else {
         let (remote_player_name, opt) =
-            battle_session.init_match(th19.online_vs_mode().player_name().to_string(), None)?;
+            battle_session.init_match(th19.vs_mode().player_name().to_string(), None)?;
         battle_session.set_remote_player_name(remote_player_name);
         debug_assert!(opt.is_some());
         battle_session.set_match_initial(opt);

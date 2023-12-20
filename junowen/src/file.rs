@@ -121,7 +121,7 @@ impl SettingsRepo {
         match self.read_string(RESERVED_ROOM_NAME).await {
             Some(value) => value,
             None => {
-                let value = th19.online_vs_mode().room_name().to_owned();
+                let value = th19.vs_mode().room_name().to_owned();
                 self.set_reserved_room_name(value.clone()).await;
                 value
             }
@@ -135,7 +135,7 @@ impl SettingsRepo {
         match self.read_string(SHARED_ROOM_NAME).await {
             Some(value) => value,
             None => {
-                let value = th19.online_vs_mode().room_name().to_owned();
+                let value = th19.vs_mode().room_name().to_owned();
                 self.set_shared_room_name(value.clone()).await;
                 value
             }
