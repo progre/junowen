@@ -1,7 +1,10 @@
 use std::ffi::c_void;
 
 use getset::{Getters, MutGetters};
-use junowen_lib::{InputFlags, InputValue, Th19};
+use junowen_lib::{
+    structs::input_devices::{InputFlags, InputValue},
+    Th19,
+};
 
 use crate::{
     file::SettingsRepo,

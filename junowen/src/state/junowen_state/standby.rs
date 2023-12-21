@@ -1,6 +1,10 @@
 use std::ffi::c_void;
 
-use junowen_lib::{structs::others::RenderingText, Fn0b7d40, Fn0d5ae0, MainMenu, ScreenId, Th19};
+use junowen_lib::{
+    structs::app::{MainMenu, ScreenId},
+    structs::others::RenderingText,
+    Fn0b7d40, Fn0d5ae0, Th19,
+};
 
 use crate::in_game_lobby::{Lobby, TitleMenuModifier};
 use crate::signaling::waiting_for_match::{WaitingForMatch, WaitingForOpponent, WaitingInRoom};

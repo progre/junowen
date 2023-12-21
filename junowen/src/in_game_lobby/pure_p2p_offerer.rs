@@ -9,7 +9,8 @@ use junowen_lib::{
         },
         DataChannel, PeerConnection,
     },
-    InputValue, Th19,
+    structs::input_devices::InputValue,
+    Th19,
 };
 use tokio::sync::mpsc;
 use tracing::trace;

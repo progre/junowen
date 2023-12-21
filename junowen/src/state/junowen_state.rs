@@ -5,8 +5,9 @@ use std::{ffi::c_void, sync::mpsc::RecvError};
 
 use anyhow::Result;
 use junowen_lib::{
+    structs::app::{MainMenu, ScreenId},
     structs::{others::RenderingText, selection::Selection, settings::GameSettings},
-    Fn011560, Fn0b7d40, Fn0d5ae0, Fn10f720, MainMenu, ScreenId, Th19,
+    Fn011560, Fn0b7d40, Fn0d5ae0, Fn10f720, Th19,
 };
 use tracing::trace;
 

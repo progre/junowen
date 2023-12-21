@@ -1,4 +1,4 @@
-use junowen_lib::{InputFlags, InputValue};
+use junowen_lib::structs::input_devices::{InputFlags, InputValue};
 
 fn pulse(current: InputValue, prev: InputValue, flag: InputFlags) -> bool {
     current.0 & flag != None && prev.0 & flag == None

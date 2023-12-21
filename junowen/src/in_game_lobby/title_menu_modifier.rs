@@ -2,8 +2,10 @@ use std::ffi::c_void;
 
 use getset::CopyGetters;
 use junowen_lib::{
-    structs::others::RenderingText, Fn0d5ae0, Input, InputFlags, InputValue, MainMenu, ScreenId,
-    Th19,
+    structs::app::{MainMenu, ScreenId},
+    structs::input_devices::{Input, InputFlags, InputValue},
+    structs::others::RenderingText,
+    Fn0d5ae0, Th19,
 };
 
 use super::helper::menu_item_color;

@@ -1,6 +1,10 @@
 use anyhow::{bail, Result};
 use getset::Getters;
-use junowen_lib::{structs::selection::Selection, MainMenu, ScreenId, Th19};
+use junowen_lib::{
+    structs::app::{MainMenu, ScreenId},
+    structs::selection::Selection,
+    Th19,
+};
 use tracing::info;
 
 use crate::{

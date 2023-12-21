@@ -1,5 +1,3 @@
-mod app;
-mod inputdevices;
 pub mod structs;
 pub mod th19_helpers;
 
@@ -18,10 +16,10 @@ use crate::{
     memory_accessors::{ExternalProcess, HookedProcess, MemoryAccessor},
     pointer, ptr_opt, u16_prop, u32_prop, value_ref,
 };
-pub use app::*;
-pub use inputdevices::*;
 
 use self::structs::{
+    app::App,
+    input_devices::{Input, InputDevices},
     others::{RenderingText, RoundFrame, VSMode},
     selection::Selection,
     settings::GameSettings,

@@ -1,7 +1,10 @@
 use derive_new::new;
 use getset::{CopyGetters, Getters, MutGetters, Setters};
 use junowen_lib::{
-    structs::selection::PlayerMatchup, th19_helpers::AutomaticInputs, MainMenu, ScreenId, Th19,
+    structs::app::{MainMenu, ScreenId},
+    structs::selection::PlayerMatchup,
+    th19_helpers::AutomaticInputs,
+    Th19,
 };
 
 fn to_automatic_inputs(prepare_state: u8) -> AutomaticInputs {

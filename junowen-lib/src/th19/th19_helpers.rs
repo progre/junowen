@@ -1,11 +1,13 @@
 use tracing::{trace, warn};
 
 use crate::{
-    structs::selection::{GameMode, PlayerMatchup},
-    InputFlags, InputValue, Th19,
+    structs::{
+        app::{MainMenu, ScreenId},
+        input_devices::{InputFlags, InputValue},
+        selection::{GameMode, PlayerMatchup},
+    },
+    Th19,
 };
-
-use super::app::{MainMenu, ScreenId};
 
 pub fn shot_repeatedly(prev: InputValue) -> InputValue {
     if prev == InputFlags::SHOT.into() {

@@ -7,7 +7,7 @@ use std::ffi::c_void;
 
 use derive_new::new;
 use getset::{CopyGetters, Getters, MutGetters};
-use junowen_lib::{InputValue, Th19};
+use junowen_lib::{structs::input_devices::InputValue, Th19};
 
 use self::{
     menu_controller::{

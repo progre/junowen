@@ -3,7 +3,14 @@ use std::sync::mpsc::RecvError;
 use anyhow::Result;
 use derive_new::new;
 use getset::{Getters, MutGetters};
-use junowen_lib::{th19_helpers::reset_cursors, InputValue, MainMenu, ScreenId, Th19};
+use junowen_lib::{
+    structs::{
+        app::{MainMenu, ScreenId},
+        input_devices::InputValue,
+    },
+    th19_helpers::reset_cursors,
+    Th19,
+};
 use tracing::trace;
 
 use crate::session::spectator::{self, SpectatorSession};

@@ -3,7 +3,7 @@ use std::sync::mpsc::RecvError;
 use anyhow::Result;
 use derive_new::new;
 use getset::{Getters, MutGetters};
-use junowen_lib::{InputValue, Th19};
+use junowen_lib::{structs::input_devices::InputValue, Th19};
 
 use crate::session::spectator::SpectatorSession;
 

@@ -11,12 +11,14 @@ use bytes::{Buf, BytesMut};
 use interprocess::os::windows::named_pipe::{ByteReaderPipeStream, PipeListenerOptions, PipeMode};
 use junowen_lib::{
     structs::{
+        app::{MainMenu, ScreenId},
+        input_devices::{InputDevices, InputValue},
         others::RoundFrame,
         selection::{Difficulty, GameMode, PlayerMatchup},
         settings::GameSettings,
     },
     th19_helpers::{select_cursor, shot_repeatedly, AutomaticInputs},
-    FnOfHookAssembly, InputDevices, InputValue, MainMenu, ScreenId, Th19,
+    FnOfHookAssembly, Th19,
 };
 use th19replayplayer_lib::{FileInputList, ReplayFile};
 use windows::Win32::{

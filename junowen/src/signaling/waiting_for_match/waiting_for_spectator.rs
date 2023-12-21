@@ -7,7 +7,8 @@ use junowen_lib::{
         parse_signaling_code, socket::async_read_write_socket::SignalingServerMessage,
         SignalingCodeType,
     },
-    MainMenu, ScreenId, Th19,
+    structs::app::{MainMenu, ScreenId},
+    Th19,
 };
 use tokio::sync::mpsc::{self, error::TryRecvError};
 use tracing::info;

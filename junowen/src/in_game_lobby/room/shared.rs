@@ -1,6 +1,6 @@
 use std::ffi::c_void;
 
-use junowen_lib::{InputValue, Th19};
+use junowen_lib::{structs::input_devices::InputValue, Th19};
 
 use crate::{
     file::SettingsRepo, signaling::waiting_for_match::WaitingForOpponentInSharedRoom, TOKIO_RUNTIME,

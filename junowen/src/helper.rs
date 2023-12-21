@@ -1,4 +1,4 @@
-use junowen_lib::InputDevices;
+use junowen_lib::structs::input_devices::InputDevices;
 
 pub fn inputed_number(input_devices: &InputDevices) -> Option<u8> {
     let raw_keys = input_devices.keyboard_input().raw_keys();

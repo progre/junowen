@@ -6,7 +6,8 @@ use junowen_lib::{
         parse_signaling_code, socket::async_read_write_socket::SignalingServerMessage,
         SignalingCodeType,
     },
-    InputValue, Th19,
+    structs::input_devices::InputValue,
+    Th19,
 };
 use tokio::sync::mpsc;
 

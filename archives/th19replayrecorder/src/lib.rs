@@ -5,7 +5,9 @@ use std::{
 };
 
 use junowen_lib::{
-    hook_utils::WELL_KNOWN_VERSION_HASHES, FnOfHookAssembly, InputDevices, ScreenId, Th19,
+    hook_utils::WELL_KNOWN_VERSION_HASHES,
+    structs::{app::ScreenId, input_devices::InputDevices},
+    FnOfHookAssembly, Th19,
 };
 use th19replayplayer_lib::{FileInputList, ReplayFile};
 use windows::{
