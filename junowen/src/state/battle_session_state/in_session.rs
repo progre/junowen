@@ -1,6 +1,6 @@
 use std::{borrow::Cow, ffi::c_void};
 
-use junowen_lib::{RenderingText, Th19};
+use junowen_lib::{structs::others::RenderingText, Th19};
 
 use crate::{
     signaling::waiting_for_match::{WaitingForPureP2pSpectator, WaitingForSpectator},

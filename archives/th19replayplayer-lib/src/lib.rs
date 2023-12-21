@@ -2,7 +2,13 @@ use std::io::{BufRead, Write};
 
 use anyhow::Result;
 use bytes::{Buf, BufMut, BytesMut};
-use junowen_lib::{Difficulty, GameSettings, PlayerMatchup, Th19};
+use junowen_lib::{
+    structs::{
+        selection::{Difficulty, PlayerMatchup},
+        settings::GameSettings,
+    },
+    Th19,
+};
 
 pub enum FileInputList {
     HumanVsHuman(Vec<(u16, u16)>),

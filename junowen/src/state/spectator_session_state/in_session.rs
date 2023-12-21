@@ -1,6 +1,6 @@
 use std::ffi::c_void;
 
-use junowen_lib::{RenderingText, Th19};
+use junowen_lib::{structs::others::RenderingText, Th19};
 
 use crate::state::render_names::render_names;
 

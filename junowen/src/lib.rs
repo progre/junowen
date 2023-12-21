@@ -9,8 +9,9 @@ mod tracing_helper;
 use std::{ffi::c_void, slice};
 
 use junowen_lib::{
-    hook_utils::WELL_KNOWN_VERSION_HASHES, Fn009fa0, Fn011560, Fn0b7d40, Fn0d5ae0, Fn0d6e10,
-    Fn1049e0, Fn10f720, FnOfHookAssembly, RenderingText, Selection, Th19,
+    hook_utils::WELL_KNOWN_VERSION_HASHES,
+    structs::{others::RenderingText, selection::Selection},
+    Fn009fa0, Fn011560, Fn0b7d40, Fn0d5ae0, Fn0d6e10, Fn1049e0, Fn10f720, FnOfHookAssembly, Th19,
 };
 use once_cell::sync::Lazy;
 use windows::Win32::{

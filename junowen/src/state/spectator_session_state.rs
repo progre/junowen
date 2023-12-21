@@ -5,7 +5,7 @@ mod spectator_select;
 use std::{ffi::c_void, mem, sync::mpsc::RecvError};
 
 use anyhow::Result;
-use junowen_lib::{GameSettings, InputFlags, MainMenu, ScreenId, Th19};
+use junowen_lib::{structs::settings::GameSettings, InputFlags, MainMenu, ScreenId, Th19};
 
 use crate::session::spectator::SpectatorSession;
 

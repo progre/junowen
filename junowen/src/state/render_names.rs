@@ -1,6 +1,6 @@
 use std::ffi::c_void;
 
-use junowen_lib::{RenderingText, Th19};
+use junowen_lib::{structs::others::RenderingText, Th19};
 
 pub fn render_names(text_renderer: *const c_void, th19: &Th19, p1_name: &str, p2_name: &str) {
     let mut text = RenderingText::default();

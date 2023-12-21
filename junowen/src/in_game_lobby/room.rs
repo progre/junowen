@@ -3,7 +3,7 @@ pub mod shared;
 
 use std::{f64::consts::PI, ffi::c_void};
 
-use junowen_lib::{RenderingText, Th19};
+use junowen_lib::{structs::others::RenderingText, Th19};
 
 use crate::signaling::waiting_for_match::WaitingInRoom;
 

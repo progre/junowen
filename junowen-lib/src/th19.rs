@@ -1,7 +1,7 @@
 mod app;
 mod inputdevices;
+pub mod structs;
 pub mod th19_helpers;
-mod th19_structs;
 
 use std::{arch::asm, ffi::c_void, mem::transmute};
 
@@ -20,7 +20,12 @@ use crate::{
 };
 pub use app::*;
 pub use inputdevices::*;
-pub use th19_structs::*;
+
+use self::structs::{
+    others::{RenderingText, RoundFrame, VSMode},
+    selection::Selection,
+    settings::GameSettings,
+};
 
 pub type Fn002530 = extern "thiscall" fn(*const c_void);
 pub type Fn009fa0 = extern "thiscall" fn(*const c_void, u32) -> u32;

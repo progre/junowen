@@ -5,7 +5,8 @@ mod settings_editor;
 use std::path::Path;
 
 use junowen_lib::{
-    hook_utils::WELL_KNOWN_VERSION_HASHES, Fn002530, Fn009fa0, Fn012480, GameSettings, Th19,
+    hook_utils::WELL_KNOWN_VERSION_HASHES, structs::settings::GameSettings, Fn002530, Fn009fa0,
+    Fn012480, Th19,
 };
 use settings_editor::{on_close_settings_editor, on_open_settings_editor};
 use windows::{

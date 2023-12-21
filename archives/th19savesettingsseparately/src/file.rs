@@ -1,7 +1,7 @@
 use std::mem::transmute;
 
 use anyhow::{bail, Result};
-use junowen_lib::GameSettings;
+use junowen_lib::structs::settings::GameSettings;
 
 pub fn read_from_file(settings_path: &str) -> Result<GameSettings> {
     let vec = std::fs::read(settings_path)?;

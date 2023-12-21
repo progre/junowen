@@ -1,6 +1,9 @@
 use tracing::{trace, warn};
 
-use crate::{GameMode, InputFlags, InputValue, PlayerMatchup, Th19};
+use crate::{
+    structs::selection::{GameMode, PlayerMatchup},
+    InputFlags, InputValue, Th19,
+};
 
 use super::app::{MainMenu, ScreenId};
 

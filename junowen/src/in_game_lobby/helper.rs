@@ -1,6 +1,6 @@
 use std::ffi::c_void;
 
-use junowen_lib::{RenderingText, Th19};
+use junowen_lib::{structs::others::RenderingText, Th19};
 
 pub fn render_title(th19: &Th19, text_renderer: *const c_void, text: &[u8]) {
     let x = (640 * th19.screen_width().unwrap() / 1280) as f32;

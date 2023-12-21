@@ -7,7 +7,7 @@ mod utils;
 use std::{ffi::c_void, mem, sync::mpsc::RecvError};
 
 use anyhow::Result;
-use junowen_lib::{GameSettings, MainMenu, ScreenId, Th19};
+use junowen_lib::{structs::settings::GameSettings, MainMenu, ScreenId, Th19};
 
 use crate::{session::battle::BattleSession, signaling::waiting_for_match::WaitingForSpectator};
 

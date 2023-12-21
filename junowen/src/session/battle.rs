@@ -4,7 +4,7 @@ use anyhow::Result;
 use getset::{CopyGetters, Getters, Setters};
 use junowen_lib::{
     connection::{DataChannel, PeerConnection},
-    GameSettings,
+    structs::settings::GameSettings,
 };
 use serde::{Deserialize, Serialize};
 use tracing::{info, trace};

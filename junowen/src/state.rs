@@ -7,7 +7,10 @@ mod spectator_session_state;
 use std::{ffi::c_void, fmt::Display};
 
 use getset::{Getters, MutGetters};
-use junowen_lib::{Fn011560, Fn0b7d40, Fn0d5ae0, Fn10f720, RenderingText, Selection, Th19};
+use junowen_lib::{
+    structs::{others::RenderingText, selection::Selection},
+    Fn011560, Fn0b7d40, Fn0d5ae0, Fn10f720, Th19,
+};
 use tracing::debug;
 
 use self::junowen_state::JunowenState;
