@@ -53,6 +53,9 @@ impl SpectatorSelect {
                 spectator::Screen::Game => unimplemented!(),
             }
         }
+        if !th19.no_wait() {
+            th19.set_no_wait(true);
+        }
 
         let (p1, p2) = self.session.dequeue_inputs()?;
         let input_devices = th19.input_devices_mut();

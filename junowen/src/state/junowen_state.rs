@@ -49,8 +49,13 @@ impl JunowenState {
         *self = Self::BattleSession(BattleSessionState::prepare(battle_session, waiting));
     }
 
-    pub fn end_session(&mut self) {
+    fn end_session(&mut self) {
         *self = Self::Standby;
+    }
+
+    pub fn abort_session(&mut self, th19: &mut Th19) {
+        self.end_session();
+        th19.set_no_wait(false);
     }
 
     pub fn start_spectator_session(&mut self, session: SpectatorSession) {
@@ -61,15 +66,15 @@ impl JunowenState {
         &mut self,
         th19: &Th19,
         waiting_for_match: &mut Option<WaitingForMatch>,
-    ) -> Option<&'static MainMenu> {
+    ) -> (bool, Option<&'static MainMenu>) {
         match self {
             Self::Standby => {
                 let Some(old_waiting) = waiting_for_match.take() else {
-                    return None;
+                    return (false, None);
                 };
                 if let Some(main_menu) = th19.app().main_loop_tasks().find_main_menu() {
                     if main_menu.screen_id() == ScreenId::OnlineVSMode {
-                        return None;
+                        return (false, None);
                     }
                 }
                 match old_waiting {
@@ -78,11 +83,11 @@ impl JunowenState {
                             Ok((session, waiting)) => {
                                 trace!("session received");
                                 self.start_battle_session(session, waiting);
-                                None
+                                (true, None)
                             }
                             Err(waiting) => {
                                 *waiting_for_match = Some(WaitingForMatch::Opponent(waiting));
-                                None
+                                (false, None)
                             }
                         }
                     }
@@ -90,39 +95,45 @@ impl JunowenState {
                         Ok(session) => {
                             trace!("session received");
                             self.start_spectator_session(session);
-                            None
+                            (true, None)
                         }
                         Err(waiting) => {
                             *waiting_for_match = Some(WaitingForMatch::SpectatorHost(waiting));
-                            None
+                            (false, None)
                         }
                     },
                 }
             }
             Self::BattleSession(session_state) => {
-                let Some(ret) = session_state.update_state(th19) else {
+                let Some(menu_opt) = session_state.update_state(th19) else {
                     self.end_session();
-                    return None;
+                    return (true, None);
                 };
-                ret
+                (false, menu_opt)
             }
             Self::SpectatorSession(session_state) => {
-                let Some(ret) = session_state.update_state(th19) else {
+                let Some(menu_opt) = session_state.update_state(th19) else {
                     self.end_session();
-                    return None;
+                    return (true, None);
                 };
-                ret
+                (false, menu_opt)
             }
         }
     }
 
     fn update_th19_on_input_players(
         &mut self,
+        changed: bool,
         menu: Option<&MainMenu>,
         th19: &mut Th19,
     ) -> Result<(), RecvError> {
         match self {
-            Self::Standby => Ok(()),
+            Self::Standby => {
+                if changed {
+                    th19.set_no_wait(false);
+                }
+                Ok(())
+            }
             Self::BattleSession(session_state) => {
                 session_state.update_th19_on_input_players(menu, th19)
             }
@@ -137,8 +148,8 @@ impl JunowenState {
         th19: &mut Th19,
         waiting_for_match: &mut Option<WaitingForMatch>,
     ) -> Result<(), RecvError> {
-        let menu_opt = self.update_state(th19, waiting_for_match);
-        self.update_th19_on_input_players(menu_opt, th19)
+        let (changed, menu_opt) = self.update_state(th19, waiting_for_match);
+        self.update_th19_on_input_players(changed, menu_opt, th19)
     }
 
     pub fn on_input_menu(
@@ -154,7 +165,7 @@ impl JunowenState {
             Self::BattleSession(session_state) => session_state.on_input_menu(th19)?,
             Self::SpectatorSession(session_state) => {
                 if !session_state.on_input_menu(th19)? {
-                    self.end_session();
+                    self.abort_session(th19);
                 }
             }
         }

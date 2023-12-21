@@ -142,7 +142,11 @@ impl SpectatorSessionState {
             Self::Null => unreachable!(),
             Self::Prepare(prepare) => prepare.update_th19_on_input_players(th19),
             Self::Select(select) => select.update_th19_on_input_players(menu.unwrap(), th19)?,
-            Self::GameLoading { .. } => {}
+            Self::GameLoading { .. } => {
+                if th19.no_wait() {
+                    th19.set_no_wait(false);
+                }
+            }
             Self::Game(game) => game.update_th19(th19)?,
             Self::BackToSelect { .. } => {}
         }

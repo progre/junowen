@@ -6,6 +6,7 @@ mod th19_structs;
 use std::{arch::asm, ffi::c_void, mem::transmute};
 
 use anyhow::{anyhow, Result};
+use tracing::debug;
 use windows::{
     core::Interface,
     Win32::{Graphics::Direct3D9::IDirect3DDevice9, System::Memory::PAGE_EXECUTE_WRITECOPY},
@@ -241,7 +242,11 @@ impl Th19 {
             .ok_or_else(|| anyhow!("IDirect3DDevice9::from_raw_borrowed failed"))
     }
 
+    pub fn no_wait(&mut self) -> bool {
+        self.memory_accessor.read_u32(0x208498).unwrap() == 0x00000001
+    }
     pub fn set_no_wait(&mut self, value: bool) {
+        debug!("set_no_wait: {}", value);
         self.memory_accessor
             .write_u32(0x208498, if value { 0x00000001 } else { 0x80000000 })
             .unwrap();
