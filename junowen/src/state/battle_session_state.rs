@@ -123,17 +123,17 @@ impl BattleSessionState {
                 }
             }
             Self::GameLoading { .. } => {
-                let Some(game) = th19.round() else {
+                let Some(round_frame) = th19.round_frame() else {
                     return Some(None);
                 };
-                if !game.is_first_frame() {
+                if !round_frame.is_first_frame() {
                     return Some(None);
                 }
                 self.change_to_game();
                 Some(None)
             }
             Self::Game { .. } => {
-                if th19.round().is_some() {
+                if th19.round_frame().is_some() {
                     return Some(None);
                 }
                 self.change_to_back_to_select();

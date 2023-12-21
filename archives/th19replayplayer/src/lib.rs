@@ -12,7 +12,7 @@ use interprocess::os::windows::named_pipe::{ByteReaderPipeStream, PipeListenerOp
 use junowen_lib::{
     th19_helpers::{select_cursor, shot_repeatedly, AutomaticInputs},
     Difficulty, FnOfHookAssembly, GameMode, GameSettings, InputDevices, InputValue, MainMenu,
-    PlayerMatchup, Round, ScreenId, Th19,
+    PlayerMatchup, RoundFrame, ScreenId, Th19,
 };
 use th19replayplayer_lib::{FileInputList, ReplayFile};
 use windows::Win32::{
@@ -165,13 +165,17 @@ fn init_battle(th19: &mut Th19, replay_file: &ReplayFile) {
     th19.set_rand_seed2(replay_file.rand_seed2).unwrap();
 }
 
-fn tick_battle(input_devices: &mut InputDevices, battle: &Round, replay_file: &ReplayFile) -> bool {
+fn tick_battle(
+    input_devices: &mut InputDevices,
+    round_frame: &RoundFrame,
+    replay_file: &ReplayFile,
+) -> bool {
     match &replay_file.inputs {
         FileInputList::HumanVsHuman(vec) => {
-            if battle.frame as usize >= vec.len() {
+            if round_frame.frame as usize >= vec.len() {
                 return false;
             }
-            let (p1_input, p2_input) = vec[battle.frame as usize];
+            let (p1_input, p2_input) = vec[round_frame.frame as usize];
             input_devices
                 .p1_input_mut()
                 .set_current((p1_input as u32).try_into().unwrap());
@@ -180,10 +184,10 @@ fn tick_battle(input_devices: &mut InputDevices, battle: &Round, replay_file: &R
                 .set_current((p2_input as u32).try_into().unwrap());
         }
         FileInputList::HumanVsCpu(vec) => {
-            if battle.frame as usize >= vec.len() {
+            if round_frame.frame as usize >= vec.len() {
                 return false;
             }
-            let p1_input = vec[battle.frame as usize];
+            let p1_input = vec[round_frame.frame as usize];
             input_devices
                 .p1_input_mut()
                 .set_current((p1_input as u32).try_into().unwrap());
@@ -313,8 +317,8 @@ fn on_input_players_internal() {
             }
         }
         ReplayPlayerState::InGame { th19, replay_file } => {
-            if let Some(battle) = th19.round() {
-                if tick_battle(th19.input_devices_mut(), battle, replay_file) {
+            if let Some(round_frame) = th19.round_frame() {
+                if tick_battle(th19.input_devices_mut(), round_frame, replay_file) {
                     return;
                 }
             }

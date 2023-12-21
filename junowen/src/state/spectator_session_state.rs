@@ -101,10 +101,10 @@ impl SpectatorSessionState {
                 }
             }
             Self::GameLoading { .. } => {
-                let Some(game) = th19.round() else {
+                let Some(round_frame) = th19.round_frame() else {
                     return Some(None);
                 };
-                if !game.is_first_frame() {
+                if !round_frame.is_first_frame() {
                     return Some(None);
                 }
                 self.change_to_game();
@@ -114,7 +114,7 @@ impl SpectatorSessionState {
                 if th19.input_devices().p1_input().current().0 & InputFlags::PAUSE != None {
                     return None;
                 }
-                if th19.round().is_some() {
+                if th19.round_frame().is_some() {
                     return Some(None);
                 }
                 self.change_to_back_to_select();

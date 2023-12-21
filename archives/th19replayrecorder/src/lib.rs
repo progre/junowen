@@ -148,8 +148,9 @@ fn on_input() {
             state.in_game = true;
         }
     } else {
-        if let Some(battle) = props.th19.round() {
-            tick_recording(&mut state.replay_file.inputs, battle.frame, input_devices);
+        if let Some(round_frame) = props.th19.round_frame() {
+            let frame = round_frame.frame;
+            tick_recording(&mut state.replay_file.inputs, frame, input_devices);
             return;
         };
         end_recording(props, state);

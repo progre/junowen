@@ -20,7 +20,7 @@ impl SpectatorGame {
 
     pub fn update_th19(&mut self, th19: &mut Th19) -> Result<(), RecvError> {
         // -1フレーム目、0フレーム目は複数回呼ばれ、回数が不定なのでスキップする
-        if th19.round().unwrap().frame < 1 {
+        if th19.round_frame().unwrap().frame < 1 {
             let input_devices = th19.input_devices_mut();
             input_devices
                 .p1_input_mut()

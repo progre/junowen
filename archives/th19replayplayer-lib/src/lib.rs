@@ -60,11 +60,11 @@ impl ReplayFile {
         let rand_seed2 = buf.get_u16_le();
         let difficulty = Difficulty::try_from(buf.get_u8() as u32)?;
         let player_matchup = PlayerMatchup::try_from(buf.get_u8() as u32)?;
-        let battle_settings = GameSettings {
-            common: buf.get_u8() as u32,
-            p1: buf.get_u8() as u32,
-            p2: buf.get_u8() as u32,
-        };
+        let battle_settings = GameSettings::new(
+            buf.get_u8() as u32,
+            buf.get_u8() as u32,
+            buf.get_u8() as u32,
+        );
         let p1_character = buf.get_u8();
         let p1_card = buf.get_u8();
         let p2_character = buf.get_u8();
@@ -120,9 +120,9 @@ impl ReplayFile {
         buf.put_u16_le(self.rand_seed2);
         buf.put_u8(self.difficulty as u8);
         buf.put_u8(self.player_matchup as u8);
-        buf.put_u8(self.battle_settings.common as u8);
-        buf.put_u8(self.battle_settings.p1 as u8);
-        buf.put_u8(self.battle_settings.p2 as u8);
+        buf.put_u8(self.battle_settings.common() as u8);
+        buf.put_u8(self.battle_settings.p1() as u8);
+        buf.put_u8(self.battle_settings.p2() as u8);
         buf.put_u8(self.p1_character);
         buf.put_u8(self.p1_card);
         buf.put_u8(self.p2_character);
