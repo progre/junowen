@@ -1,23 +1,25 @@
 use std::{borrow::Cow, ffi::c_void};
 
-use junowen_lib::{structs::others::RenderingText, Th19};
+use junowen_lib::Th19;
 
 use crate::{
     signaling::waiting_for_match::{WaitingForPureP2pSpectator, WaitingForSpectator},
-    state::render_names::render_names,
+    state::render_parts::{render_footer, render_names},
 };
 
 use super::spectator_host::SpectatorHostState;
 
 pub fn on_render_texts(
     th19: &Th19,
+    text_renderer: *const c_void,
     host: bool,
     delay: u8,
     p1_name: &str,
     p2_name: &str,
     spectator_host_state: Option<&SpectatorHostState>,
-    text_renderer: *const c_void,
 ) {
+    render_names(th19, text_renderer, p1_name, p2_name);
+
     let (msg2_rear, msg2_front) = if let Some(spectator_host_state) = spectator_host_state {
         if spectator_host_state.count_spectators() > 0 {
             (
@@ -55,26 +57,9 @@ pub fn on_render_texts(
         ("", "".into())
     };
 
-    let version = env!("CARGO_PKG_VERSION");
-    let version_blank = (0..version.len()).map(|_| " ").collect::<String>();
     let delay_underline = if host { "_" } else { " " };
-    let msg_rear = format!(
-        "           {}        {} {}",
-        version_blank, delay_underline, msg2_rear
-    );
-    let msg_front = format!("Ju.N.Owen v{} Delay: {} {}", version, delay, msg2_front);
+    let msg_front/* _ */= format!("Delay: {} {}", delay, msg2_front);
+    let msg_rear/* __ */= format!("       {} {}", delay_underline, msg2_rear);
 
-    let mut text = RenderingText::default();
-    text.set_text(msg_rear.as_bytes());
-    text.x = (16 * th19.screen_width().unwrap() / 1280) as f32;
-    text.y = (944 * th19.screen_height().unwrap() / 960) as f32;
-    text.color = 0xffffffff;
-    text.font_type = 1;
-    th19.render_text(text_renderer, &text);
-
-    text.set_text(msg_front.as_bytes());
-    text.y = (940 * th19.screen_height().unwrap() / 960) as f32;
-    th19.render_text(text_renderer, &text);
-
-    render_names(text_renderer, th19, p1_name, p2_name);
+    render_footer(th19, text_renderer, &msg_front, &msg_rear);
 }

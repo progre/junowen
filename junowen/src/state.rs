@@ -1,7 +1,7 @@
 mod battle_session_state;
 mod junowen_state;
 mod prepare;
-mod render_names;
+mod render_parts;
 mod spectator_session_state;
 
 use std::{ffi::c_void, fmt::Display};

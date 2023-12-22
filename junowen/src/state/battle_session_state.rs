@@ -217,12 +217,12 @@ impl BattleSessionState {
         };
         in_session::on_render_texts(
             th19,
+            text_renderer,
             session.host(),
             session.delay(),
             p1,
             p2,
             spectator_host_state,
-            text_renderer,
         );
     }
 

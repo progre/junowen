@@ -199,9 +199,9 @@ impl SpectatorSessionState {
         };
         in_session::on_render_texts_spectator(
             th19,
+            text_renderer,
             initial.p1_name(),
             initial.p2_name(),
-            text_renderer,
         );
     }
 
