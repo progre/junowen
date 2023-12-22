@@ -2,19 +2,14 @@ use std::sync::mpsc::RecvError;
 
 use anyhow::Result;
 use getset::{CopyGetters, Getters, Setters};
-use junowen_lib::{
-    connection::{DataChannel, PeerConnection},
-    structs::settings::GameSettings,
-};
-use serde::{Deserialize, Serialize};
+use junowen_lib::connection::{DataChannel, PeerConnection};
 use tracing::{info, trace};
 
-use super::{delayed_inputs::DelayedInputs, to_channel, RoundInitial};
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct MatchInitial {
-    pub game_settings: GameSettings,
-}
+use super::{
+    delayed_inputs::DelayedInputs,
+    session_message::{MatchInitial, RoundInitial},
+    to_channel,
+};
 
 #[derive(CopyGetters, Getters, Setters)]
 pub struct BattleSession {

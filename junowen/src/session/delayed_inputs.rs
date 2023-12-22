@@ -5,19 +5,9 @@ use std::{
 
 use anyhow::Result;
 use getset::CopyGetters;
-use serde::{Deserialize, Serialize};
 use tracing::{debug, trace};
 
-use super::{battle::MatchInitial, RoundInitial};
-
-/** input 以外はホストのみ発行できる */
-#[derive(Debug, Deserialize, Serialize)]
-pub enum SessionMessage {
-    InitMatch((String, Option<MatchInitial>)),
-    InitRound(Option<RoundInitial>),
-    Delay(u8),
-    Input(u16),
-}
+use super::session_message::{MatchInitial, RoundInitial, SessionMessage};
 
 #[derive(CopyGetters)]
 pub struct DelayedInputs {

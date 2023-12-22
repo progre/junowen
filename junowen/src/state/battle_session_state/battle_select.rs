@@ -12,7 +12,7 @@ use tracing::trace;
 
 use crate::{
     helper::{inputed_number, pushed_f1},
-    session::battle::{BattleSession, MatchInitial},
+    session::{battle::BattleSession, MatchInitial},
 };
 
 use super::{spectator_host::SpectatorHostState, utils::init_round};

@@ -1,5 +1,6 @@
 pub mod battle;
 mod delayed_inputs;
+mod session_message;
 pub mod spectator;
 pub mod spectator_host;
 
@@ -9,17 +10,11 @@ use anyhow::Result;
 use bytes::Bytes;
 use junowen_lib::connection::DataChannel;
 use rmp_serde::decode::Error;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use tokio::spawn;
 use tracing::debug;
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct RoundInitial {
-    pub seed1: u16,
-    pub seed2: u16,
-    pub seed3: u16,
-    pub seed4: u16,
-}
+pub use session_message::{MatchInitial, RoundInitial};
 
 fn to_channel<T>(
     mut data_channel: DataChannel,

@@ -5,7 +5,7 @@ use tracing::info;
 
 use super::{
     spectator::{SpectatorInitial, SpectatorSessionMessage},
-    to_channel, RoundInitial,
+    to_channel, session_message::RoundInitial,
 };
 
 #[derive(CopyGetters, Getters, Setters)]

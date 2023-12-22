@@ -10,7 +10,7 @@ use junowen_lib::{
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
 
-use super::{to_channel, RoundInitial};
+use super::{session_message::RoundInitial, to_channel};
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub enum Screen {
