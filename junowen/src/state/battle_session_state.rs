@@ -15,6 +15,8 @@ use junowen_lib::{
 
 use crate::{session::battle::BattleSession, signaling::waiting_for_match::WaitingForSpectator};
 
+use self::in_session::RenderingStatus;
+
 use super::prepare::Prepare;
 
 use {battle_game::BattleGame, battle_select::BattleSelect, spectator_host::SpectatorHostState};
@@ -204,7 +206,7 @@ impl BattleSessionState {
                 } => (session, Some(spectator_host_state)),
             }
         };
-        let (p1, p2) = if session.host() {
+        let (p1_name, p2_name) = if session.host() {
             (
                 th19.vs_mode().player_name(),
                 session.remote_player_name().as_str(),
@@ -215,15 +217,14 @@ impl BattleSessionState {
                 th19.vs_mode().player_name(),
             )
         };
-        in_session::on_render_texts(
-            th19,
-            text_renderer,
-            session.host(),
-            session.delay(),
-            p1,
-            p2,
+        let status = RenderingStatus {
+            host: session.host(),
+            delay: session.delay(),
+            p1_name,
+            p2_name,
             spectator_host_state,
-        );
+        };
+        in_session::on_render_texts(th19, text_renderer, status);
     }
 
     pub fn on_round_over(&mut self, th19: &mut Th19) -> Result<(), RecvError> {

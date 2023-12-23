@@ -9,18 +9,18 @@ use crate::{
 
 use super::spectator_host::SpectatorHostState;
 
-pub fn on_render_texts(
-    th19: &Th19,
-    text_renderer: *const c_void,
-    host: bool,
-    delay: u8,
-    p1_name: &str,
-    p2_name: &str,
-    spectator_host_state: Option<&SpectatorHostState>,
-) {
-    render_names(th19, text_renderer, p1_name, p2_name);
+pub struct RenderingStatus<'a> {
+    pub host: bool,
+    pub delay: u8,
+    pub p1_name: &'a str,
+    pub p2_name: &'a str,
+    pub spectator_host_state: Option<&'a SpectatorHostState>,
+}
 
-    let (msg2_rear, msg2_front) = if let Some(spectator_host_state) = spectator_host_state {
+pub fn on_render_texts(th19: &Th19, text_renderer: *const c_void, status: RenderingStatus) {
+    render_names(th19, text_renderer, status.p1_name, status.p2_name);
+
+    let (msg2_rear, msg2_front) = if let Some(spectator_host_state) = status.spectator_host_state {
         if spectator_host_state.count_spectators() > 0 {
             (
                 "               ",
@@ -57,8 +57,8 @@ pub fn on_render_texts(
         ("", "".into())
     };
 
-    let delay_underline = if host { "_" } else { " " };
-    let msg_front/* _ */= format!("Delay: {} {}", delay, msg2_front);
+    let delay_underline = if status.host { "_" } else { " " };
+    let msg_front/* _ */= format!("Delay: {} {}", status.delay, msg2_front);
     let msg_rear/* __ */= format!("       {} {}", delay_underline, msg2_rear);
 
     render_footer(th19, text_renderer, &msg_front, &msg_rear);
