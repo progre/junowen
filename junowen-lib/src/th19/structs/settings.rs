@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use derive_new::new;
 use getset::{CopyGetters, Setters};
 use num_enum::TryFromPrimitive;
@@ -16,6 +18,20 @@ pub enum TimeLimit {
     TwentyMinutes = 6,
 }
 
+impl Display for TimeLimit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::None => f.write_str("None"),
+            Self::ThreeMinutes => f.write_str("3 min"),
+            Self::FiveMinutes => f.write_str("5 min"),
+            Self::SevenMinutes => f.write_str("7 min"),
+            Self::TenMinutes => f.write_str("10 min"),
+            Self::FifteenMinutes => f.write_str("15 min"),
+            Self::TwentyMinutes => f.write_str("20 min"),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Default, TryFromPrimitive)]
 #[repr(u8)]
 pub enum Round {
@@ -23,9 +39,19 @@ pub enum Round {
     #[default]
     SingleMatch = 0,
     /// 2本先取
-    TwoOutOfThree = 1,
+    FirstTo2Wins = 1,
     /// 3本先取
-    ThreeOutOfFive = 2,
+    FirstTo3Wins = 2,
+}
+
+impl Display for Round {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::SingleMatch => f.write_str("Single match"),
+            Self::FirstTo2Wins => f.write_str("First to 2 Wins"),
+            Self::FirstTo3Wins => f.write_str("First to 3 Wins"),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, TryFromPrimitive)]
@@ -46,6 +72,17 @@ pub enum Barrier {
     ManualOnly = 1,
     LongTime = 2,
     ShortTime = 3,
+}
+
+impl Display for Barrier {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NoBarrier => f.write_str("No Barrier"),
+            Self::ManualOnly => f.write_str("Manual Only"),
+            Self::LongTime => f.write_str("Long Time"),
+            Self::ShortTime => f.write_str("Short Time"),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, Deserialize, CopyGetters, Setters, Serialize, new)]
