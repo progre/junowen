@@ -55,14 +55,22 @@ impl VSMode {
     }
 }
 
+#[derive(CopyGetters)]
+pub struct WindowInner {
+    #[get_copy = "pub"]
+    width: u32,
+    #[get_copy = "pub"]
+    height: u32,
+}
+
 #[derive(Derivative)]
 #[derivative(Default)]
 #[repr(C)]
 pub struct RenderingText {
     #[derivative(Default(value = "[0u8; 256]"))]
     raw_text: [u8; 256],
-    pub x: f32,
-    pub y: f32,
+    x: f32,
+    y: f32,
     pub _unknown1: u32,
     /// 0xaarrggbb
     #[derivative(Default(value = "0xffffffff"))]
@@ -119,5 +127,17 @@ impl RenderingText {
         let mut raw_text = [0u8; 256];
         raw_text[0..(text.len())].copy_from_slice(text);
         self.raw_text = raw_text;
+    }
+
+    pub fn set_x(&mut self, x: u32, window_inner: &WindowInner) {
+        self.x = (x * window_inner.width() / 1280) as f32;
+    }
+
+    pub fn set_y(&mut self, y: u32, window_inner: &WindowInner) {
+        self.y = (y * window_inner.height() / 960) as f32;
+    }
+
+    pub fn sub_y(&mut self, y: u32, window_inner: &WindowInner) {
+        self.y -= (y * window_inner.height() / 960) as f32;
     }
 }

@@ -109,7 +109,7 @@ impl TitleMenuModifier {
         }
         let text = rendering_text.text().unwrap().to_string_lossy().to_string();
         if ["Story Mode", "VS Mode", "Online VS Mode"].contains(&text.as_str()) {
-            rendering_text.y -= (50 * th19.screen_height().unwrap() / 960) as f32;
+            rendering_text.sub_y(50, th19.window_inner());
         }
         let selected_junowen = [1, 2].contains(&menu.cursor()) && self.selected_junowen;
         if text == "VS Mode" && selected_junowen {
@@ -119,16 +119,16 @@ impl TitleMenuModifier {
         if text == "Online VS Mode" {
             if selected_junowen {
                 // disable shake
-                rendering_text.x = (64 * th19.screen_width().unwrap() / 1280) as f32;
-                rendering_text.y = (550 * th19.screen_height().unwrap() / 960) as f32;
+                rendering_text.set_x(64, th19.window_inner());
+                rendering_text.set_y(550, th19.window_inner());
                 // reset color
                 rendering_text.color = menu_item_color(rendering_text.font_type, true, false);
             }
             {
                 let mut rendering_text = RenderingText::default();
                 rendering_text.set_text(b"Ju.N.Owen");
-                rendering_text.x = (64 * th19.screen_width().unwrap() / 1280) as f32;
-                rendering_text.y = (600 * th19.screen_height().unwrap() / 960) as f32;
+                rendering_text.set_x(64, th19.window_inner());
+                rendering_text.set_y(600, th19.window_inner());
                 rendering_text.color = menu_item_color(9, true, selected_junowen);
                 rendering_text.font_type = 9;
                 th19.render_text(text_renderer, &rendering_text);

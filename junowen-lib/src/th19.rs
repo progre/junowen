@@ -20,7 +20,7 @@ use crate::{
 use self::structs::{
     app::App,
     input_devices::{Input, InputDevices},
-    others::{RenderingText, RoundFrame, VSMode},
+    others::{RenderingText, RoundFrame, VSMode, WindowInner},
     selection::Selection,
     settings::GameSettings,
 };
@@ -266,8 +266,7 @@ impl Th19 {
     // 04: menu, 07: game
     u32_prop!(0x208c90, scene);
 
-    u32_prop!(0x20b1b0, screen_width);
-    u32_prop!(0x20b1b4, screen_height);
+    value_ref!(0x20b1b0, window_inner, WindowInner);
 
     // -------------------------------------------------------------------------
 

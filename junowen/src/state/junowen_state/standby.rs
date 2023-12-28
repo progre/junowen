@@ -48,8 +48,8 @@ pub fn render_text(
 fn render_message(text_renderer: *const c_void, th19: &Th19, msg: &str, color: u32) {
     let mut text = RenderingText::default();
     text.set_text(msg.as_bytes());
-    text.x = (16 * th19.screen_width().unwrap() / 1280) as f32;
-    text.y = (4 * th19.screen_height().unwrap() / 1280) as f32;
+    text.set_x(16, th19.window_inner());
+    text.set_y(4, th19.window_inner());
     text.color = color;
     th19.render_text(text_renderer, &text);
 }

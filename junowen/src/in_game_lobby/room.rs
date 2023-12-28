@@ -35,8 +35,8 @@ fn render_progress_alpha(th19: &Th19, text_renderer: *const c_void, progress: f6
     let y = 160 + 32 * 11;
     let mut rt = RenderingText::default();
     rt.set_text(text);
-    rt.x = (x * th19.screen_width().unwrap() / 1280) as f32;
-    rt.y = (y * th19.screen_height().unwrap() / 960) as f32;
+    rt.set_x(x, th19.window_inner());
+    rt.set_y(y, th19.window_inner());
     rt.color = 0xff000000;
     rt.font_type = 8;
     rt.horizontal_align = 0;
@@ -50,7 +50,7 @@ fn render_progress_alpha(th19: &Th19, text_renderer: *const c_void, progress: f6
         let x = (650 - 200 + i * 20) as u32;
 
         rt.set_text(b"-");
-        rt.x = (x * th19.screen_width().unwrap() / 1280) as f32;
+        rt.set_x(x, th19.window_inner());
         rt.color = (0xff - alpha) as u32 * 0x1000000;
         rt.font_type = 8;
         th19.render_text(text_renderer, &rt);
@@ -59,7 +59,6 @@ fn render_progress_alpha(th19: &Th19, text_renderer: *const c_void, progress: f6
         th19.render_text(text_renderer, &rt);
 
         rt.set_text(b"#");
-        rt.x = (x * th19.screen_width().unwrap() / 1280) as f32;
         rt.color = alpha as u32 * 0x1000000;
         rt.font_type = 8;
         th19.render_text(text_renderer, &rt);
@@ -94,12 +93,12 @@ fn progress_text(progress: f64) -> Vec<u8> {
 }
 
 fn render_progress_item(th19: &Th19, text_renderer: *const c_void, alpha: u8, text: &[u8]) {
-    let x = (640 * th19.screen_width().unwrap() / 1280) as f32;
-    let y = ((160 + 32 * 11) * th19.screen_height().unwrap() / 960) as f32;
+    let x = 640;
+    let y = 160 + 32 * 11;
     let mut rt = RenderingText::default();
     rt.set_text(text);
-    rt.x = x;
-    rt.y = y;
+    rt.set_x(x, th19.window_inner());
+    rt.set_y(y, th19.window_inner());
     rt.color = alpha as u32 * 0x1000000;
     rt.font_type = 8;
     rt.horizontal_align = 0;
