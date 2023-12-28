@@ -21,6 +21,10 @@ adonis や th075caster と同じような仕組みで動作します。
 3. 獣王園のインストールフォルダーに d3d9.dll と modules フォルダーを移動します
 4. 獣王園を起動します
 5. うまくいけば獣王園のタイトル画面の項目に「Ju.N.Owen」が追加されます
+6. もし「VCRUNTIME140.dllが見つからないため…」というエラーが出て起動しない場合は、
+   Visual Studio 2015 の Visual C++ 再頒布可能パッケージの x86 版 (vc_redist.x86.exe) を
+   インストールしてください
+   <https://www.microsoft.com/ja-jp/download/details.aspx?id=48145>
 
 ## 使い方
 
