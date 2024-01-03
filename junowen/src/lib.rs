@@ -129,20 +129,15 @@ fn check_version(hash: &[u8]) -> bool {
         .any(|&valid_hash| valid_hash == hash)
 }
 
-fn init(module: HMODULE) {
+async fn init(module: HMODULE) {
     if cfg!(debug_assertions) {
         let _ = unsafe { AllocConsole() };
         std::env::set_var("RUST_BACKTRACE", "1");
     }
-    let (ini_file_path, module_dir, log_file_name, old_log_path) = TOKIO_RUNTIME.block_on(
-        ini_file_path_log_dir_path_log_file_name_old_log_path(module),
-    );
+    let (ini_file_path, module_dir, log_file_name, old_log_path) =
+        ini_file_path_log_dir_path_log_file_name_old_log_path(module).await;
     tracing_helper::init_tracing(&module_dir, &log_file_name, false);
-    TOKIO_RUNTIME.block_on(move_old_log_to_new_path(
-        &old_log_path,
-        &module_dir,
-        &log_file_name,
-    ));
+    move_old_log_to_new_path(&old_log_path, &module_dir, &log_file_name).await;
 
     let mut th19 = Th19::new_hooked_process("th19.exe").unwrap();
 
@@ -175,7 +170,7 @@ fn init(module: HMODULE) {
             old_fn_from_13f9d0_0345,
             old_fn_from_13f9d0_0446,
         });
-        STATE = Some(State::new(SettingsRepo::new(ini_file_path), th19));
+        STATE = Some(State::new(SettingsRepo::new(ini_file_path), th19).await);
     }
     let th19 = &mut state_mut().th19_mut();
     apply_hook_on_input_players(th19);
@@ -210,7 +205,7 @@ pub unsafe extern "C" fn CheckVersion(hash: *const u8, length: usize) -> bool {
 #[allow(non_snake_case)]
 #[no_mangle]
 pub extern "C" fn Initialize(_direct_3d: *const IDirect3D9) -> bool {
-    init(unsafe { MODULE });
+    TOKIO_RUNTIME.block_on(init(unsafe { MODULE }));
 
     true
 }

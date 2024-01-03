@@ -13,7 +13,10 @@ use junowen_lib::{
     Th19,
 };
 
-use crate::{session::battle::BattleSession, signaling::waiting_for_match::WaitingForSpectator};
+use crate::{
+    file::Features, session::battle::BattleSession,
+    signaling::waiting_for_match::WaitingForSpectator,
+};
 
 use self::in_session::RenderingStatus;
 
@@ -186,7 +189,12 @@ impl BattleSessionState {
         Ok(())
     }
 
-    pub fn on_render_texts(&self, th19: &Th19, text_renderer: *const c_void) {
+    pub fn on_render_texts(
+        &self,
+        features: &[Features],
+        th19: &Th19,
+        text_renderer: *const c_void,
+    ) {
         let (session, spectator_host_state) = {
             match self {
                 Self::Null => unreachable!(),
@@ -217,11 +225,22 @@ impl BattleSessionState {
                 th19.vs_mode().player_name(),
             )
         };
+
+        let game_settings = 'ret: {
+            if !features.contains(&Features::ShowSettings) {
+                break 'ret None;
+            }
+            let Self::Select(select) = self else {
+                break 'ret None;
+            };
+            select.session().match_initial().map(|x| &x.game_settings)
+        };
         let status = RenderingStatus {
             host: session.host(),
             delay: session.delay(),
             p1_name,
             p2_name,
+            game_settings,
             spectator_host_state,
         };
         in_session::on_render_texts(th19, text_renderer, status);

@@ -2,6 +2,7 @@ use std::{io::ErrorKind, path::PathBuf};
 
 use derive_new::new;
 use junowen_lib::Th19;
+use serde::Deserialize;
 use tokio::{
     fs::{self, read_to_string},
     io,
@@ -79,6 +80,13 @@ pub async fn move_old_log_to_new_path(old_log_path: &str, module_dir: &str, log_
     }
 }
 
+#[derive(Debug, Deserialize, PartialEq, serde::Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Features {
+    ShowSettings,
+}
+
+const FEATURES: &str = "features";
 const SHARED_ROOM_NAME: &str = "shared_room_name";
 const RESERVED_ROOM_NAME: &str = "reserved_room_name";
 
@@ -115,6 +123,20 @@ impl SettingsRepo {
         if let Err(err) = tokio::fs::write(&self.path, doc.to_string()).await {
             error!("{}", err);
         }
+    }
+
+    pub async fn features(&self) -> Vec<Features> {
+        self.load()
+            .await
+            .get(FEATURES)
+            .and_then(|x| x.as_array())
+            .map(|x| {
+                x.iter()
+                    .flat_map(|x| x.as_str())
+                    .flat_map(|x| serde_json::from_str(&format!("\"{x}\"")).ok())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default()
     }
 
     pub async fn reserved_room_name(&self, th19: &Th19) -> String {

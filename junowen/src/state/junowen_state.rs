@@ -12,6 +12,7 @@ use junowen_lib::{
 use tracing::trace;
 
 use crate::{
+    file::Features,
     in_game_lobby::{Lobby, TitleMenuModifier},
     session::{battle::BattleSession, spectator::SpectatorSession},
     signaling::waiting_for_match::{WaitingForMatch, WaitingForSpectator},
@@ -203,6 +204,7 @@ impl JunowenState {
 
     pub fn on_render_texts(
         &self,
+        features: &[Features],
         th19: &Th19,
         title_menu_modifier: &TitleMenuModifier,
         lobby: &Lobby,
@@ -213,7 +215,7 @@ impl JunowenState {
                 standby::on_render_texts(th19, title_menu_modifier, lobby, text_renderer);
             }
             Self::BattleSession(session_state) => {
-                session_state.on_render_texts(th19, text_renderer)
+                session_state.on_render_texts(features, th19, text_renderer)
             }
             Self::SpectatorSession(session_state) => {
                 session_state.on_render_texts(th19, text_renderer)

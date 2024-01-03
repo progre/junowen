@@ -15,12 +15,13 @@ use tracing::debug;
 
 use self::junowen_state::JunowenState;
 use crate::{
-    file::SettingsRepo,
+    file::{Features, SettingsRepo},
     in_game_lobby::{Lobby, TitleMenuModifier},
 };
 
 #[derive(Getters, MutGetters)]
 pub struct State {
+    features: Vec<Features>,
     #[getset(get_mut = "pub")]
     th19: Th19,
     title_menu_modifier: TitleMenuModifier,
@@ -29,8 +30,9 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(settings_repo: SettingsRepo, th19: Th19) -> Self {
+    pub async fn new(settings_repo: SettingsRepo, th19: Th19) -> Self {
         Self {
+            features: settings_repo.features().await,
             th19,
             title_menu_modifier: TitleMenuModifier::new(),
             lobby: Lobby::new(settings_repo),
@@ -93,6 +95,7 @@ impl State {
 
     pub fn on_render_texts(&self, text_renderer: *const c_void) {
         self.junowen_state.on_render_texts(
+            &self.features,
             &self.th19,
             &self.title_menu_modifier,
             &self.lobby,

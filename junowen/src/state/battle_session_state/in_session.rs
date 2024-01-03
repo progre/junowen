@@ -1,10 +1,10 @@
 use std::{borrow::Cow, ffi::c_void};
 
-use junowen_lib::Th19;
+use junowen_lib::{structs::settings::GameSettings, Th19};
 
 use crate::{
     signaling::waiting_for_match::{WaitingForPureP2pSpectator, WaitingForSpectator},
-    state::render_parts::{render_footer, render_names},
+    state::render_parts::{render_footer, render_game_settings, render_names},
 };
 
 use super::spectator_host::SpectatorHostState;
@@ -14,11 +14,15 @@ pub struct RenderingStatus<'a> {
     pub delay: u8,
     pub p1_name: &'a str,
     pub p2_name: &'a str,
+    pub game_settings: Option<&'a GameSettings>,
     pub spectator_host_state: Option<&'a SpectatorHostState>,
 }
 
 pub fn on_render_texts(th19: &Th19, text_renderer: *const c_void, status: RenderingStatus) {
     render_names(th19, text_renderer, status.p1_name, status.p2_name);
+    if let Some(game_settings) = status.game_settings {
+        render_game_settings(th19, text_renderer, game_settings);
+    }
 
     let (msg2_rear, msg2_front) = if let Some(spectator_host_state) = status.spectator_host_state {
         if spectator_host_state.count_spectators() > 0 {
