@@ -9,6 +9,9 @@ license.workspace = true
 name = "th19_junowen"
 crate-type = ['cdylib']
 
+[build-dependencies]
+static_vcruntime.workspace = true
+
 [dependencies]
 anyhow.workspace = true
 async-trait = "0.1.74"

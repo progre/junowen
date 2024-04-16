@@ -24,6 +24,7 @@ license = "GPL-3.0"
 [workspace.dependencies]
 anyhow = { version = "1.0.75", features = ["backtrace"] }
 junowen-lib = { path = "./junowen-lib" }
+static_vcruntime = "2.0"
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.17", features = [
   "env-filter",

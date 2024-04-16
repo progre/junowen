@@ -10,6 +10,7 @@ crate-type = ['cdylib']
 name = "d3d9"
 
 [build-dependencies]
+static_vcruntime.workspace = true
 winres = "0.1"
 
 [dependencies]
