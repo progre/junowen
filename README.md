@@ -23,10 +23,6 @@ It works in the same way as adonis and th075caster.
 3. Move d3d9.dll and the modules folder into Touhou 19 folder.
 4. Start Touhou 19.
 5. If all goes well, "Ju.N.Owen" will be added as an item on the title screen of Touhou 19.
-6. If you get the error "VCRUNTIME140.dll is missing..." and it won't start,
-   install the x86 version of
-   Visual C++ Redistributable for Visual Studio 2015 (vc_redist.x86.exe).
-   <https://www.microsoft.com/en-us/download/details.aspx?id=48145>
 
 ## How to use
 
