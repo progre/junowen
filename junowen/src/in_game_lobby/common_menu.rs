@@ -55,13 +55,13 @@ pub enum OnMenuInputResult {
 #[derive(Debug)]
 enum CurrentMenuSceneResult<'a> {
     Menu(&'a Menu),
-    SubScene(&'static str, LobbyScene),
+    SubScene(LobbyScene),
     TextInput(&'static str, &'a TextInput),
 }
 
 enum CurrentMenuSceneMutResult<'a> {
     Menu(&'a mut Menu),
-    SubScene(LobbyScene),
+    SubScene,
     TextInput(&'a mut TextInput),
 }
 
@@ -119,7 +119,7 @@ impl CommonMenu {
         }
 
         match self.current_menu_scene() {
-            CurrentMenuSceneResult::SubScene(_, scene) => OnMenuInputResult::SubScene(scene),
+            CurrentMenuSceneResult::SubScene(scene) => OnMenuInputResult::SubScene(scene),
             CurrentMenuSceneResult::Menu(menu) => {
                 let ignore_decide = menu.items().is_empty();
                 let instant_decide =
@@ -206,7 +206,7 @@ impl CommonMenu {
                     return CurrentMenuSceneResult::Menu(item.sub_menu());
                 }
                 MenuItem::SubScene(item) => {
-                    return CurrentMenuSceneResult::SubScene(item.label(), item.sub_scene());
+                    return CurrentMenuSceneResult::SubScene(item.sub_scene());
                 }
                 MenuItem::TextInput(item) => {
                     return CurrentMenuSceneResult::TextInput(item.label(), item.text_input());
@@ -230,8 +230,8 @@ impl CommonMenu {
                     }
                     return CurrentMenuSceneMutResult::Menu(item.sub_menu_mut());
                 }
-                MenuItem::SubScene(item) => {
-                    return CurrentMenuSceneMutResult::SubScene(item.sub_scene());
+                MenuItem::SubScene(_item) => {
+                    return CurrentMenuSceneMutResult::SubScene;
                 }
                 MenuItem::TextInput(item) => {
                     return CurrentMenuSceneMutResult::TextInput(item.text_input_mut());
