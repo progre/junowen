@@ -1,4 +1,4 @@
-mod inject_dll;
+mod dll_injection;
 mod load_library_w_addr;
 
 use std::{fs::File, io::Read};
@@ -10,7 +10,7 @@ use windows::{
     Win32::{Foundation::MAX_PATH, System::LibraryLoader::GetModuleFileNameW},
 };
 
-pub use inject_dll::{inject_dll, InjectDllError};
+pub use dll_injection::{do_dll_injection, DllInjectionError};
 
 pub fn calc_th19_hash() -> Vec<u8> {
     let mut buf = [0u16; MAX_PATH as usize];

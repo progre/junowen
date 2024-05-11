@@ -12,7 +12,10 @@ use windows::{
         System::{
             Diagnostics::Debug::WriteProcessMemory,
             Memory::{VirtualAllocEx, VirtualFreeEx, MEM_COMMIT, MEM_RELEASE, PAGE_READWRITE},
-            Threading::{CreateRemoteThread, OpenProcess, WaitForSingleObject, PROCESS_ALL_ACCESS},
+            Threading::{
+                CreateRemoteThread, OpenProcess, WaitForSingleObject, LPTHREAD_START_ROUTINE,
+                PROCESS_ALL_ACCESS,
+            },
         },
     },
 };
@@ -42,21 +45,21 @@ impl<'a> Drop for VirtualAllocatedMem<'a> {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum InjectDllError {
+pub enum DllInjectionError {
     #[error("DLL not found")]
     DllNotFound,
     #[error("Process not found: {}", .0)]
     ProcessNotFound(Error),
 }
 
-pub fn inject_dll(exe_file: &str, dll_path: &Path) -> Result<(), InjectDllError> {
+pub fn do_dll_injection(exe_file: &str, dll_path: &Path) -> Result<(), DllInjectionError> {
     if !dll_path.exists() {
-        return Err(InjectDllError::DllNotFound);
+        return Err(DllInjectionError::DllNotFound);
     }
-    let process_id = find_process_id(exe_file).map_err(InjectDllError::ProcessNotFound)?;
+    let process_id = find_process_id(exe_file).map_err(DllInjectionError::ProcessNotFound)?;
     let process = SafeHandle(
         unsafe { OpenProcess(PROCESS_ALL_ACCESS, FALSE, process_id) }
-            .map_err(|err| InjectDllError::ProcessNotFound(Error::new(err)))?,
+            .map_err(|err| DllInjectionError::ProcessNotFound(Error::new(err)))?,
     );
     let dll_path_hstr = HSTRING::from(dll_path);
     let dll_path_hstr_size = size_of_val(dll_path_hstr.as_wide());
@@ -72,13 +75,14 @@ pub fn inject_dll(exe_file: &str, dll_path: &Path) -> Result<(), InjectDllError>
         )
     }
     .unwrap();
+    let load_library_w_addr = load_library_w_addr(process_id).unwrap();
     let thread = SafeHandle(
         unsafe {
             CreateRemoteThread(
                 process.0,
                 None,
                 0,
-                transmute(load_library_w_addr(process_id).unwrap()),
+                transmute::<usize, LPTHREAD_START_ROUTINE>(load_library_w_addr),
                 Some(remote_dll_path_wstr.addr),
                 0,
                 None,

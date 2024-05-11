@@ -9,7 +9,7 @@ use std::{
 use anyhow::Result;
 use bytes::{BufMut, BytesMut};
 use interprocess::os::windows::named_pipe::ByteWriterPipeStream;
-use junowen_lib::hook_utils::inject_dll;
+use junowen_lib::hook_utils::do_dll_injection;
 
 fn main() -> Result<()> {
     let replay_file = env::args().nth(1).unwrap();
@@ -26,7 +26,7 @@ fn main() -> Result<()> {
             .unwrap()
             .join(concat!(env!("CARGO_PKG_NAME"), "_hook.dll"));
 
-        inject_dll("th19.exe", &dll_path)?;
+        do_dll_injection("th19.exe", &dll_path)?;
 
         let name = OsStr::new(pkg_name);
         loop {

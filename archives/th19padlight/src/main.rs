@@ -1,7 +1,7 @@
 use std::env::current_exe;
 
 use anyhow::Result;
-use junowen_lib::hook_utils::inject_dll;
+use junowen_lib::hook_utils::do_dll_injection;
 
 fn main() -> Result<()> {
     let dll_path = current_exe()?
@@ -10,7 +10,7 @@ fn main() -> Result<()> {
         .unwrap()
         .join(concat!(env!("CARGO_PKG_NAME"), "_hook.dll"));
 
-    inject_dll("th19.exe", &dll_path)?;
+    do_dll_injection("th19.exe", &dll_path)?;
 
     Ok(())
 }
