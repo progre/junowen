@@ -96,7 +96,7 @@ pub struct SettingsRepo {
 }
 
 impl SettingsRepo {
-    async fn load(&self) -> toml_edit::Document {
+    async fn load(&self) -> toml_edit::DocumentMut {
         read_to_string(&self.path)
             .await
             .unwrap_or_default()
