@@ -1,4 +1,4 @@
-use std::mem::size_of;
+use std::mem::{size_of, transmute};
 
 use anyhow::{anyhow, Result};
 use windows::Win32::System::Diagnostics::ToolHelp::{
@@ -24,7 +24,8 @@ fn find_process_id_in_snapshot(snapshot: SafeHandle, exe_file: &str) -> Option<u
         return None;
     }
     loop {
-        let current = String::from_utf8_lossy(&pe.szExeFile);
+        let current =
+            String::from_utf8_lossy(unsafe { transmute::<&[i8], &[u8]>(&pe.szExeFile[..]) });
         if current.contains(exe_file) {
             return Some(pe.th32ProcessID);
         }
