@@ -18,18 +18,16 @@ use windows::{
     },
 };
 
-pub async fn ini_file_path_log_dir_path_log_file_name_old_log_path(
-    module: HMODULE,
-) -> (String, String, String, String) {
-    let dll_path = {
-        let mut buf = [0u16; u16::MAX as usize];
-        if unsafe { GetModuleFileNameW(module, &mut buf) } == 0 {
-            panic!();
-        }
-        let dll_path = unsafe { PCWSTR::from_raw(buf.as_ptr()).to_string() }.unwrap();
-        PathBuf::from(dll_path)
-    };
+pub fn to_dll_path(module: HMODULE) -> PathBuf {
+    let mut buf = [0u16; u16::MAX as usize];
+    if unsafe { GetModuleFileNameW(module, &mut buf) } == 0 {
+        panic!();
+    }
+    let dll_path = unsafe { PCWSTR::from_raw(buf.as_ptr()).to_string() }.unwrap();
+    PathBuf::from(dll_path)
+}
 
+pub fn to_ini_file_path_log_dir_path_log_file_name(dll_stem: &str) -> (String, String, String) {
     let module_dir = {
         let guid = FOLDERID_RoamingAppData;
         let res = unsafe { SHGetKnownFolderPath(&guid, KNOWN_FOLDER_FLAG(0), HANDLE::default()) };
@@ -37,13 +35,10 @@ pub async fn ini_file_path_log_dir_path_log_file_name_old_log_path(
         format!("{}/ShanghaiAlice/th19/modules", app_data_dir)
     };
 
-    let dll_stem = dll_path.file_stem().unwrap().to_string_lossy();
     let ini_file_path = format!("{}/{}.ini", module_dir, dll_stem);
     let log_file_name = format!("{}.log", dll_stem);
-    let dll_dir_path = dll_path.parent().unwrap().to_string_lossy();
-    let old_log_path = format!("{}/{}", dll_dir_path, log_file_name);
 
-    (ini_file_path, module_dir, log_file_name, old_log_path)
+    (ini_file_path, module_dir, log_file_name)
 }
 
 pub async fn move_old_log_to_new_path(old_log_path: &str, module_dir: &str, log_file_name: &str) {

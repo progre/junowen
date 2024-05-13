@@ -2,6 +2,7 @@ use std::{collections::HashMap, fs};
 
 use sys_locale::get_locales;
 
+#[derive(derive_new::new)]
 pub struct Lang {
     lang: HashMap<String, String>,
 }

@@ -6,11 +6,26 @@ use std::{fs::File, io::Read};
 use sha3::digest::Digest; // using for Sha3_224::new()
 use sha3::{digest::generic_array::GenericArray, Sha3_224};
 use windows::{
-    core::PCWSTR,
-    Win32::{Foundation::MAX_PATH, System::LibraryLoader::GetModuleFileNameW},
+    core::{HSTRING, PCWSTR},
+    Win32::{
+        Foundation::{HWND, MAX_PATH},
+        System::LibraryLoader::GetModuleFileNameW,
+        UI::WindowsAndMessaging::{MessageBoxW, MB_ICONWARNING, MB_OK},
+    },
 };
 
 pub use dll_injection::{do_dll_injection, DllInjectionError};
+
+pub fn show_warn_dialog(msg: &str) {
+    unsafe {
+        MessageBoxW(
+            HWND::default(),
+            &HSTRING::from(msg),
+            &HSTRING::from(env!("CARGO_PKG_NAME")),
+            MB_ICONWARNING | MB_OK,
+        )
+    };
+}
 
 pub fn calc_th19_hash() -> Vec<u8> {
     let mut buf = [0u16; MAX_PATH as usize];

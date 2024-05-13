@@ -30,16 +30,24 @@ jobs:
       - name: Build
         shell: bash
         run: |
+          cargo build --locked --release --package junowen --features simple-dll-injection
+          mv \
+            target/i686-pc-windows-msvc/release/th19_junowen.dll \
+            target/i686-pc-windows-msvc/release/junowen.dll
+          cargo build --locked --release --package junowen --bin junowen-standalone
+          mv \
+            target/i686-pc-windows-msvc/release/junowen-standalone.exe \
+            target/i686-pc-windows-msvc/release/junowen.exe
           cargo build --locked --release --workspace
           cargo bundle-licenses --format yaml --output THIRDPARTY.yml
           mkdir --parents artifact/modules
           mv \
-            ./target/i686-pc-windows-msvc/release/th19_*.dll \
-            ./artifact/modules/
+            target/i686-pc-windows-msvc/release/th19_*.dll \
+            artifact/modules/
           mv \
-            ./target/i686-pc-windows-msvc/release/*.dll \
-            ./target/i686-pc-windows-msvc/release/*.exe \
-            ./artifact/
+            target/i686-pc-windows-msvc/release/*.dll \
+            target/i686-pc-windows-msvc/release/*.exe \
+            artifact/
           cp --recursive LICENSE README.md THIRDPARTY.yml ./artifact/
       - uses: actions/upload-artifact@v3
         with:
@@ -51,6 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FILENAME: ${{ github.ref_name }}.zip
+      FILENAME_STANDALONE: ${{ github.ref_name }}-standalone.zip
     steps:
       - uses: actions/download-artifact@v3
         with:
@@ -60,6 +69,7 @@ jobs:
         run: |
           cd artifact
           zip ../${{ env.FILENAME }} d3d9.dll modules/th19_junowen.dll LICENSE README.md THIRDPARTY.yml
+          zip ../${{ env.FILENAME_STANDALONE }} junowen.dll junowen.exe LICENSE README.md THIRDPARTY.yml
 
           ref_name=${{github.ref_name}}
           echo "RELEASE_NAME=${ref_name/junowen-/Ju.N.Owen }" >> "$GITHUB_ENV"
@@ -68,7 +78,9 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           name: ${{ env.RELEASE_NAME }}
-          files: ${{ env.FILENAME }}
+          files: |
+            ${{ env.FILENAME }}
+            ${{ env.FILENAME_STANDALONE }}
   build-server:
     runs-on: ubuntu-latest
     steps:

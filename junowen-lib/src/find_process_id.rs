@@ -40,7 +40,7 @@ pub fn find_process_id(exe_file: &str) -> Result<u32> {
     let snapshot = SafeHandle(unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) }?);
 
     let process_id = find_process_id_in_snapshot(snapshot, exe_file)
-        .ok_or_else(|| anyhow!("Process not found"))?;
+        .ok_or_else(|| anyhow!("process not found"))?;
 
     Ok(process_id)
 }

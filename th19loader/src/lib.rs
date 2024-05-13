@@ -1,11 +1,11 @@
 use std::{env::current_dir, mem::transmute};
 
-use junowen_lib::hook_utils::calc_th19_hash;
+use junowen_lib::hook_utils::{calc_th19_hash, show_warn_dialog};
 
 use windows::{
     core::{s, HSTRING, PCWSTR},
     Win32::{
-        Foundation::{FreeLibrary, HINSTANCE, HMODULE, HWND, MAX_PATH},
+        Foundation::{FreeLibrary, HINSTANCE, HMODULE, MAX_PATH},
         Graphics::Direct3D9::IDirect3D9,
         System::{
             Console::AllocConsole,
@@ -13,7 +13,6 @@ use windows::{
             SystemInformation::GetSystemDirectoryW,
             SystemServices::{DLL_PROCESS_ATTACH, DLL_PROCESS_DETACH},
         },
-        UI::WindowsAndMessaging::{MessageBoxW, MB_ICONWARNING, MB_OK},
     },
 };
 
@@ -32,17 +31,6 @@ fn load_library(dll_name: &str) -> HMODULE {
         panic!();
     }
     dll_instance
-}
-
-fn show_warn_dialog(msg: &str) {
-    unsafe {
-        MessageBoxW(
-            HWND::default(),
-            &HSTRING::from(msg),
-            &HSTRING::from(env!("CARGO_PKG_NAME")),
-            MB_ICONWARNING | MB_OK,
-        )
-    };
 }
 
 fn hook(direct_3d: *const IDirect3D9) {

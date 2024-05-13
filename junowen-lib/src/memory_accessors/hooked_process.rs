@@ -1,7 +1,7 @@
 use std::{
     ffi::c_void,
     mem::{size_of, transmute},
-    ptr::{copy_nonoverlapping, replace},
+    ptr::{copy_nonoverlapping, read_unaligned, write_unaligned},
 };
 
 use anyhow::Result;
@@ -55,7 +55,8 @@ unsafe fn assemble_call_and_manage_register(mut addr: *mut u8, target: usize) {
 unsafe fn assemble_jmp_target(addr: *mut u8, target: usize) -> usize {
     let jump_base_addr = addr.wrapping_add(5) as i64;
     let p_jump_target = addr.wrapping_add(1) as *mut i32;
-    let old_value = replace(p_jump_target, (target as i64 - jump_base_addr) as i32);
+    let old_value = read_unaligned(p_jump_target);
+    write_unaligned(p_jump_target, (target as i64 - jump_base_addr) as i32);
     (jump_base_addr + old_value as i64) as usize
 }
 

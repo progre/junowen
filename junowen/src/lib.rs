@@ -9,7 +9,7 @@ mod tracing_helper;
 use std::{ffi::c_void, slice};
 
 use junowen_lib::{
-    hook_utils::WELL_KNOWN_VERSION_HASHES,
+    hook_utils::{calc_th19_hash, show_warn_dialog, WELL_KNOWN_VERSION_HASHES},
     structs::{others::RenderingText, selection::Selection},
     Fn009fa0, Fn011560, Fn0b7d40, Fn0d5ae0, Fn0d6e10, Fn1049e0, Fn10f720, FnOfHookAssembly, Th19,
 };
@@ -22,7 +22,7 @@ use windows::Win32::{
 
 use crate::{
     file::{
-        ini_file_path_log_dir_path_log_file_name_old_log_path, move_old_log_to_new_path,
+        move_old_log_to_new_path, to_dll_path, to_ini_file_path_log_dir_path_log_file_name,
         SettingsRepo,
     },
     state::State,
@@ -129,15 +129,18 @@ fn check_version(hash: &[u8]) -> bool {
         .any(|&valid_hash| valid_hash == hash)
 }
 
-async fn init(module: HMODULE) {
+async fn init(dll_stem: &str, old_log_dir_path: Option<&str>) {
     if cfg!(debug_assertions) {
         let _ = unsafe { AllocConsole() };
         std::env::set_var("RUST_BACKTRACE", "1");
     }
-    let (ini_file_path, module_dir, log_file_name, old_log_path) =
-        ini_file_path_log_dir_path_log_file_name_old_log_path(module).await;
+    let (ini_file_path, module_dir, log_file_name) =
+        to_ini_file_path_log_dir_path_log_file_name(dll_stem);
     tracing_helper::init_tracing(&module_dir, &log_file_name, false);
-    move_old_log_to_new_path(&old_log_path, &module_dir, &log_file_name).await;
+    if let Some(old_log_dir_path) = old_log_dir_path {
+        let old_log_path = format!("{}/{}", old_log_dir_path, log_file_name);
+        move_old_log_to_new_path(&old_log_path, &module_dir, &log_file_name).await;
+    };
 
     let mut th19 = Th19::new_hooked_process("th19.exe").unwrap();
 
@@ -185,10 +188,30 @@ async fn init(module: HMODULE) {
     apply_hook_13f9d0_0446(th19);
 }
 
+fn launch_init(dll_stem: &str, old_log_dir_path: Option<&str>) {
+    TOKIO_RUNTIME.block_on(init(dll_stem, old_log_dir_path));
+}
+
+fn self_init() -> bool {
+    let hash = calc_th19_hash();
+    let dll_path = to_dll_path(unsafe { MODULE });
+    if !check_version(&hash) {
+        show_warn_dialog(&format!("Hash mismatch: {}", dll_path.to_string_lossy()));
+        return false;
+    }
+    let dll_stem = dll_path.file_stem().unwrap().to_string_lossy().to_string();
+    std::thread::spawn(move || launch_init(&dll_stem, None));
+
+    true
+}
+
 #[no_mangle]
 pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32) -> bool {
     if reason == DLL_PROCESS_ATTACH {
         unsafe { MODULE = inst_dll.into() };
+        if cfg!(feature = "simple-dll-injection") && !self_init() {
+            return false;
+        }
     }
     true
 }
@@ -205,7 +228,11 @@ pub unsafe extern "C" fn CheckVersion(hash: *const u8, length: usize) -> bool {
 #[allow(non_snake_case)]
 #[no_mangle]
 pub extern "C" fn Initialize(_direct_3d: *const IDirect3D9) -> bool {
-    TOKIO_RUNTIME.block_on(init(unsafe { MODULE }));
+    let dll_path = to_dll_path(unsafe { MODULE });
+    let dll_stem = dll_path.file_stem().unwrap().to_string_lossy();
+    let old_log_dir_path = dll_path.parent().unwrap().to_string_lossy();
+
+    launch_init(&dll_stem, Some(&old_log_dir_path));
 
     true
 }
