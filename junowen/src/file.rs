@@ -12,14 +12,14 @@ use tracing::error;
 use windows::{
     core::PCWSTR,
     Win32::{
-        Foundation::{HANDLE, HMODULE},
+        Foundation::{HANDLE, HMODULE, MAX_PATH},
         System::LibraryLoader::GetModuleFileNameW,
         UI::Shell::{FOLDERID_RoamingAppData, SHGetKnownFolderPath, KNOWN_FOLDER_FLAG},
     },
 };
 
 pub fn to_dll_path(module: HMODULE) -> PathBuf {
-    let mut buf = [0u16; u16::MAX as usize];
+    let mut buf = [0u16; MAX_PATH as usize];
     if unsafe { GetModuleFileNameW(module, &mut buf) } == 0 {
         panic!();
     }
