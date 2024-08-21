@@ -6,7 +6,7 @@ mod signaling;
 mod state;
 mod tracing_helper;
 
-use std::{ffi::c_void, slice};
+use std::{ffi::c_void, ptr::null, slice};
 
 use junowen_lib::{
     hook_utils::{calc_th19_hash, show_warn_dialog, WELL_KNOWN_VERSION_HASHES},
@@ -35,7 +35,7 @@ static TOKIO_RUNTIME: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
         .unwrap()
 });
 
-static mut MODULE: HMODULE = HMODULE(0);
+static mut MODULE: HMODULE = HMODULE(null::<c_void>() as *mut _);
 static mut PROPS: Option<Props> = None;
 static mut STATE: Option<State> = None;
 
