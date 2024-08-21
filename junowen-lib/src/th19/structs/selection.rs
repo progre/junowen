@@ -36,7 +36,7 @@ impl TryFrom<u32> for Difficulty {
         if !(0..4).contains(&value) {
             bail!("Invalid Difficulty: {}", value);
         }
-        Ok(unsafe { transmute(value) })
+        Ok(unsafe { transmute::<u32, Self>(value) })
     }
 }
 
@@ -54,7 +54,7 @@ impl TryFrom<u32> for GameMode {
         if !(0..3).contains(&value) {
             bail!("Invalid GameMode: {}", value);
         }
-        Ok(unsafe { transmute(value) })
+        Ok(unsafe { transmute::<u32, Self>(value) })
     }
 }
 
@@ -79,7 +79,7 @@ impl TryFrom<u32> for PlayerMatchup {
         if !(0..4).contains(&value) {
             bail!("Invalid PlayerMatchup: {}", value);
         }
-        Ok(unsafe { transmute(value) })
+        Ok(unsafe { transmute::<u32, Self>(value) })
     }
 }
 

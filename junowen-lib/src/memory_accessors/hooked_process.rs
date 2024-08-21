@@ -164,7 +164,12 @@ impl HookedProcess {
             let p_dummy_func = jmp_target(addr) as *mut u8;
 
             let p_call = p_call_at_jmp_dst_mut(p_dummy_func);
-            return Some(unsafe { transmute(assemble_jmp_target(p_call, target_func as usize)) });
+            return Some(unsafe {
+                transmute::<usize, extern "fastcall" fn()>(assemble_jmp_target(
+                    p_call,
+                    target_func as usize,
+                ))
+            });
         }
 
         let p_dummy_func = dummy_func as *mut u8;
@@ -203,6 +208,6 @@ impl HookedProcess {
         let p_dummy_func = jmp_target(addr) as *const u8;
 
         let p_call = p_call_at_jmp_dst(p_dummy_func);
-        Some(unsafe { transmute(jmp_target(p_call)) })
+        Some(unsafe { transmute::<usize, FnOfHookAssembly>(jmp_target(p_call)) })
     }
 }

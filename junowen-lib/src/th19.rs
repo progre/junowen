@@ -179,7 +179,7 @@ impl Th19 {
         type Fn = extern "thiscall" fn(*const c_void, u32, u32);
         const ADDR: usize = 0x0aeb20;
         let ptr = self.hooked_process_memory_accessor().raw_ptr(ADDR);
-        (unsafe { transmute::<_, Fn>(ptr) })(this, id, arg2)
+        (unsafe { transmute::<*const c_void, Fn>(ptr) })(this, id, arg2)
     }
 
     hook!(0x0bed70 + 0x00fc, hook_0bed70_00fc, Fn0b7d40);
@@ -187,7 +187,7 @@ impl Th19 {
     pub fn render_text(&self, text_renderer: *const c_void, text: &RenderingText) -> u32 {
         const ADDR: usize = 0x0d5ae0;
         let ptr = self.hooked_process_memory_accessor().raw_ptr(ADDR);
-        (unsafe { transmute::<_, Fn0d5ae0>(ptr) })(text_renderer, text as *const _ as _)
+        (unsafe { transmute::<*const c_void, Fn0d5ae0>(ptr) })(text_renderer, text as *const _ as _)
     }
 
     hook!(0x0d6e10 + 0x0039, hook_0d6e10_0039, Fn0d5ae0);
@@ -357,7 +357,7 @@ impl Th19 {
     fn game_settings_from(&self, addr: usize) -> Result<GameSettings> {
         let mut buffer = [0u8; 12];
         self.memory_accessor.read(addr, &mut buffer)?;
-        Ok(unsafe { transmute(buffer) })
+        Ok(unsafe { transmute::<[u8; 12], GameSettings>(buffer) })
     }
     fn put_game_settings_to(&mut self, addr: usize, game_settings: &GameSettings) -> Result<()> {
         let buffer: &[u8; 12] = unsafe { transmute(game_settings) };

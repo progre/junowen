@@ -55,7 +55,7 @@ pub enum WaitingForPureP2pSpectator {
         pushed: bool,
     },
     SignalingCodeSent {
-        signaling: Signaling,
+        _signaling: Signaling,
         session_rx: mpsc::Receiver<SpectatorHostSession>,
         ready: bool,
         pushed: bool,
@@ -139,7 +139,7 @@ impl WaitingForPureP2pSpectator {
                     unreachable!()
                 };
                 *self = Self::SignalingCodeSent {
-                    signaling,
+                    _signaling: signaling,
                     session_rx,
                     ready,
                     pushed,
