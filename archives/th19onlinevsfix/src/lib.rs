@@ -73,7 +73,7 @@ pub extern "C" fn Initialize(_direct_3d: *const IDirect3D9) -> bool {
         std::env::set_var("RUST_BACKTRACE", "1");
     }
 
-    let mut th19 = Th19::new_hooked_process("th19.exe").unwrap();
+    let th19 = Th19::new_hooked_process("th19.exe").unwrap();
     let (old_on_waiting_online_vs_connection, apply) =
         th19.hook_on_waiting_online_vs_connection(on_waiting_online_vs_connection);
     unsafe {

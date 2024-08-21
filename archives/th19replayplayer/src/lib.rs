@@ -386,7 +386,7 @@ pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32
         let (tx, rx) = mpsc::channel();
         init_interprecess(tx);
 
-        let mut th19 = Th19::new_hooked_process("th19.exe").unwrap();
+        let th19 = Th19::new_hooked_process("th19.exe").unwrap();
         let (original_on_input_menu, apply_hook_on_input_menu) =
             th19.hook_on_input_menu(on_input_menu);
         let (original_on_input_players, apply_hook_on_input_players) =

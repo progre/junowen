@@ -1,7 +1,7 @@
 #[macro_export]
 macro_rules! hook {
     ($addr:expr, $hook:ident, $type:ty) => {
-        pub fn $hook(&mut self, target: $type) -> ($type, ApplyFn) {
+        pub fn $hook(&self, target: $type) -> ($type, ApplyFn) {
             let addr = $addr;
             unsafe {
                 transmute::<(usize, ApplyFn), ($type, ApplyFn)>(self.hook_call(addr, target as _))

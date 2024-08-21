@@ -142,7 +142,7 @@ async fn init(dll_stem: &str, old_log_dir_path: Option<&str>) {
         move_old_log_to_new_path(&old_log_path, &module_dir, &log_file_name).await;
     };
 
-    let mut th19 = Th19::new_hooked_process("th19.exe").unwrap();
+    let th19 = Th19::new_hooked_process("th19.exe").unwrap();
 
     let (old_on_input_players, apply_hook_on_input_players) =
         th19.hook_on_input_players(on_input_players);

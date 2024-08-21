@@ -136,7 +136,7 @@ impl Th19 {
     }
 
     pub fn hook_on_waiting_online_vs_connection(
-        &mut self,
+        &self,
         target: FnOfHookAssembly,
     ) -> (Option<FnOfHookAssembly>, ApplyFn) {
         const ADDR: usize = 0x02d1f0 + 0x007c;
@@ -147,7 +147,7 @@ impl Th19 {
     hook!(0x0a9540 + 0x0175, hook_0a9540_0175, Fn0a9000);
 
     pub fn hook_on_input_players(
-        &mut self,
+        &self,
         target: FnOfHookAssembly,
     ) -> (Option<FnOfHookAssembly>, ApplyFn) {
         const ADDR: usize = 0x0aba30 + 0x00fb;
@@ -156,7 +156,7 @@ impl Th19 {
     }
 
     pub fn hook_on_input_menu(
-        &mut self,
+        &self,
         target: FnOfHookAssembly,
     ) -> (Option<FnOfHookAssembly>, ApplyFn) {
         const ADDR: usize = 0x0aba30 + 0x018e;
@@ -303,8 +303,8 @@ impl Th19 {
         unsafe { (*p_p_obj).as_mut() }
     }
 
-    fn hook_call(&mut self, addr: usize, target: usize) -> (usize, ApplyFn) {
-        let memory_accessor = self.hooked_process_memory_accessor_mut();
+    fn hook_call(&self, addr: usize, target: usize) -> (usize, ApplyFn) {
+        let memory_accessor = self.hooked_process_memory_accessor();
         let old_target = memory_accessor.current_callback_of_hook_call(addr);
         (
             old_target,
@@ -321,7 +321,7 @@ impl Th19 {
     }
 
     fn hook_assembly(
-        &mut self,
+        &self,
         addr: usize,
         size: usize,
         dummy_func: extern "fastcall" fn(),
