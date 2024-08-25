@@ -102,7 +102,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
-          rustup target add x86_64-unknown-linux-gnu
+          rustup target add x86_64-unknown-linux-musl
           pip3 install cargo-lambda
           mkdir ~/.aws
           cat <<EOF > ~/.aws/config
@@ -113,7 +113,7 @@ jobs:
           EOF
       - name: Build & Deploy dev
         run: |
-          cargo lambda build --locked --package junowen-server --release
+          cargo lambda build --locked --package junowen-server --release --target x86_64-unknown-linux-musl
           cargo lambda deploy --binary-name junowen-server junowen-server-dev
       - uses: actions/upload-artifact@v3
         with:
