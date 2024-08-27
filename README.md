@@ -100,7 +100,6 @@ This method does not use a connection server, but exchanges connection informati
 ## Current constraints
 
 - "Online VS Mode" must be released for the game to work properly.
-- Ju.N.Owen menu cannot be operated with the enter key
 - Spectators can only be added immediately after a player connects.
 - The game may be freeze if communication is delayed or something not good happens.
 
