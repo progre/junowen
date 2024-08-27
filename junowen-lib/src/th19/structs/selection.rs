@@ -12,7 +12,7 @@ pub struct Player {
     _unknown2: [u8; 0x80],
     /// Available on player select screen
     pub card: u32,
-    _unknown3: [u8; 0x2c],
+    _unknown3: [u8; 0x34],
 }
 
 #[derive(Clone, Copy, PartialEq)]

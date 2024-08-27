@@ -13,16 +13,6 @@ pub enum MemoryAccessor {
 }
 
 impl MemoryAccessor {
-    pub fn read_u16(&self, addr: usize) -> Result<u16> {
-        let mut buffer = [0; 2];
-        self.read(addr, &mut buffer)?;
-        Ok(u16::from_le_bytes(buffer))
-    }
-
-    pub fn write_u16(&mut self, addr: usize, value: u16) -> Result<()> {
-        self.write(addr, &value.to_le_bytes())
-    }
-
     pub fn read_u32(&self, addr: usize) -> Result<u32> {
         let mut buffer = [0; 4];
         self.read(addr, &mut buffer)?;

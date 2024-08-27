@@ -11,6 +11,15 @@ macro_rules! hook {
 }
 
 #[macro_export]
+macro_rules! hook_todo {
+    ($addr:expr, $hook:ident, $type:ty) => {
+        pub fn $hook(&self, _target: $type) -> ($type, ApplyFn) {
+            todo!()
+        }
+    };
+}
+
+#[macro_export]
 macro_rules! u16_prop {
     ($addr:expr, $getter:ident) => {
         pub fn $getter(&self) -> Result<u16> {
@@ -43,6 +52,22 @@ macro_rules! u32_prop {
 }
 
 #[macro_export]
+macro_rules! u32_prop_todo {
+    ($addr:expr, $getter:ident) => {
+        pub fn $getter(&self) -> Result<u32> {
+            todo!("u32_prop");
+        }
+    };
+
+    ($addr:expr, $getter:ident, $setter:ident) => {
+        $crate::u32_prop_todo!($addr, $getter);
+        pub fn $setter(&mut self, value: u32) -> Result<()> {
+            todo!("u32_prop");
+        }
+    };
+}
+
+#[macro_export]
 macro_rules! pointer {
     ($addr:expr, $getter:ident, $type:ty) => {
         pub fn $getter(&self) -> &'static $type {
@@ -68,21 +93,6 @@ macro_rules! ptr_opt {
         ptr_opt!($addr, $getter, $type);
         pub fn $getter_mut(&mut self) -> Option<&'static mut $type> {
             self.pointer_mut($addr)
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! value {
-    ($addr:expr, $getter:ident, $type:ty) => {
-        pub fn $getter(&self) -> $type {
-            self.value($addr)
-        }
-    };
-    ($addr:expr, $getter:ident, $setter:ident, $type:ty) => {
-        value!($addr, $getter, $type);
-        pub fn $setter(&mut self, value: $type) {
-            self.set_value($addr, value)
         }
     };
 }

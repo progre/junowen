@@ -45,7 +45,7 @@ pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32
 #[allow(non_snake_case)]
 #[no_mangle]
 pub extern "C" fn CheckVersion(hash: *const u8, length: usize) -> bool {
-    let valid_hash = &WELL_KNOWN_VERSION_HASHES.v100a_steam;
+    let valid_hash = &WELL_KNOWN_VERSION_HASHES.v110c_steam;
     if length != valid_hash.len() {
         return false;
     }

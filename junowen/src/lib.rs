@@ -124,7 +124,7 @@ extern "thiscall" fn on_loaded_game_settings(this: *const c_void, arg1: u32) -> 
 
 fn check_version(hash: &[u8]) -> bool {
     WELL_KNOWN_VERSION_HASHES
-        .all_v100a()
+        .all_v110c()
         .iter()
         .any(|&valid_hash| valid_hash == hash)
 }

@@ -104,7 +104,7 @@ pub fn render_object(
 ) {
     if title_menu_modifier.selected_junowen() {
         let id = unsafe { *(obj.add(0x28) as *const u32) };
-        if (0xb0..=0xbc).contains(&id) {
+        if (0xb4..=0xc0).contains(&id) {
             return;
         }
     }

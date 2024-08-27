@@ -70,8 +70,7 @@ impl Drop for PeerConnection {
     }
 }
 
-const PROTOCOL: &str = "JUNOWEN/0.5";
-const FUTURE_PROTOCOL: &str = "JUNOWEN/1.0";
+const PROTOCOL: &str = "JUNOWEN/1.1";
 
 impl PeerConnection {
     pub async fn new(timeout: Duration) -> Result<Self> {
@@ -195,7 +194,7 @@ impl PeerConnection {
         let data_channel_task = async {
             let mut data_channel = self.data_channel_rx.take().unwrap().await.unwrap();
             data_channel.wait_for_open_data_channel().await;
-            if ![PROTOCOL, FUTURE_PROTOCOL].contains(&data_channel.protocol()) {
+            if data_channel.protocol() != PROTOCOL {
                 bail!("unexpected protocol: {}", data_channel.protocol());
             }
             Ok(data_channel)

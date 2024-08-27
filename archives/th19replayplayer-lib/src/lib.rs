@@ -23,8 +23,8 @@ impl Default for FileInputList {
 
 #[derive(Default)]
 pub struct ReplayFile {
-    pub rand_seed1: u16,
-    pub rand_seed2: u16,
+    pub rand_seed1: u32,
+    pub rand_seed2: u32,
     pub difficulty: Difficulty,
     pub player_matchup: PlayerMatchup,
     pub battle_settings: GameSettings,
@@ -62,8 +62,8 @@ impl ReplayFile {
         let mut buf = BytesMut::new();
         buf.resize(13, 0);
         reader.read_exact(&mut buf)?;
-        let rand_seed1 = buf.get_u16_le();
-        let rand_seed2 = buf.get_u16_le();
+        let rand_seed1 = buf.get_u32_le();
+        let rand_seed2 = buf.get_u32_le();
         let difficulty = Difficulty::try_from(buf.get_u8() as u32)?;
         let player_matchup = PlayerMatchup::try_from(buf.get_u8() as u32)?;
         let battle_settings = GameSettings::new(
@@ -122,8 +122,8 @@ impl ReplayFile {
 
     pub fn write_to(&self, writer: &mut impl Write) -> Result<()> {
         let mut buf = BytesMut::new();
-        buf.put_u16_le(self.rand_seed1);
-        buf.put_u16_le(self.rand_seed2);
+        buf.put_u32_le(self.rand_seed1);
+        buf.put_u32_le(self.rand_seed2);
         buf.put_u8(self.difficulty as u8);
         buf.put_u8(self.player_matchup as u8);
         buf.put_u8(self.battle_settings.common() as u8);

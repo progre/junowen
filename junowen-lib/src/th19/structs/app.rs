@@ -20,6 +20,7 @@ pub enum ScreenId {
     Option,
     ControllerSelect,
     GameSettings,
+    Unknown1,
     Unknown2,
     DifficultySelect,
     PlayerMatchupSelect,
@@ -29,11 +30,11 @@ pub enum ScreenId {
     Unknown4,
     Unknown5,
     Unknown6,
-    MusicRoom,
     Unknown7,
+    MusicRoom,
     Unknown8,
+    Unknown9,
     Manual,
-    Manual2,
     Unknown10,
     Archievements,
     Unknown11,
@@ -106,9 +107,9 @@ pub struct Game {
 
 #[derive(Copy, Clone, Debug)]
 enum MainLoopTaskId {
-    ControllerSelect = 0x09,
-    Menu = 0x0a,
-    Game = 0x0e,
+    ControllerSelect = 0x0a,
+    Menu = 0x0b,
+    Game = 0x0f,
 }
 
 #[derive(Debug)]

@@ -8,10 +8,10 @@ pub struct MatchInitial {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct RoundInitial {
-    pub seed1: u16,
-    pub seed2: u16,
-    pub seed3: u16,
-    pub seed4: u16,
+    pub seed1: u32,
+    pub seed2: u32,
+    pub seed3: u32,
+    pub seed4: u32,
 }
 
 /** input 以外はホストのみ発行できる */

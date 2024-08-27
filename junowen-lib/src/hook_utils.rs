@@ -3,6 +3,7 @@ mod load_library_w_addr;
 
 use std::{fs::File, io::Read};
 
+use hex_literal::hex;
 use sha3::digest::Digest; // using for Sha3_224::new()
 use sha3::{digest::generic_array::GenericArray, Sha3_224};
 use windows::{
@@ -43,23 +44,17 @@ pub fn calc_th19_hash() -> Vec<u8> {
 }
 
 pub struct WellKnownVersionHashes {
-    pub v100a: [u8; 28],
-    pub v100a_steam: [u8; 28],
+    pub v110c: [u8; 28],
+    pub v110c_steam: [u8; 28],
 }
 
 impl WellKnownVersionHashes {
-    pub fn all_v100a(&self) -> [&[u8; 28]; 2] {
-        [&self.v100a, &self.v100a_steam]
+    pub fn all_v110c(&self) -> [&[u8; 28]; 2] {
+        [&self.v110c, &self.v110c_steam]
     }
 }
 
 pub const WELL_KNOWN_VERSION_HASHES: WellKnownVersionHashes = WellKnownVersionHashes {
-    v100a: [
-        0xef, 0xf4, 0x38, 0x36, 0x51, 0xe5, 0xa2, 0x4b, 0x75, 0x11, 0xda, 0xa0, 0xd6, 0x44, 0x14,
-        0x2c, 0x24, 0x39, 0xa8, 0x31, 0xe5, 0x36, 0x2d, 0xd9, 0xff, 0xbf, 0xf1, 0x89,
-    ],
-    v100a_steam: [
-        0xaa, 0x4e, 0xf4, 0xe6, 0xfa, 0xe1, 0x23, 0xcb, 0xcb, 0xc1, 0xc2, 0xc2, 0x32, 0x46, 0x2d,
-        0x5e, 0xfa, 0x6b, 0x21, 0x5d, 0x4a, 0x94, 0xf6, 0x4d, 0x62, 0xbc, 0xef, 0xcb,
-    ],
+    v110c: hex!("f7cfd5dc38a4cab6efd91646264b09f21cd79409d568f23b7cbfd359"),
+    v110c_steam: hex!("a2bbb4ff6c7ee5bd1126b536416762f2bea3b83ebf351f24cb66af64"),
 };
