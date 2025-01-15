@@ -53,14 +53,17 @@ struct Props {
 }
 
 fn props() -> &'static Props {
-    unsafe { PROPS.as_ref().unwrap() }
+    let props = &raw const PROPS;
+    unsafe { props.as_ref() }.unwrap().as_ref().unwrap()
 }
 
 fn state() -> &'static State {
-    unsafe { STATE.as_ref().unwrap() }
+    let state = &raw const STATE;
+    unsafe { state.as_ref() }.unwrap().as_ref().unwrap()
 }
 fn state_mut() -> &'static mut State {
-    unsafe { STATE.as_mut().unwrap() }
+    let state = &raw mut STATE;
+    unsafe { state.as_mut() }.unwrap().as_mut().unwrap()
 }
 
 extern "fastcall" fn on_input_players() {

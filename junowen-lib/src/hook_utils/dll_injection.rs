@@ -38,7 +38,7 @@ impl<'a> VirtualAllocatedMem<'a> {
     }
 }
 
-impl<'a> Drop for VirtualAllocatedMem<'a> {
+impl Drop for VirtualAllocatedMem<'_> {
     fn drop(&mut self) {
         unsafe { VirtualFreeEx(self.process.0, self.addr, 0, MEM_RELEASE) }.unwrap();
     }

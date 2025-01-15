@@ -107,7 +107,8 @@ pub extern "stdcall" fn DllMain(_inst_dll: HINSTANCE, reason: u32, _reserved: u3
             }
         }
         DLL_PROCESS_DETACH => unsafe {
-            if !ORIGINAL_MODULE.is_invalid() {
+            let original_module = (&raw const ORIGINAL_MODULE).as_ref().unwrap();
+            if !original_module.is_invalid() {
                 FreeLibrary(ORIGINAL_MODULE).unwrap();
             }
         },
