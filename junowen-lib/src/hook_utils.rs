@@ -9,7 +9,7 @@ use sha3::{digest::generic_array::GenericArray, Sha3_224};
 use windows::{
     core::{HSTRING, PCWSTR},
     Win32::{
-        Foundation::{HWND, MAX_PATH},
+        Foundation::MAX_PATH,
         System::LibraryLoader::GetModuleFileNameW,
         UI::WindowsAndMessaging::{MessageBoxW, MB_ICONWARNING, MB_OK},
     },
@@ -20,7 +20,7 @@ pub use dll_injection::{do_dll_injection, DllInjectionError};
 pub fn show_warn_dialog(msg: &str) {
     unsafe {
         MessageBoxW(
-            HWND::default(),
+            None,
             &HSTRING::from(msg),
             &HSTRING::from(env!("CARGO_PKG_NAME")),
             MB_ICONWARNING | MB_OK,

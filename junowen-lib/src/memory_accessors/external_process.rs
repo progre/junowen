@@ -2,7 +2,7 @@ use std::{ffi::c_void, mem::size_of};
 
 use anyhow::{anyhow, bail, Result};
 use windows::Win32::{
-    Foundation::{CloseHandle, FALSE, HANDLE, HMODULE, MAX_PATH},
+    Foundation::{CloseHandle, HANDLE, HMODULE, MAX_PATH},
     System::{
         Diagnostics::Debug::{ReadProcessMemory, WriteProcessMemory},
         ProcessStatus::{EnumProcessModules, GetModuleBaseNameA},
@@ -32,7 +32,7 @@ fn find_base_module(process: HANDLE, exe_file: &str) -> Result<HMODULE> {
         .iter()
         .filter(|&&module| {
             let mut base_name = [0u8; MAX_PATH as usize];
-            let len = unsafe { GetModuleBaseNameA(process, module, &mut base_name) };
+            let len = unsafe { GetModuleBaseNameA(process, Some(module), &mut base_name) };
             len > 0 && String::from_utf8_lossy(&base_name[0..len as usize]) == exe_file
         })
         .copied()
@@ -54,7 +54,7 @@ impl ExternalProcess {
                     | PROCESS_VM_OPERATION
                     | PROCESS_VM_READ
                     | PROCESS_VM_WRITE,
-                FALSE,
+                false,
                 process_id,
             )
         }?;

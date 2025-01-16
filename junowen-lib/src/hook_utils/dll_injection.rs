@@ -1,21 +1,14 @@
-use std::{
-    mem::{size_of_val, transmute},
-    os::raw::c_void,
-    path::Path,
-};
+use std::{mem::transmute, os::raw::c_void, path::Path};
 
 use anyhow::{Error, Result};
 use windows::{
     core::HSTRING,
-    Win32::{
-        Foundation::FALSE,
-        System::{
-            Diagnostics::Debug::WriteProcessMemory,
-            Memory::{VirtualAllocEx, VirtualFreeEx, MEM_COMMIT, MEM_RELEASE, PAGE_READWRITE},
-            Threading::{
-                CreateRemoteThread, OpenProcess, WaitForSingleObject, LPTHREAD_START_ROUTINE,
-                PROCESS_ALL_ACCESS,
-            },
+    Win32::System::{
+        Diagnostics::Debug::WriteProcessMemory,
+        Memory::{VirtualAllocEx, VirtualFreeEx, MEM_COMMIT, MEM_RELEASE, PAGE_READWRITE},
+        Threading::{
+            CreateRemoteThread, OpenProcess, WaitForSingleObject, LPTHREAD_START_ROUTINE,
+            PROCESS_ALL_ACCESS,
         },
     },
 };
@@ -58,18 +51,19 @@ pub fn do_dll_injection(exe_file: &str, dll_path: &Path) -> Result<(), DllInject
     }
     let process_id = find_process_id(exe_file).map_err(DllInjectionError::ProcessNotFound)?;
     let process = SafeHandle(
-        unsafe { OpenProcess(PROCESS_ALL_ACCESS, FALSE, process_id) }
+        unsafe { OpenProcess(PROCESS_ALL_ACCESS, false, process_id) }
             .map_err(|err| DllInjectionError::ProcessNotFound(Error::new(err)))?,
     );
     let dll_path_hstr = HSTRING::from(dll_path);
-    let dll_path_hstr_size = size_of_val(dll_path_hstr.as_wide());
+    let dll_path_hstr_range = dll_path_hstr.as_ptr_range();
+    let dll_path_hstr_size = dll_path_hstr_range.end as usize - dll_path_hstr_range.start as usize;
     let remote_dll_path_wstr = VirtualAllocatedMem::new(&process, dll_path_hstr_size);
 
     unsafe {
         WriteProcessMemory(
             process.0,
             remote_dll_path_wstr.addr,
-            dll_path_hstr.as_ptr() as _,
+            dll_path_hstr_range.start as _,
             dll_path_hstr_size,
             None,
         )

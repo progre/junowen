@@ -12,7 +12,7 @@ use tracing::error;
 use windows::{
     core::PCWSTR,
     Win32::{
-        Foundation::{HANDLE, HMODULE, MAX_PATH},
+        Foundation::{HMODULE, MAX_PATH},
         System::LibraryLoader::GetModuleFileNameW,
         UI::Shell::{FOLDERID_RoamingAppData, SHGetKnownFolderPath, KNOWN_FOLDER_FLAG},
     },
@@ -20,7 +20,7 @@ use windows::{
 
 pub fn to_dll_path(module: HMODULE) -> PathBuf {
     let mut buf = [0u16; MAX_PATH as usize];
-    if unsafe { GetModuleFileNameW(module, &mut buf) } == 0 {
+    if unsafe { GetModuleFileNameW(Some(module), &mut buf) } == 0 {
         panic!();
     }
     let dll_path = unsafe { PCWSTR::from_raw(buf.as_ptr()).to_string() }.unwrap();
@@ -30,7 +30,7 @@ pub fn to_dll_path(module: HMODULE) -> PathBuf {
 pub fn to_ini_file_path_log_dir_path_log_file_name(dll_stem: &str) -> (String, String, String) {
     let module_dir = {
         let guid = FOLDERID_RoamingAppData;
-        let res = unsafe { SHGetKnownFolderPath(&guid, KNOWN_FOLDER_FLAG(0), HANDLE::default()) };
+        let res = unsafe { SHGetKnownFolderPath(&guid, KNOWN_FOLDER_FLAG(0), None) };
         let app_data_dir = unsafe { res.unwrap().to_string() }.unwrap();
         format!("{}/ShanghaiAlice/th19/modules", app_data_dir)
     };

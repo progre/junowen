@@ -4,7 +4,6 @@ use anyhow::{bail, Result};
 use windows::{
     core::{PCSTR, PCWSTR},
     Win32::{
-        Foundation::BOOLEAN,
         Storage::FileSystem::{
             CreateFileW, FILE_ATTRIBUTE_NORMAL, FILE_GENERIC_READ, FILE_SHARE_NONE, OPEN_EXISTING,
         },
@@ -57,7 +56,7 @@ fn load_library_w_addr_from_map_view_of_file(base: &ViewOfFile) -> Result<usize>
     let exp = unsafe {
         ImageDirectoryEntryToDataEx(
             base.0.Value,
-            BOOLEAN::from(false),
+            false,
             IMAGE_DIRECTORY_ENTRY_EXPORT,
             &mut exp_size,
             None,
