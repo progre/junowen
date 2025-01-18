@@ -7,11 +7,8 @@ mod spectator_session_state;
 use std::{ffi::c_void, fmt::Display};
 
 use getset::{Getters, MutGetters};
-use junowen_lib::{
-    structs::{others::RenderingText, selection::Selection},
-    Fn011560, Fn0b7d40, Fn0d5ae0, Fn10f720, Th19,
-};
-use tracing::debug;
+use junowen_lib::{structs::others::RenderingText, Th19};
+use tracing::{debug, trace};
 
 use self::junowen_state::JunowenState;
 use crate::{
@@ -27,6 +24,7 @@ pub struct State {
     title_menu_modifier: TitleMenuModifier,
     lobby: Lobby,
     junowen_state: JunowenState,
+    old_p1_idx: u32,
 }
 
 impl State {
@@ -37,6 +35,7 @@ impl State {
             title_menu_modifier: TitleMenuModifier::new(),
             lobby: Lobby::new(settings_repo),
             junowen_state: JunowenState::Standby,
+            old_p1_idx: 0,
         }
     }
 
@@ -73,24 +72,18 @@ impl State {
         }
     }
 
-    pub fn render_object(&self, old: Fn0b7d40, obj_renderer: *const c_void, obj: *const c_void) {
+    pub fn on_before_render_object(&self, obj: *const c_void) -> bool {
         self.junowen_state
-            .render_object(&self.title_menu_modifier, old, obj_renderer, obj);
+            .on_before_render_object(&self.title_menu_modifier, obj)
     }
 
-    pub fn render_text(
-        &self,
-        old: Fn0d5ae0,
-        text_renderer: *const c_void,
-        text: &mut RenderingText,
-    ) -> u32 {
-        self.junowen_state.render_text(
+    pub fn on_before_render_text(&self, text_renderer: *const c_void, text: &mut RenderingText) {
+        self.junowen_state.on_before_render_text(
             &self.th19,
             &self.title_menu_modifier,
-            old,
             text_renderer,
             text,
-        )
+        );
     }
 
     pub fn on_render_texts(&self, text_renderer: *const c_void) {
@@ -109,16 +102,43 @@ impl State {
         }
     }
 
-    pub fn is_online_vs(&self, this: *const Selection, old: Fn011560) -> u8 {
-        self.junowen_state.is_online_vs(this, old)
+    pub fn on_before_is_online_vs(&self) -> Option<u8> {
+        self.junowen_state.on_before_is_online_vs()
     }
 
-    pub fn on_rewrite_controller_assignments(&mut self, old_fn: fn(&mut Th19) -> Fn10f720) {
+    pub fn on_before_rewrite_controller_assignments(&mut self) {
+        let input_devices = self.th19.input_devices();
+        self.old_p1_idx = input_devices.p1_idx();
+    }
+
+    pub fn on_rewrite_controller_assignments(&mut self) {
+        if !self.junowen_state.has_session() {
+            return;
+        }
+        trace!(
+            "on_rewrite_controller_assignments: before old_p1_idx={}",
+            self.old_p1_idx
+        );
+        if self.old_p1_idx != 0 {
+            return;
+        }
+        let input_devices = self.th19.input_devices_mut();
+        if input_devices.p1_idx() == 0 {
+            return;
+        }
+        trace!(
+            "on_rewrite_controller_assignments: after input_devices.p1_idx()={}",
+            input_devices.p1_idx()
+        );
+        input_devices.set_p1_idx(0);
+        trace!(
+            "on_rewrite_controller_assignments: fixed input_devices.p1_idx()={}",
+            input_devices.p1_idx()
+        );
+    }
+
+    pub fn on_before_loaded_game_settings(&mut self) {
         self.junowen_state
-            .on_rewrite_controller_assignments(&mut self.th19, old_fn);
-    }
-
-    pub fn on_loaded_game_settings(&mut self) {
-        self.junowen_state.on_loaded_game_settings(&mut self.th19);
+            .on_before_loaded_game_settings(&mut self.th19);
     }
 }

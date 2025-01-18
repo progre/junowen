@@ -5,7 +5,7 @@ use junowen_lib::{
     structs::app::{MainMenu, ScreenId},
     structs::input_devices::{Input, InputFlags, InputValue},
     structs::others::RenderingText,
-    Fn0d5ae0, Th19,
+    Th19,
 };
 
 use super::helper::menu_item_color;
@@ -92,20 +92,19 @@ impl TitleMenuModifier {
         }
     }
 
-    pub fn render_text(
+    pub fn on_before_render_text(
         &self,
         main_menu: &MainMenu,
         th19: &Th19,
-        old: Fn0d5ae0,
         text_renderer: *const c_void,
         rendering_text: &mut RenderingText,
-    ) -> u32 {
+    ) {
         if main_menu.screen_id() != ScreenId::Title {
-            return old(text_renderer, rendering_text);
+            return;
         }
         let menu = main_menu.menu();
         if menu.num_disabled() > 0 {
-            return old(text_renderer, rendering_text);
+            return;
         }
         let text = rendering_text.text().unwrap().to_string_lossy().to_string();
         if ["Story Mode", "VS Mode", "Online VS Mode"].contains(&text.as_str()) {
@@ -142,7 +141,5 @@ impl TitleMenuModifier {
                 th19.render_text(text_renderer, &rendering_text);
             }
         }
-
-        old(text_renderer, rendering_text)
     }
 }

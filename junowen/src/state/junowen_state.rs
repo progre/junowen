@@ -1,4 +1,3 @@
-mod on_rewrite_controller_assignments;
 mod standby;
 
 use std::{ffi::c_void, sync::mpsc::RecvError};
@@ -6,8 +5,8 @@ use std::{ffi::c_void, sync::mpsc::RecvError};
 use anyhow::Result;
 use junowen_lib::{
     structs::app::{MainMenu, ScreenId},
-    structs::{others::RenderingText, selection::Selection, settings::GameSettings},
-    Fn011560, Fn0b7d40, Fn0d5ae0, Fn10f720, Th19,
+    structs::{others::RenderingText, settings::GameSettings},
+    Th19,
 };
 use tracing::trace;
 
@@ -21,8 +20,6 @@ use crate::{
 use super::{
     battle_session_state::BattleSessionState, spectator_session_state::SpectatorSessionState,
 };
-
-use self::on_rewrite_controller_assignments::on_rewrite_controller_assignments;
 
 pub enum JunowenState {
     Standby,
@@ -174,32 +171,27 @@ impl JunowenState {
         Ok(())
     }
 
-    pub fn render_object(
+    pub fn on_before_render_object(
         &self,
         title_menu_modifier: &TitleMenuModifier,
-        old: Fn0b7d40,
-        obj_renderer: *const c_void,
         obj: *const c_void,
-    ) {
-        if !self.has_session() {
-            standby::render_object(title_menu_modifier, old, obj_renderer, obj);
-            return;
+    ) -> bool {
+        if !self.has_session() && !standby::on_before_render_object(title_menu_modifier, obj) {
+            return false;
         }
-        old(obj_renderer, obj);
+        true
     }
 
-    pub fn render_text(
+    pub fn on_before_render_text(
         &self,
         th19: &Th19,
         title_menu_modifier: &TitleMenuModifier,
-        old: Fn0d5ae0,
         text_renderer: *const c_void,
         text: &mut RenderingText,
-    ) -> u32 {
+    ) {
         if !self.has_session() {
-            return standby::render_text(th19, title_menu_modifier, old, text_renderer, text);
+            standby::on_before_render_text(th19, title_menu_modifier, text_renderer, text);
         }
-        old(text_renderer, text)
     }
 
     pub fn on_render_texts(
@@ -231,27 +223,14 @@ impl JunowenState {
         }
     }
 
-    pub fn is_online_vs(&self, this: *const Selection, old: Fn011560) -> u8 {
-        let ret = old(this);
+    pub fn on_before_is_online_vs(&self) -> Option<u8> {
         if !self.has_session() {
-            return ret;
+            return None;
         }
-        1
+        Some(1)
     }
 
-    pub fn on_rewrite_controller_assignments(
-        &self,
-        th19: &mut Th19,
-        old_fn: fn(&mut Th19) -> Fn10f720,
-    ) {
-        if !self.has_session() {
-            old_fn(th19)();
-            return;
-        }
-        on_rewrite_controller_assignments(th19, old_fn);
-    }
-
-    pub fn on_loaded_game_settings(&self, th19: &mut Th19) {
+    pub fn on_before_loaded_game_settings(&self, th19: &mut Th19) {
         if let Some(game_settings) = self.game_settings() {
             th19.put_game_settings_in_game(game_settings).unwrap();
         }

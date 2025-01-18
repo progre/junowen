@@ -83,12 +83,16 @@ extern "fastcall" fn on_input_menu() {
 }
 
 extern "thiscall" fn render_object(this: *const c_void, obj: *const c_void) {
-    state().render_object(props().old_fn_from_0bed70_00fc, this, obj);
+    if !state().on_before_render_object(obj) {
+        return;
+    }
+    (props().old_fn_from_0bed70_00fc)(this, obj);
 }
 
 extern "thiscall" fn render_text(text_renderer: *const c_void, text: *mut RenderingText) -> u32 {
     let text = unsafe { text.as_mut().unwrap() };
-    state().render_text(props().old_fn_from_0d6e10_0039, text_renderer, text)
+    state().on_before_render_text(text_renderer, text);
+    (props().old_fn_from_0d6e10_0039)(text_renderer, text)
 }
 
 extern "thiscall" fn on_render_texts(text_renderer: *const c_void, arg: *const c_void) -> u32 {
@@ -105,22 +109,28 @@ extern "fastcall" fn on_round_over() {
 
 /// for pause menu online vs view
 extern "thiscall" fn fn_from_1243f0_00f9(this: *const Selection) -> u8 {
-    state().is_online_vs(this, props().old_fn_from_1243f0_00f9)
+    if let Some(result) = state().on_before_is_online_vs() {
+        return result;
+    }
+    (props().old_fn_from_1243f0_00f9)(this)
 }
 
 /// for pause menu online vs view
 extern "thiscall" fn fn_from_1243f0_0320(this: *const Selection) -> u8 {
-    state().is_online_vs(this, props().old_fn_from_1243f0_0320)
+    if let Some(result) = state().on_before_is_online_vs() {
+        return result;
+    }
+    (props().old_fn_from_1243f0_0320)(this)
 }
 
 extern "fastcall" fn on_rewrite_controller_assignments() {
-    // NOTE: old_fn() modifies th19 outside of Rust.
-    //       This reference makes Rust aware of the change.
-    state_mut().on_rewrite_controller_assignments(|_: &mut Th19| props().old_fn_from_13f9d0_0345);
+    state_mut().on_before_rewrite_controller_assignments();
+    (props().old_fn_from_13f9d0_0345)();
+    state_mut().on_rewrite_controller_assignments();
 }
 
 extern "thiscall" fn on_loaded_game_settings(this: *const c_void, arg1: u32) -> u32 {
-    state_mut().on_loaded_game_settings();
+    state_mut().on_before_loaded_game_settings();
 
     (props().old_fn_from_13f9d0_0446)(this, arg1)
 }

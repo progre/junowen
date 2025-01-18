@@ -3,7 +3,7 @@ use std::ffi::c_void;
 use junowen_lib::{
     structs::app::{MainMenu, ScreenId},
     structs::others::RenderingText,
-    Fn0b7d40, Fn0d5ae0, Th19,
+    Th19,
 };
 
 use crate::in_game_lobby::{Lobby, TitleMenuModifier};
@@ -32,17 +32,16 @@ pub fn update_th19_on_input_menu(
     }
 }
 
-pub fn render_text(
+pub fn on_before_render_text(
     th19: &Th19,
     title_menu_modifier: &TitleMenuModifier,
-    old: Fn0d5ae0,
     text_renderer: *const c_void,
     text: &mut RenderingText,
-) -> u32 {
+) {
     let Some(main_menu) = th19.app().main_loop_tasks().find_main_menu() else {
-        return old(text_renderer, text);
+        return;
     };
-    title_menu_modifier.render_text(main_menu, th19, old, text_renderer, text)
+    title_menu_modifier.on_before_render_text(main_menu, th19, text_renderer, text);
 }
 
 fn render_message(text_renderer: *const c_void, th19: &Th19, msg: &str, color: u32) {
@@ -96,17 +95,16 @@ pub fn on_render_texts(
     }
 }
 
-pub fn render_object(
+pub fn on_before_render_object(
     title_menu_modifier: &TitleMenuModifier,
-    old: Fn0b7d40,
-    obj_renderer: *const c_void,
     obj: *const c_void,
-) {
-    if title_menu_modifier.selected_junowen() {
-        let id = unsafe { *(obj.add(0x28) as *const u32) };
-        if (0xb4..=0xc0).contains(&id) {
-            return;
-        }
+) -> bool {
+    if !title_menu_modifier.selected_junowen() {
+        return true;
     }
-    old(obj_renderer, obj);
+    let id = unsafe { *(obj.add(0x28) as *const u32) };
+    if !(0xb4..=0xc0).contains(&id) {
+        return true;
+    }
+    false
 }
