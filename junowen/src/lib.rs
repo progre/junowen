@@ -7,7 +7,7 @@ mod state;
 mod th19_event_dispatcher;
 mod tracing_helper;
 
-use std::{ffi::c_void, ptr::null, slice, sync::LazyLock};
+use std::{cell::OnceCell, ffi::c_void, ptr::null, slice, sync::LazyLock};
 
 use junowen_lib::{
     hook_utils::{calc_th19_hash, show_warn_dialog, WELL_KNOWN_VERSION_HASHES},
@@ -25,7 +25,7 @@ use crate::{
         move_old_log_to_new_path, to_dll_path, to_ini_file_path_log_dir_path_log_file_name,
         SettingsRepo,
     },
-    state::State,
+    state::Junowen,
 };
 
 static TOKIO_RUNTIME: LazyLock<tokio::runtime::Runtime> = LazyLock::new(|| {
@@ -36,16 +36,8 @@ static TOKIO_RUNTIME: LazyLock<tokio::runtime::Runtime> = LazyLock::new(|| {
 });
 
 static mut MODULE: HMODULE = HMODULE(null::<c_void>() as *mut _);
-static mut STATE: Option<State> = None;
-
-fn state() -> &'static State {
-    let state = &raw const STATE;
-    unsafe { state.as_ref() }.unwrap().as_ref().unwrap()
-}
-fn state_mut() -> &'static mut State {
-    let state = &raw mut STATE;
-    unsafe { state.as_mut() }.unwrap().as_mut().unwrap()
-}
+static mut TH19: OnceCell<Th19> = OnceCell::new();
+static mut JUNOWEN: OnceCell<Junowen> = OnceCell::new();
 
 fn check_version(hash: &[u8]) -> bool {
     WELL_KNOWN_VERSION_HASHES
@@ -67,13 +59,19 @@ async fn init(dll_stem: &str, old_log_dir_path: Option<&str>) {
         move_old_log_to_new_path(&old_log_path, &module_dir, &log_file_name).await;
     }
 
+    let th19_ptr = &raw mut TH19;
     let th19 = Th19::new_hooked_process("th19.exe").unwrap();
+    let th19_cell = unsafe { th19_ptr.as_ref() }.unwrap();
+    th19_cell.set(th19).map_err(|_| {}).unwrap();
 
-    unsafe {
-        STATE = Some(State::new(SettingsRepo::new(ini_file_path), th19).await);
-    }
+    let th19 = unsafe { th19_ptr.as_mut() }.unwrap().get_mut().unwrap();
+    let junowen = Junowen::new(SettingsRepo::new(ini_file_path), th19).await;
+    let junowen_cell = unsafe { (&raw mut JUNOWEN).as_mut() }.unwrap();
+    junowen_cell.set(junowen).map_err(|_| {}).unwrap();
 
-    Th19EventDispatcher::init(state_mut().th19_mut());
+    let th19 = unsafe { th19_ptr.as_mut() }.unwrap().get_mut().unwrap();
+    let junowen = junowen_cell.get_mut().unwrap();
+    Th19EventDispatcher::init(th19, junowen);
 }
 
 fn launch_init(dll_stem: &str, old_log_dir_path: Option<&str>) {
