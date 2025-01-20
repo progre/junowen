@@ -15,4 +15,6 @@ mod th19;
 #[cfg(target_os = "windows")]
 mod win_api_wrappers;
 #[cfg(target_os = "windows")]
+pub use crate::th19::th19_event_dispatcher::{Th19EventDispatcher, Th19EventListener};
+#[cfg(target_os = "windows")]
 pub use crate::th19::*;

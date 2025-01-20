@@ -4,16 +4,14 @@ mod in_game_lobby;
 mod session;
 mod signaling;
 mod state;
-mod th19_event_dispatcher;
 mod tracing_helper;
 
 use std::{cell::OnceCell, ffi::c_void, ptr::null, slice, sync::LazyLock};
 
 use junowen_lib::{
     hook_utils::{calc_th19_hash, show_warn_dialog, WELL_KNOWN_VERSION_HASHES},
-    Th19,
+    Th19, Th19EventDispatcher,
 };
-use th19_event_dispatcher::Th19EventDispatcher;
 use windows::Win32::{
     Foundation::{HINSTANCE, HMODULE},
     Graphics::Direct3D9::IDirect3D9,

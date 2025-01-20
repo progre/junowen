@@ -1,4 +1,5 @@
 pub mod structs;
+pub mod th19_event_dispatcher;
 pub mod th19_helpers;
 
 use std::{arch::asm, ffi::c_void, mem::transmute};

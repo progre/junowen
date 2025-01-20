@@ -6,14 +6,13 @@ mod spectator_session_state;
 
 use std::{ffi::c_void, fmt::Display};
 
-use junowen_lib::{structs::others::RenderingText, Th19};
+use junowen_lib::{structs::others::RenderingText, Th19, Th19EventListener};
 use tracing::{debug, trace};
 
 use self::junowen_state::JunowenState;
 use crate::{
     file::{Features, SettingsRepo},
     in_game_lobby::{Lobby, TitleMenuModifier},
-    th19_event_dispatcher::Th19EventListener,
 };
 
 pub struct Junowen {

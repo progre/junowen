@@ -1,6 +1,6 @@
 use std::{cell::OnceCell, ffi::c_void};
 
-use junowen_lib::{
+use crate::{
     structs::{others::RenderingText, selection::Selection},
     Fn009fa0, Fn011560, Fn0b7d40, Fn0d5ae0, Fn0d6e10, Fn1049e0, Fn10f720, FnOfHookAssembly, Th19,
 };
