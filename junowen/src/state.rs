@@ -39,7 +39,6 @@ impl Junowen {
     fn abort_session(&mut self, err: impl Display) {
         debug!("session aborted: {}", err);
         self.junowen_state.abort_session(self.th19);
-        self.lobby.reset_depth();
     }
 }
 
@@ -51,7 +50,7 @@ impl Th19EventListener for Junowen {
             .on_input_players(self.th19, self.lobby.waiting_for_match_mut())
         {
             Ok(_) => {
-                if has_session && self.junowen_state.has_session() {
+                if !has_session && self.junowen_state.has_session() {
                     self.lobby.reset_depth();
                 }
             }
