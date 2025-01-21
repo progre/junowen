@@ -5,9 +5,12 @@ use junowen_lib::{
     structs::others::RenderingText,
     Th19,
 };
+use tracing::trace;
 
 use crate::in_game_lobby::{Lobby, TitleMenuModifier};
 use crate::signaling::waiting_for_match::{WaitingForMatch, WaitingForOpponent, WaitingInRoom};
+
+use super::session::Session;
 
 fn is_title(main_menu: &MainMenu) -> bool {
     main_menu.screen_id() == ScreenId::Title
@@ -15,6 +18,42 @@ fn is_title(main_menu: &MainMenu) -> bool {
 
 fn is_lobby(main_menu: &MainMenu, title_menu_modifier: &TitleMenuModifier) -> bool {
     main_menu.screen_id() == ScreenId::PlayerMatchupSelect && title_menu_modifier.selected_junowen()
+}
+
+pub fn update_state(
+    th19: &Th19,
+    waiting_for_match: &mut Option<WaitingForMatch>,
+) -> Option<Session> {
+    let old_waiting = waiting_for_match.take()?;
+    if let Some(main_menu) = th19.app().main_loop_tasks().find_main_menu() {
+        if main_menu.screen_id() == ScreenId::OnlineVSMode {
+            return None;
+        }
+    }
+    match old_waiting {
+        WaitingForMatch::Opponent(waiting) => {
+            match waiting.try_into_session_and_waiting_for_spectator() {
+                Ok((session, waiting)) => {
+                    trace!("session received");
+                    Some(Session::battle_session(session, waiting))
+                }
+                Err(waiting) => {
+                    *waiting_for_match = Some(WaitingForMatch::Opponent(waiting));
+                    None
+                }
+            }
+        }
+        WaitingForMatch::SpectatorHost(waiting) => match waiting.try_into_session() {
+            Ok(session) => {
+                trace!("session received");
+                Some(Session::spectator_session(session))
+            }
+            Err(waiting) => {
+                *waiting_for_match = Some(WaitingForMatch::SpectatorHost(waiting));
+                None
+            }
+        },
+    }
 }
 
 pub fn update_th19_on_input_menu(

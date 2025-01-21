@@ -1,51 +1,31 @@
+mod session;
 mod standby;
 
 use std::{ffi::c_void, sync::mpsc::RecvError};
 
 use anyhow::Result;
-use junowen_lib::{
-    structs::app::{MainMenu, ScreenId},
-    structs::{others::RenderingText, settings::GameSettings},
-    Th19,
-};
+use junowen_lib::{structs::app::MainMenu, structs::others::RenderingText, Th19};
+use session::Session;
 use tracing::trace;
 
 use crate::{
     file::Features,
     in_game_lobby::{Lobby, TitleMenuModifier},
-    session::{battle::BattleSession, spectator::SpectatorSession},
-    signaling::waiting_for_match::{WaitingForMatch, WaitingForSpectator},
-};
-
-use super::{
-    battle_session_state::BattleSessionState, spectator_session_state::SpectatorSessionState,
+    signaling::waiting_for_match::WaitingForMatch,
 };
 
 pub enum JunowenState {
     Standby,
-    BattleSession(BattleSessionState),
-    SpectatorSession(SpectatorSessionState),
+    Session(Session),
 }
 
 impl JunowenState {
-    pub fn game_settings(&self) -> Option<&GameSettings> {
-        match self {
-            Self::Standby => None,
-            Self::BattleSession(session_state) => session_state.game_settings(),
-            Self::SpectatorSession(session_state) => session_state.game_settings(),
-        }
-    }
-
     pub fn has_session(&self) -> bool {
         !matches!(self, Self::Standby)
     }
 
-    fn start_battle_session(
-        &mut self,
-        battle_session: BattleSession,
-        waiting: WaitingForSpectator,
-    ) {
-        *self = Self::BattleSession(BattleSessionState::prepare(battle_session, waiting));
+    fn start_session(&mut self, session: Session) {
+        *self = Self::Session(session);
     }
 
     fn end_session(&mut self) {
@@ -57,10 +37,6 @@ impl JunowenState {
         th19.set_no_wait(false);
     }
 
-    pub fn start_spectator_session(&mut self, session: SpectatorSession) {
-        *self = Self::SpectatorSession(SpectatorSessionState::prepare(session));
-    }
-
     fn update_state(
         &mut self,
         th19: &Th19,
@@ -68,50 +44,15 @@ impl JunowenState {
     ) -> (bool, Option<&'static MainMenu>) {
         match self {
             Self::Standby => {
-                let Some(old_waiting) = waiting_for_match.take() else {
-                    return (false, None);
-                };
-                if let Some(main_menu) = th19.app().main_loop_tasks().find_main_menu() {
-                    if main_menu.screen_id() == ScreenId::OnlineVSMode {
-                        return (false, None);
-                    }
-                }
-                match old_waiting {
-                    WaitingForMatch::Opponent(waiting) => {
-                        match waiting.try_into_session_and_waiting_for_spectator() {
-                            Ok((session, waiting)) => {
-                                trace!("session received");
-                                self.start_battle_session(session, waiting);
-                                (true, None)
-                            }
-                            Err(waiting) => {
-                                *waiting_for_match = Some(WaitingForMatch::Opponent(waiting));
-                                (false, None)
-                            }
-                        }
-                    }
-                    WaitingForMatch::SpectatorHost(waiting) => match waiting.try_into_session() {
-                        Ok(session) => {
-                            trace!("session received");
-                            self.start_spectator_session(session);
-                            (true, None)
-                        }
-                        Err(waiting) => {
-                            *waiting_for_match = Some(WaitingForMatch::SpectatorHost(waiting));
-                            (false, None)
-                        }
-                    },
-                }
-            }
-            Self::BattleSession(session_state) => {
-                let Some(menu_opt) = session_state.update_state(th19) else {
-                    self.end_session();
+                if let Some(session) = standby::update_state(th19, waiting_for_match) {
+                    trace!("session received");
+                    self.start_session(session);
                     return (true, None);
-                };
-                (false, menu_opt)
+                }
+                (false, None)
             }
-            Self::SpectatorSession(session_state) => {
-                let Some(menu_opt) = session_state.update_state(th19) else {
+            Self::Session(session) => {
+                let Some(menu_opt) = session.update_state(th19) else {
                     self.end_session();
                     return (true, None);
                 };
@@ -133,12 +74,7 @@ impl JunowenState {
                 }
                 Ok(())
             }
-            Self::BattleSession(session_state) => {
-                session_state.update_th19_on_input_players(menu, th19)
-            }
-            Self::SpectatorSession(session_state) => {
-                session_state.update_th19_on_input_players(menu, th19)
-            }
+            Self::Session(session) => session.update_th19_on_input_players(menu, th19),
         }
     }
 
@@ -161,9 +97,8 @@ impl JunowenState {
             Self::Standby => {
                 standby::update_th19_on_input_menu(th19, title_menu_modifier, lobby);
             }
-            Self::BattleSession(session_state) => session_state.on_input_menu(th19)?,
-            Self::SpectatorSession(session_state) => {
-                if !session_state.on_input_menu(th19)? {
+            Self::Session(session) => {
+                if !session.on_input_menu(th19)? {
                     self.abort_session(th19);
                 }
             }
@@ -176,10 +111,10 @@ impl JunowenState {
         title_menu_modifier: &TitleMenuModifier,
         obj: *const c_void,
     ) -> bool {
-        if !self.has_session() && !standby::on_before_render_object(title_menu_modifier, obj) {
-            return false;
+        match self {
+            Self::Standby => standby::on_before_render_object(title_menu_modifier, obj),
+            Self::Session(_) => true,
         }
-        true
     }
 
     pub fn on_before_render_text(
@@ -189,8 +124,11 @@ impl JunowenState {
         text_renderer: *const c_void,
         text: &mut RenderingText,
     ) {
-        if !self.has_session() {
-            standby::on_before_render_text(th19, title_menu_modifier, text_renderer, text);
+        match self {
+            Self::Standby => {
+                standby::on_before_render_text(th19, title_menu_modifier, text_renderer, text);
+            }
+            Self::Session(_) => {}
         }
     }
 
@@ -206,11 +144,8 @@ impl JunowenState {
             Self::Standby => {
                 standby::on_render_texts(th19, title_menu_modifier, lobby, text_renderer);
             }
-            Self::BattleSession(session_state) => {
-                session_state.on_render_texts(features, th19, text_renderer)
-            }
-            Self::SpectatorSession(session_state) => {
-                session_state.on_render_texts(th19, text_renderer)
+            Self::Session(session) => {
+                session.on_render_texts(features, th19, text_renderer);
             }
         }
     }
@@ -218,21 +153,26 @@ impl JunowenState {
     pub fn on_round_over(&mut self, th19: &mut Th19) -> Result<(), RecvError> {
         match self {
             Self::Standby => Ok(()),
-            Self::BattleSession(session_state) => session_state.on_round_over(th19),
-            Self::SpectatorSession(session_state) => session_state.on_round_over(th19),
+            Self::Session(session) => session.on_round_over(th19),
         }
     }
 
     pub fn on_before_is_online_vs(&self) -> Option<u8> {
-        if !self.has_session() {
-            return None;
+        match self {
+            Self::Standby => None,
+            Self::Session(_) => Some(1),
         }
-        Some(1)
     }
 
     pub fn on_before_loaded_game_settings(&self, th19: &mut Th19) {
-        if let Some(game_settings) = self.game_settings() {
-            th19.put_game_settings_in_game(game_settings).unwrap();
+        match self {
+            Self::Standby => {}
+            Self::Session(session) => {
+                let Some(game_settings) = session.game_settings() else {
+                    return;
+                };
+                th19.put_game_settings_in_game(game_settings).unwrap();
+            }
         }
     }
 }
