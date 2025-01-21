@@ -1,17 +1,15 @@
 mod session;
 mod standby;
 
-use std::{ffi::c_void, sync::mpsc::RecvError};
+use std::ffi::c_void;
 
-use anyhow::Result;
 use junowen_lib::{structs::app::MainMenu, structs::others::RenderingText, Th19};
 use session::Session;
-use tracing::trace;
+use tracing::{debug, trace};
 
 use crate::{
     file::Features,
     in_game_lobby::{Lobby, TitleMenuModifier},
-    signaling::waiting_for_match::WaitingForMatch,
 };
 
 pub enum JunowenState {
@@ -20,10 +18,6 @@ pub enum JunowenState {
 }
 
 impl JunowenState {
-    pub fn has_session(&self) -> bool {
-        !matches!(self, Self::Standby)
-    }
-
     fn start_session(&mut self, session: Session) {
         *self = Self::Session(session);
     }
@@ -32,21 +26,22 @@ impl JunowenState {
         *self = Self::Standby;
     }
 
-    pub fn abort_session(&mut self, th19: &mut Th19) {
+    fn abort_session(&mut self, th19: &mut Th19) {
         self.end_session();
         th19.set_no_wait(false);
     }
 
-    fn update_state(
+    pub fn update_state(
         &mut self,
         th19: &Th19,
-        waiting_for_match: &mut Option<WaitingForMatch>,
+        lobby: &mut Lobby,
     ) -> (bool, Option<&'static MainMenu>) {
         match self {
             Self::Standby => {
-                if let Some(session) = standby::update_state(th19, waiting_for_match) {
+                if let Some(session) = standby::update_state(th19, lobby.waiting_for_match_mut()) {
                     trace!("session received");
                     self.start_session(session);
+                    lobby.clear_input();
                     return (true, None);
                 }
                 (false, None)
@@ -61,30 +56,25 @@ impl JunowenState {
         }
     }
 
-    fn update_th19_on_input_players(
+    pub fn update_th19_on_input_players(
         &mut self,
         changed: bool,
         menu: Option<&MainMenu>,
         th19: &mut Th19,
-    ) -> Result<(), RecvError> {
+    ) {
         match self {
             Self::Standby => {
                 if changed {
                     th19.set_no_wait(false);
                 }
-                Ok(())
             }
-            Self::Session(session) => session.update_th19_on_input_players(menu, th19),
+            Self::Session(session) => {
+                if let Err(err) = session.update_th19_on_input_players(menu, th19) {
+                    debug!("session aborted: {err}");
+                    self.abort_session(th19);
+                }
+            }
         }
-    }
-
-    pub fn on_input_players(
-        &mut self,
-        th19: &mut Th19,
-        waiting_for_match: &mut Option<WaitingForMatch>,
-    ) -> Result<(), RecvError> {
-        let (changed, menu_opt) = self.update_state(th19, waiting_for_match);
-        self.update_th19_on_input_players(changed, menu_opt, th19)
     }
 
     pub fn on_input_menu(
@@ -92,18 +82,22 @@ impl JunowenState {
         th19: &mut Th19,
         title_menu_modifier: &mut TitleMenuModifier,
         lobby: &mut Lobby,
-    ) -> Result<(), RecvError> {
+    ) {
         match self {
             Self::Standby => {
                 standby::update_th19_on_input_menu(th19, title_menu_modifier, lobby);
             }
-            Self::Session(session) => {
-                if !session.on_input_menu(th19)? {
+            Self::Session(session) => match session.on_input_menu(th19) {
+                Ok(true) => {}
+                Ok(false) => {
                     self.abort_session(th19);
                 }
-            }
+                Err(err) => {
+                    debug!("session aborted: {err}");
+                    self.abort_session(th19);
+                }
+            },
         }
-        Ok(())
     }
 
     pub fn on_before_render_object(
@@ -150,10 +144,15 @@ impl JunowenState {
         }
     }
 
-    pub fn on_round_over(&mut self, th19: &mut Th19) -> Result<(), RecvError> {
+    pub fn on_round_over(&mut self, th19: &mut Th19) {
         match self {
-            Self::Standby => Ok(()),
-            Self::Session(session) => session.on_round_over(th19),
+            Self::Standby => {}
+            Self::Session(session) => {
+                if let Err(err) = session.on_round_over(th19) {
+                    debug!("session aborted: {err}");
+                    self.abort_session(th19);
+                }
+            }
         }
     }
 
@@ -161,6 +160,22 @@ impl JunowenState {
         match self {
             Self::Standby => None,
             Self::Session(_) => Some(1),
+        }
+    }
+
+    pub fn on_rewrite_controller_assignments(&mut self, th19: &mut Th19, old_p1_idx: u32) {
+        match self {
+            Self::Standby => {}
+            Self::Session(_) => {
+                if old_p1_idx != 0 {
+                    return;
+                }
+                let input_devices = th19.input_devices_mut();
+                if input_devices.p1_idx() == 0 {
+                    return;
+                }
+                input_devices.set_p1_idx(0);
+            }
         }
     }
 

@@ -117,8 +117,7 @@ impl Lobby {
         }
     }
 
-    pub fn reset_depth(&mut self) {
-        // self.scene = LobbyScene::Root;
+    pub fn clear_input(&mut self) {
         self.prev_input = InputValue::full();
     }
 
