@@ -17,19 +17,13 @@ fn to_automatic_inputs(prepare_state: u8) -> AutomaticInputs {
 }
 
 #[derive(new, CopyGetters, Getters, MutGetters, Setters)]
-pub struct Prepare<T> {
-    #[getset(get = "pub", get_mut = "pub")]
-    session: T,
+pub struct Prepare {
     /// 0: back to title, 1: resolve controller, 2: forward to difficulty select
     #[new(value = "0")]
     state: u8,
 }
 
-impl<T> Prepare<T> {
-    pub fn inner_session(self) -> T {
-        self.session
-    }
-
+impl Prepare {
     pub fn update_th19_on_input_players(&self, th19: &mut Th19) {
         th19.set_no_wait(true);
         to_automatic_inputs(self.state).on_input_players(th19);

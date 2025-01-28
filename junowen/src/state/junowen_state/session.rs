@@ -5,25 +5,26 @@ use junowen_lib::{Th19, structs::app::MainMenu, structs::settings::GameSettings}
 
 use crate::{
     file::Features,
-    session::{battle::BattleSession, spectator::SpectatorSession},
-    signaling::waiting_for_match::WaitingForSpectator,
-    state::{
-        battle_session_state::BattleSessionState, spectator_session_state::SpectatorSessionState,
+    session::{
+        battle::BattleSession as BattleSessionProps,
+        spectator::SpectatorSession as SpectatorSessionProps,
     },
+    signaling::waiting_for_match::WaitingForSpectator,
+    state::{battle_session_state::BattleSession, spectator_session_state::SpectatorSession},
 };
 
 pub enum Session {
-    BattleSession(BattleSessionState),
-    SpectatorSession(SpectatorSessionState),
+    BattleSession(BattleSession),
+    SpectatorSession(SpectatorSession),
 }
 
 impl Session {
-    pub fn battle_session(battle_session: BattleSession, waiting: WaitingForSpectator) -> Self {
-        Self::BattleSession(BattleSessionState::prepare(battle_session, waiting))
+    pub fn battle_session(props: BattleSessionProps, waiting: WaitingForSpectator) -> Self {
+        Self::BattleSession(BattleSession::prepare(props, waiting))
     }
 
-    pub fn spectator_session(session: SpectatorSession) -> Self {
-        Self::SpectatorSession(SpectatorSessionState::prepare(session))
+    pub fn spectator_session(session: SpectatorSessionProps) -> Self {
+        Self::SpectatorSession(SpectatorSession::prepare(session))
     }
 
     pub fn game_settings(&self) -> Option<&GameSettings> {

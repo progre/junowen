@@ -4,7 +4,7 @@ mod in_session;
 mod spectator_host;
 mod utils;
 
-use std::{ffi::c_void, mem, sync::mpsc::RecvError};
+use std::{ffi::c_void, sync::mpsc::RecvError};
 
 use anyhow::Result;
 use junowen_lib::{
@@ -14,7 +14,7 @@ use junowen_lib::{
 };
 
 use crate::{
-    file::Features, session::battle::BattleSession,
+    file::Features, session::battle::BattleSession as BattleSessionProps,
     signaling::waiting_for_match::WaitingForSpectator,
 };
 
@@ -24,94 +24,49 @@ use super::prepare::Prepare;
 
 use {battle_game::BattleGame, battle_select::BattleSelect, spectator_host::SpectatorHostState};
 
-pub enum BattleSessionState {
-    Null,
-    Prepare(Prepare<(BattleSession, SpectatorHostState)>),
-    Select(BattleSelect),
-    GameLoading {
-        session: BattleSession,
-        spectator_host_state: SpectatorHostState,
-    },
-    Game(BattleGame),
-    BackToSelect {
-        session: BattleSession,
-        spectator_host_state: SpectatorHostState,
-    },
+pub struct BattleSession {
+    props: BattleSessionProps,
+    spectator_host_state: SpectatorHostState,
+    state: BattleSessionStateState,
 }
 
-impl BattleSessionState {
-    pub fn prepare(session: BattleSession, waiting: WaitingForSpectator) -> Self {
-        Self::Prepare(Prepare::new((session, SpectatorHostState::new(waiting))))
+enum BattleSessionStateState {
+    Prepare(Prepare),
+    Select(BattleSelect),
+    GameLoading,
+    Game(BattleGame),
+    BackToSelect,
+}
+
+impl BattleSession {
+    pub fn prepare(props: BattleSessionProps, waiting: WaitingForSpectator) -> Self {
+        Self {
+            props,
+            spectator_host_state: SpectatorHostState::new(waiting),
+            state: BattleSessionStateState::Prepare(Prepare::new()),
+        }
     }
 
     pub fn game_settings(&self) -> Option<&GameSettings> {
-        match self {
-            Self::Null => unreachable!(),
-            Self::GameLoading { session, .. } | Self::BackToSelect { session, .. } => {
-                session.match_initial().map(|x| &x.game_settings)
-            }
-            Self::Prepare(i) => {
-                let (session, _) = i.session();
-                session.match_initial().map(|x| &x.game_settings)
-            }
-            Self::Select(i) => i.session().match_initial().map(|x| &x.game_settings),
-            Self::Game(i) => i.session().match_initial().map(|x| &x.game_settings),
-        }
+        self.props.match_initial().map(|x| &x.game_settings)
     }
 
     pub fn change_to_select(&mut self) {
-        let old = mem::replace(self, Self::Null);
-        let (session, spectator_host_state) = match old {
-            Self::Null => unreachable!(),
-            Self::Prepare(prepare) => prepare.inner_session(),
-            Self::Select { .. } => unreachable!(),
-            Self::GameLoading { .. } => unreachable!(),
-            Self::Game { .. } => unreachable!(),
-            Self::BackToSelect {
-                session,
-                spectator_host_state,
-            } => (session, spectator_host_state),
-        };
-        *self = Self::Select(BattleSelect::new(session, spectator_host_state));
+        self.state = BattleSessionStateState::Select(BattleSelect::new());
     }
     pub fn change_to_game_loading(&mut self) {
-        let old = mem::replace(self, Self::Null);
-        let Self::Select(old) = old else {
-            unreachable!()
-        };
-        let (session, spectator_host_state) = old.inner_state();
-        *self = Self::GameLoading {
-            session,
-            spectator_host_state,
-        }
+        self.state = BattleSessionStateState::GameLoading;
     }
     pub fn change_to_game(&mut self) {
-        let old = mem::replace(self, Self::Null);
-        let Self::GameLoading {
-            session,
-            spectator_host_state,
-        } = old
-        else {
-            unreachable!()
-        };
-        *self = Self::Game(BattleGame::new(session, spectator_host_state));
+        self.state = BattleSessionStateState::Game(BattleGame);
     }
     pub fn change_to_back_to_select(&mut self) {
-        let old = mem::replace(self, Self::Null);
-        let Self::Game(game) = old else {
-            unreachable!()
-        };
-        let (session, spectator_host_state) = game.inner_state();
-        *self = Self::BackToSelect {
-            session,
-            spectator_host_state,
-        }
+        self.state = BattleSessionStateState::BackToSelect;
     }
 
     pub fn update_state(&mut self, th19: &Th19) -> Option<Option<&'static MainMenu>> {
-        match self {
-            Self::Null => unreachable!(),
-            Self::Prepare(prepare) => {
+        match &mut self.state {
+            BattleSessionStateState::Prepare(prepare) => {
                 let Some(main_menu) = th19.app().main_loop_tasks().find_main_menu() else {
                     return Some(None);
                 };
@@ -120,7 +75,7 @@ impl BattleSessionState {
                 }
                 Some(Some(main_menu))
             }
-            Self::Select { .. } => {
+            BattleSessionStateState::Select { .. } => {
                 let main_menu = th19.app().main_loop_tasks().find_main_menu().unwrap();
                 match main_menu.screen_id() {
                     ScreenId::GameLoading => {
@@ -131,7 +86,7 @@ impl BattleSessionState {
                     _ => Some(Some(main_menu)),
                 }
             }
-            Self::GameLoading { .. } => {
+            BattleSessionStateState::GameLoading { .. } => {
                 let Some(round_frame) = th19.round_frame() else {
                     return Some(None);
                 };
@@ -141,14 +96,14 @@ impl BattleSessionState {
                 self.change_to_game();
                 Some(None)
             }
-            Self::Game { .. } => {
+            BattleSessionStateState::Game { .. } => {
                 if th19.round_frame().is_some() {
                     return Some(None);
                 }
                 self.change_to_back_to_select();
                 Some(None)
             }
-            Self::BackToSelect { .. } => {
+            BattleSessionStateState::BackToSelect { .. } => {
                 let Some(main_menu) = th19.app().main_loop_tasks().find_main_menu() else {
                     return Some(None);
                 };
@@ -166,57 +121,47 @@ impl BattleSessionState {
         menu: Option<&MainMenu>,
         th19: &mut Th19,
     ) -> Result<(), RecvError> {
-        match self {
-            Self::Null => unreachable!(),
-            Self::Prepare(prepare) => prepare.update_th19_on_input_players(th19),
-            Self::Select(select) => select.update_th19_on_input_players(menu.unwrap(), th19)?,
-            Self::GameLoading { .. } => {}
-            Self::Game(game) => game.update_th19(th19)?,
-            Self::BackToSelect { .. } => {}
+        match &mut self.state {
+            BattleSessionStateState::Prepare(prepare) => prepare.update_th19_on_input_players(th19),
+            BattleSessionStateState::Select(select) => select.update_th19_on_input_players(
+                &mut self.props,
+                &mut self.spectator_host_state,
+                menu.unwrap(),
+                th19,
+            )?,
+            BattleSessionStateState::GameLoading { .. } => {}
+            BattleSessionStateState::Game(game) => {
+                game.update_th19(&mut self.props, &mut self.spectator_host_state, th19)?
+            }
+            BattleSessionStateState::BackToSelect { .. } => {}
         }
         Ok(())
     }
 
     pub fn on_input_menu(&mut self, th19: &mut Th19) -> Result<(), RecvError> {
-        match self {
-            Self::Null => unreachable!(),
-            Self::Prepare(prepare) => prepare.update_th19_on_input_menu(th19),
-            Self::Select(select) => select.update_th19_on_input_menu(th19)?,
-            Self::GameLoading { .. } => {}
-            Self::Game { .. } => {}
-            Self::BackToSelect { .. } => {}
+        match &mut self.state {
+            BattleSessionStateState::Prepare(prepare) => prepare.update_th19_on_input_menu(th19),
+            BattleSessionStateState::Select(select) => select.update_th19_on_input_menu(
+                &mut self.props,
+                &mut self.spectator_host_state,
+                th19,
+            )?,
+            BattleSessionStateState::GameLoading { .. } => {}
+            BattleSessionStateState::Game { .. } => {}
+            BattleSessionStateState::BackToSelect { .. } => {}
         }
         Ok(())
     }
 
     pub fn on_render_texts(&self, features: &[Features], th19: &Th19, text_renderer: &c_void) {
-        let (session, spectator_host_state) = {
-            match self {
-                Self::Null => unreachable!(),
-                Self::Prepare(inner) => {
-                    let (session, spectator_host_state) = inner.session();
-                    (session, Some(spectator_host_state))
-                }
-                Self::Select(inner) => (inner.session(), Some(inner.spectator_host_state())),
-                Self::GameLoading {
-                    session,
-                    spectator_host_state,
-                } => (session, Some(spectator_host_state)),
-                Self::Game(inner) => (inner.session(), Some(inner.spectator_host_state())),
-                Self::BackToSelect {
-                    session,
-                    spectator_host_state,
-                } => (session, Some(spectator_host_state)),
-            }
-        };
-        let (p1_name, p2_name) = if session.host() {
+        let (p1_name, p2_name) = if self.props.host() {
             (
                 th19.vs_mode().player_name(),
-                session.remote_player_name().as_str(),
+                self.props.remote_player_name().as_str(),
             )
         } else {
             (
-                session.remote_player_name().as_str(),
+                self.props.remote_player_name().as_str(),
                 th19.vs_mode().player_name(),
             )
         };
@@ -225,26 +170,26 @@ impl BattleSessionState {
             if !features.contains(&Features::ShowSettings) {
                 break 'ret None;
             }
-            let Self::Select(select) = self else {
+            if !matches!(self.state, BattleSessionStateState::Select { .. }) {
                 break 'ret None;
-            };
-            select.session().match_initial().map(|x| &x.game_settings)
+            }
+            self.props.match_initial().map(|x| &x.game_settings)
         };
         let status = RenderingStatus {
-            host: session.host(),
-            delay: session.delay(),
+            host: self.props.host(),
+            delay: self.props.delay(),
             p1_name,
             p2_name,
             game_settings,
-            spectator_host_state,
+            spectator_host_state: &self.spectator_host_state,
         };
         in_session::on_render_texts(th19, text_renderer, status);
     }
 
     pub fn on_round_over(&mut self, th19: &mut Th19) -> Result<(), RecvError> {
-        let Self::Game(game) = self else {
+        let BattleSessionStateState::Game(game) = &mut self.state else {
             return Ok(());
         };
-        game.on_round_over(th19)
+        game.on_round_over(&mut self.props, &mut self.spectator_host_state, th19)
     }
 }
