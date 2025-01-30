@@ -33,13 +33,12 @@ fn load_library(dll_name: &str) -> HMODULE {
     dll_instance
 }
 
-fn hook(direct_3d: *const IDirect3D9) {
+fn hook(mut direct_3d: IDirect3D9) -> IDirect3D9 {
     let hash = calc_th19_hash();
-    println!("{:x?}", hash);
 
     let directory = current_dir().unwrap().join("modules");
     if !directory.is_dir() {
-        return;
+        return direct_3d;
     }
     directory
         .read_dir()
@@ -82,13 +81,14 @@ fn hook(direct_3d: *const IDirect3D9) {
                 unsafe { FreeLibrary(module) }.unwrap();
                 return;
             };
-            let initialize: extern "C" fn(direct_3d: *const IDirect3D9) -> bool =
+            let initialize: extern "C" fn(direct_3d: *mut IDirect3D9) -> bool =
                 unsafe { transmute(initialize_addr) };
-            if !initialize(direct_3d) {
+            if !initialize(&mut direct_3d) {
                 show_warn_dialog(&format!("Failed to initialize {}", path));
                 unsafe { FreeLibrary(module) }.unwrap();
-            }
+            };
         });
+    direct_3d
 }
 
 #[unsafe(no_mangle)]
@@ -118,10 +118,9 @@ pub extern "stdcall" fn DllMain(_inst_dll: HINSTANCE, reason: u32, _reserved: u3
 }
 
 #[unsafe(no_mangle)]
-extern "stdcall" fn Direct3DCreate9(sdkversion: u32) -> *const IDirect3D9 {
-    type Func = extern "stdcall" fn(sdkversion: u32) -> *const IDirect3D9;
+extern "stdcall" fn Direct3DCreate9(sdkversion: u32) -> Option<IDirect3D9> {
+    type Func = extern "stdcall" fn(sdkversion: u32) -> Option<IDirect3D9>;
     let func: Func = unsafe { transmute(ORIGINAL_DIRECT_3D_CREATE_9) };
-    let direct_3d = func(sdkversion);
-    hook(direct_3d);
-    direct_3d
+    let direct_3d = func(sdkversion)?;
+    Some(hook(direct_3d))
 }

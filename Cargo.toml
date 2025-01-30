@@ -36,16 +36,18 @@ tokio = { version = "1.43.0", features = [
   "rt",
   "macros",
   "rt-multi-thread",
-  "time"
+  "time",
 ] }
 toml = "0.8.19"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = [
   "env-filter",
-  "local-time"
+  "local-time",
 ] }
 windows = { version = "0.59.0", features = [
+  "Foundation_Numerics",
   "Win32_Foundation",
+  "Win32_Graphics_Direct3D",
   "Win32_Graphics_Direct3D9",
   "Win32_Graphics_Gdi",
   "Win32_Security",
@@ -63,3 +65,4 @@ windows = { version = "0.59.0", features = [
   "Win32_UI_Shell",
   "Win32_UI_WindowsAndMessaging",
 ] }
+windows-core = "0.59.0"
