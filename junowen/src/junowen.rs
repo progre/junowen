@@ -1,10 +1,15 @@
 use std::ffi::c_void;
 
-use junowen_lib::{Th19, Th19EventListener, structs::others::RenderingText};
+use junowen_lib::{
+    Th19, Th19EventListener,
+    structs::{app::ScreenId, others::RenderingText},
+};
+use windows::Win32::Graphics::Direct3D9::IDirect3DDevice9;
 
 use crate::{
+    custom_direct_3d::Direct3DDeviceEventListener,
     file::{Features, SettingsRepo},
-    lobby::{Lobby, TitleMenuModifier},
+    lobby::{self, Lobby, TitleMenuModifier},
     state::State,
 };
 
@@ -81,5 +86,21 @@ impl Th19EventListener for Junowen {
 
     fn on_before_loaded_game_settings(&mut self) {
         self.state.on_before_loaded_game_settings(self.th19);
+    }
+}
+
+impl Direct3DDeviceEventListener for &Junowen {
+    fn on_before_present(&self, device: &IDirect3DDevice9) {
+        if !self.title_menu_modifier.selected_junowen() {
+            return;
+        }
+        let Some(main_menu) = self.th19.app().main_loop_tasks().find_main_menu() else {
+            return;
+        };
+        if main_menu.screen_id() != ScreenId::PlayerMatchupSelect {
+            return;
+        }
+
+        lobby::overlay(device, &self.lobby, self.th19.window_inner());
     }
 }

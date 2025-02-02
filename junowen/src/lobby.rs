@@ -1,5 +1,6 @@
 mod common_menu;
 mod helper;
+mod overlay;
 mod pure_p2p_guest;
 mod pure_p2p_offerer;
 mod room;
@@ -29,6 +30,7 @@ use self::{
     room::{reserved::ReservedRoom, shared::SharedRoom},
 };
 
+pub use overlay::overlay;
 pub use title_menu_modifier::TitleMenuModifier;
 
 pub struct Root {
@@ -90,6 +92,25 @@ impl Root {
 
     pub fn on_render_texts(&self, th19: &Th19, text_renderer: &c_void) {
         self.common_menu.on_render_texts(th19, text_renderer);
+    }
+
+    fn text(&self) -> String {
+        match self.common_menu.menu().cursor() {
+            0 => concat!(
+                "ルーム名が一致したユーザーと対戦します。\n",
+                "接続を待っている間も CPU 戦など他の機能を使用できます。\n",
+                "通常はこちらを使用してください。"
+            )
+            .into(),
+            1 => "ルーム名が一致したユーザーと対戦します。\n観戦機能が使用できます。".into(),
+            2 => if self.common_menu.menu().decided() {
+                ""
+            } else {
+                "接続サーバーを使わず、\n外部のチャットなどを介して対戦相手と接続します。"
+            }
+            .into(),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -278,6 +299,17 @@ impl Lobby {
                 .as_ref()
                 .unwrap()
                 .on_render_texts(th19, text_renderer),
+        }
+    }
+
+    pub fn text(&self) -> String {
+        match self.scene {
+            LobbyScene::Root => self.root.text(),
+            LobbyScene::SharedRoom => self.shared_room.text(self.waiting_for_match.is_some()),
+            LobbyScene::ReservedRoom => String::new(),
+            LobbyScene::PureP2pHost => String::new(),
+            LobbyScene::PureP2pGuest => String::new(),
+            LobbyScene::PureP2pSpectator => String::new(),
         }
     }
 }

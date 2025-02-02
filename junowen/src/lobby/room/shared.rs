@@ -126,4 +126,13 @@ impl SharedRoom {
             text_renderer,
         );
     }
+
+    pub fn text(&self, waiting: bool) -> String {
+        if waiting {
+            "　　　決定ボタン: 対戦を中止する\nキャンセルボタン: 対戦待ちのままタイトルに戻る"
+                .into()
+        } else {
+            String::new()
+        }
+    }
 }

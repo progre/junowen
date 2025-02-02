@@ -1,39 +1,52 @@
 use windows::{
-    core::{implement, OutRef, Ref},
     Foundation::Numerics::Matrix4x4,
     Win32::{
         Foundation::{BOOL, HANDLE, HWND, POINT, RECT},
         Graphics::{
             Direct3D9::{
-                IDirect3D9, IDirect3DBaseTexture9, IDirect3DCubeTexture9, IDirect3DDevice9,
-                IDirect3DDevice9_Impl, IDirect3DIndexBuffer9, IDirect3DPixelShader9,
-                IDirect3DQuery9, IDirect3DStateBlock9, IDirect3DSurface9, IDirect3DSwapChain9,
-                IDirect3DTexture9, IDirect3DVertexBuffer9, IDirect3DVertexDeclaration9,
-                IDirect3DVertexShader9, IDirect3DVolumeTexture9, D3DBACKBUFFER_TYPE, D3DCAPS9,
-                D3DCLIPSTATUS9, D3DDEVICE_CREATION_PARAMETERS, D3DDISPLAYMODE, D3DFORMAT,
-                D3DGAMMARAMP, D3DLIGHT9, D3DMATERIAL9, D3DMULTISAMPLE_TYPE, D3DPOOL,
-                D3DPRESENT_PARAMETERS, D3DPRIMITIVETYPE, D3DQUERYTYPE, D3DRASTER_STATUS, D3DRECT,
-                D3DRECTPATCH_INFO, D3DRENDERSTATETYPE, D3DSAMPLERSTATETYPE, D3DSTATEBLOCKTYPE,
-                D3DTEXTUREFILTERTYPE, D3DTEXTURESTAGESTATETYPE, D3DTRANSFORMSTATETYPE,
-                D3DTRIPATCH_INFO, D3DVERTEXELEMENT9, D3DVIEWPORT9,
+                D3DBACKBUFFER_TYPE, D3DCAPS9, D3DCLIPSTATUS9, D3DDEVICE_CREATION_PARAMETERS,
+                D3DDISPLAYMODE, D3DFORMAT, D3DGAMMARAMP, D3DLIGHT9, D3DMATERIAL9,
+                D3DMULTISAMPLE_TYPE, D3DPOOL, D3DPRESENT_PARAMETERS, D3DPRIMITIVETYPE,
+                D3DQUERYTYPE, D3DRASTER_STATUS, D3DRECT, D3DRECTPATCH_INFO, D3DRENDERSTATETYPE,
+                D3DSAMPLERSTATETYPE, D3DSTATEBLOCKTYPE, D3DTEXTUREFILTERTYPE,
+                D3DTEXTURESTAGESTATETYPE, D3DTRANSFORMSTATETYPE, D3DTRIPATCH_INFO,
+                D3DVERTEXELEMENT9, D3DVIEWPORT9, IDirect3D9, IDirect3DBaseTexture9,
+                IDirect3DCubeTexture9, IDirect3DDevice9, IDirect3DDevice9_Impl,
+                IDirect3DIndexBuffer9, IDirect3DPixelShader9, IDirect3DQuery9,
+                IDirect3DStateBlock9, IDirect3DSurface9, IDirect3DSwapChain9, IDirect3DTexture9,
+                IDirect3DVertexBuffer9, IDirect3DVertexDeclaration9, IDirect3DVertexShader9,
+                IDirect3DVolumeTexture9,
             },
             Gdi::{PALETTEENTRY, RGNDATA},
         },
     },
+    core::{OutRef, Ref, implement},
 };
 
+use super::direct_3d_device_event_listener::Direct3DDeviceEventListener;
+
 #[implement(IDirect3DDevice9)]
-pub struct CustomDirect3DDevice9 {
+pub struct CustomDirect3DDevice9<T>
+where
+    T: 'static + Direct3DDeviceEventListener,
+{
     instance: IDirect3DDevice9,
+    delegate: T,
 }
 
-impl CustomDirect3DDevice9 {
-    pub fn new(instance: IDirect3DDevice9) -> Self {
-        Self { instance }
+impl<T> CustomDirect3DDevice9<T>
+where
+    T: Direct3DDeviceEventListener,
+{
+    pub fn new(instance: IDirect3DDevice9, delegate: T) -> Self {
+        Self { instance, delegate }
     }
 }
 
-impl IDirect3DDevice9_Impl for CustomDirect3DDevice9_Impl {
+impl<T> IDirect3DDevice9_Impl for CustomDirect3DDevice9_Impl<T>
+where
+    T: Direct3DDeviceEventListener,
+{
     fn TestCooperativeLevel(&self) -> windows::core::Result<()> {
         unsafe { self.instance.TestCooperativeLevel() }
     }
@@ -125,6 +138,7 @@ impl IDirect3DDevice9_Impl for CustomDirect3DDevice9_Impl {
         hdestwindowoverride: HWND,
         pdirtyregion: *const RGNDATA,
     ) -> windows::core::Result<()> {
+        self.delegate.on_before_present(&self.instance);
         unsafe {
             self.instance
                 .Present(psourcerect, pdestrect, hdestwindowoverride, pdirtyregion)

@@ -15,9 +15,9 @@ use junowen_lib::{
     Th19, Th19EventDispatcher,
     hook_utils::{WELL_KNOWN_VERSION_HASHES, calc_th19_hash, show_warn_dialog},
 };
+use windows::Win32::Graphics::Direct3D9::IDirect3D9;
 use windows::Win32::{
     Foundation::{HINSTANCE, HMODULE},
-    Graphics::Direct3D9::IDirect3D9,
     System::{Console::AllocConsole, SystemServices::DLL_PROCESS_ATTACH},
 };
 
@@ -44,7 +44,7 @@ fn check_version(hash: &[u8]) -> bool {
         .any(|&valid_hash| valid_hash == hash)
 }
 
-async fn init(dll_path: &Path, direct_3d: IDirect3D9) -> IDirect3D9 {
+async fn init(dll_path: &Path, direct_3d: Option<IDirect3D9>) -> Option<IDirect3D9> {
     if cfg!(debug_assertions) {
         let _ = unsafe { AllocConsole() };
         unsafe { std::env::set_var("RUST_BACKTRACE", "1") };
@@ -66,13 +66,17 @@ async fn init(dll_path: &Path, direct_3d: IDirect3D9) -> IDirect3D9 {
     junowen_cell.set(junowen).map_err(|_| {}).unwrap();
 
     let th19 = unsafe { th19_ptr.as_mut() }.unwrap().get_mut().unwrap();
+    let junowen_cell = unsafe { (&raw mut JUNOWEN).as_mut() }.unwrap();
     let junowen = junowen_cell.get_mut().unwrap();
     Th19EventDispatcher::init(th19, junowen);
 
-    IDirect3D9::from(CustomDirect3D9::new(direct_3d))
+    let direct_3d = direct_3d?;
+    let junowen_cell = unsafe { (&raw mut JUNOWEN).as_mut() }.unwrap();
+    let junowen = junowen_cell.get().unwrap();
+    Some(IDirect3D9::from(CustomDirect3D9::new(direct_3d, junowen)))
 }
 
-fn launch_init(dll_path: &Path, direct_3d: IDirect3D9) -> IDirect3D9 {
+fn launch_init(dll_path: &Path, direct_3d: Option<IDirect3D9>) -> Option<IDirect3D9> {
     TOKIO_RUNTIME.block_on(init(dll_path, direct_3d))
 }
 
@@ -83,7 +87,9 @@ fn self_init() -> bool {
         show_warn_dialog(&format!("Hash mismatch: {}", dll_path.to_string_lossy()));
         return false;
     }
-    todo!("std::thread::spawn(move || launch_init(&dll_path))");
+    std::thread::spawn(move || {
+        launch_init(&dll_path, None);
+    });
 
     true
 }
@@ -115,10 +121,10 @@ pub unsafe extern "C" fn CheckVersion(hash: *const u8, length: usize) -> bool {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn Initialize(direct_3d: *mut IDirect3D9) -> bool {
     let direct_3d_ref = unsafe { (direct_3d as *mut Option<IDirect3D9>).as_mut() }.unwrap();
-    let direct_3d = take(direct_3d_ref).unwrap();
+    let direct_3d = take(direct_3d_ref);
 
     let dll_path = to_dll_path(unsafe { MODULE });
-    let direct_3d = launch_init(&dll_path, direct_3d);
+    let direct_3d = launch_init(&dll_path, direct_3d).unwrap();
     *direct_3d_ref = Some(direct_3d);
     true
 }

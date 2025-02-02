@@ -63,6 +63,30 @@ pub struct WindowInner {
     height: u32,
 }
 
+impl WindowInner {
+    /// 描画基準座標 (left_offset)
+    ///
+    /// ゲーム画面は 4:3 なので、フルスクリーンだと黒帯ができる為
+    pub fn screen_left_offset(&self, screen_width: u32) -> u32 {
+        let game_width = self.height * 4 / 3;
+        if screen_width > game_width {
+            (screen_width - game_width) / 2
+        } else {
+            0
+        }
+    }
+
+    /// 描画基準座標 (top_offset)
+    pub fn screen_top_offset(&self, screen_height: u32) -> u32 {
+        let game_height = self.width * 3 / 4;
+        if screen_height > game_height {
+            (screen_height - game_height) / 2
+        } else {
+            0
+        }
+    }
+}
+
 #[derive(Derivative)]
 #[derivative(Default)]
 #[repr(C)]

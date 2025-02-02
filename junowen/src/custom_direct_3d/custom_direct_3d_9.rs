@@ -1,34 +1,44 @@
 use std::ffi::c_void;
 
 use windows::{
-    core::{implement, OutRef},
     Win32::{
         Foundation::{BOOL, HWND},
         Graphics::{
             Direct3D9::{
-                IDirect3D9, IDirect3D9_Impl, IDirect3DDevice9, D3DADAPTER_IDENTIFIER9, D3DCAPS9,
-                D3DDEVTYPE, D3DDISPLAYMODE, D3DFORMAT, D3DMULTISAMPLE_TYPE, D3DPRESENT_PARAMETERS,
-                D3DRESOURCETYPE,
+                D3DADAPTER_IDENTIFIER9, D3DCAPS9, D3DDEVTYPE, D3DDISPLAYMODE, D3DFORMAT,
+                D3DMULTISAMPLE_TYPE, D3DPRESENT_PARAMETERS, D3DRESOURCETYPE, IDirect3D9,
+                IDirect3D9_Impl, IDirect3DDevice9,
             },
             Gdi::HMONITOR,
         },
     },
+    core::{OutRef, implement},
 };
 
-use super::custom_direct_3d_device_9::CustomDirect3DDevice9;
+use super::{Direct3DDeviceEventListener, custom_direct_3d_device_9::CustomDirect3DDevice9};
 
 #[implement(IDirect3D9)]
-pub struct CustomDirect3D9 {
+pub struct CustomDirect3D9<T>
+where
+    T: 'static + Direct3DDeviceEventListener + Clone,
+{
     instance: IDirect3D9,
+    delegate: T,
 }
 
-impl CustomDirect3D9 {
-    pub fn new(instance: IDirect3D9) -> Self {
-        Self { instance }
+impl<T> CustomDirect3D9<T>
+where
+    T: 'static + Direct3DDeviceEventListener + Clone,
+{
+    pub fn new(instance: IDirect3D9, delegate: T) -> Self {
+        Self { instance, delegate }
     }
 }
 
-impl IDirect3D9_Impl for CustomDirect3D9_Impl {
+impl<T> IDirect3D9_Impl for CustomDirect3D9_Impl<T>
+where
+    T: Direct3DDeviceEventListener + Clone,
+{
     fn RegisterSoftwareDevice(
         &self,
         pinitializefunction: *mut c_void,
@@ -204,8 +214,10 @@ impl IDirect3D9_Impl for CustomDirect3D9_Impl {
                 &mut ptr,
             )
         };
-        let _ = ppreturneddeviceinterface
-            .write(ptr.map(|x| IDirect3DDevice9::from(CustomDirect3DDevice9::new(x))));
+        let _ =
+            ppreturneddeviceinterface.write(ptr.map(|x| {
+                IDirect3DDevice9::from(CustomDirect3DDevice9::new(x, self.delegate.clone()))
+            }));
         result
     }
 }
