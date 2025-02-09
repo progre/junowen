@@ -6,7 +6,7 @@ mod signaling;
 mod state;
 mod tracing_helper;
 
-use std::{cell::OnceCell, ffi::c_void, ptr::null, slice, sync::LazyLock};
+use std::{cell::OnceCell, ptr::null_mut, slice, sync::LazyLock};
 
 use junowen_lib::{
     Th19, Th19EventDispatcher,
@@ -33,7 +33,7 @@ static TOKIO_RUNTIME: LazyLock<tokio::runtime::Runtime> = LazyLock::new(|| {
         .unwrap()
 });
 
-static mut MODULE: HMODULE = HMODULE(null::<c_void>() as *mut _);
+static mut MODULE: HMODULE = HMODULE(null_mut());
 static mut TH19: OnceCell<Th19> = OnceCell::new();
 static mut JUNOWEN: OnceCell<Junowen> = OnceCell::new();
 

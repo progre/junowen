@@ -1,4 +1,4 @@
-use std::{env::current_dir, ffi::c_void, mem::transmute, ptr::null};
+use std::{env::current_dir, mem::transmute, ptr::null_mut};
 
 use junowen_lib::hook_utils::{calc_th19_hash, show_warn_dialog};
 
@@ -17,7 +17,7 @@ use windows::{
 };
 
 static mut ORIGINAL_DIRECT_3D_CREATE_9: usize = 0;
-static mut ORIGINAL_MODULE: HMODULE = HMODULE(null::<c_void>() as *mut _);
+static mut ORIGINAL_MODULE: HMODULE = HMODULE(null_mut());
 
 fn load_library(dll_name: &str) -> HMODULE {
     let system_directory = unsafe {
