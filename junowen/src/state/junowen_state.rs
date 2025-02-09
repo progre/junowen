@@ -103,7 +103,7 @@ impl JunowenState {
     pub fn on_before_render_object(
         &self,
         title_menu_modifier: &TitleMenuModifier,
-        obj: *const c_void,
+        obj: &c_void,
     ) -> bool {
         match self {
             Self::Standby => standby::on_before_render_object(title_menu_modifier, obj),

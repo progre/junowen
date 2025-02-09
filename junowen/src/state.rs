@@ -48,7 +48,7 @@ impl Th19EventListener for Junowen {
             .on_input_menu(self.th19, &mut self.title_menu_modifier, &mut self.lobby);
     }
 
-    fn on_before_render_object(&self, obj: *const c_void) -> bool {
+    fn on_before_render_object(&self, obj: &c_void) -> bool {
         self.junowen_state
             .on_before_render_object(&self.title_menu_modifier, obj)
     }

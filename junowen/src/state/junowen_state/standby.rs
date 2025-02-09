@@ -134,13 +134,11 @@ pub fn on_render_texts(
     }
 }
 
-pub fn on_before_render_object(
-    title_menu_modifier: &TitleMenuModifier,
-    obj: *const c_void,
-) -> bool {
+pub fn on_before_render_object(title_menu_modifier: &TitleMenuModifier, obj: &c_void) -> bool {
     if !title_menu_modifier.selected_junowen() {
         return true;
     }
+    let obj = obj as *const c_void;
     let id = unsafe { *(obj.add(0x28) as *const u32) };
     if !(0xb4..=0xc0).contains(&id) {
         return true;

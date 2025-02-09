@@ -8,7 +8,7 @@ use crate::{
 pub trait Th19EventListener {
     fn on_input_players(&mut self);
     fn on_input_menu(&mut self);
-    fn on_before_render_object(&self, obj: *const c_void) -> bool;
+    fn on_before_render_object(&self, obj: &c_void) -> bool;
     fn on_before_render_text(&self, text_renderer: &c_void, text: &mut RenderingText);
     fn on_render_texts(&self, text_renderer: &c_void);
     fn on_round_over(&mut self);
@@ -38,7 +38,10 @@ extern "fastcall" fn on_input_menu() {
 
 extern "thiscall" fn render_object(this: *const c_void, obj: *const c_void) {
     let dispatcher = th19_event_dispatcher();
-    if !dispatcher.listener.on_before_render_object(obj) {
+    if !dispatcher
+        .listener
+        .on_before_render_object(unsafe { &*obj })
+    {
         return;
     }
     (dispatcher.old_fn_from_0bed70_00fc)(this, obj);
