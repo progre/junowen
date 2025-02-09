@@ -7,7 +7,7 @@ use std::ffi::c_void;
 
 use derive_new::new;
 use getset::{CopyGetters, Getters, MutGetters};
-use junowen_lib::{structs::input_devices::InputValue, Th19};
+use junowen_lib::{Th19, structs::input_devices::InputValue};
 
 use self::{
     menu_controller::{
@@ -176,7 +176,7 @@ impl CommonMenu {
         }
     }
 
-    pub fn on_render_texts(&self, th19: &Th19, text_renderer: *const c_void) {
+    pub fn on_render_texts(&self, th19: &Th19, text_renderer: &c_void) {
         match self.current_menu_scene() {
             CurrentMenuSceneResult::SubScene { .. } => unreachable!(),
             CurrentMenuSceneResult::Menu(menu) => {

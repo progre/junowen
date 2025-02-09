@@ -1,9 +1,9 @@
 use std::ffi::c_void;
 
-use junowen_lib::{structs::input_devices::InputValue, Th19};
+use junowen_lib::{Th19, structs::input_devices::InputValue};
 
 use crate::{
-    file::SettingsRepo, signaling::waiting_for_match::WaitingForOpponentInSharedRoom, TOKIO_RUNTIME,
+    TOKIO_RUNTIME, file::SettingsRepo, signaling::waiting_for_match::WaitingForOpponentInSharedRoom,
 };
 
 use super::{
@@ -116,7 +116,7 @@ impl SharedRoom {
         &self,
         waiting: Option<&WaitingForOpponentInSharedRoom>,
         th19: &Th19,
-        text_renderer: *const c_void,
+        text_renderer: &c_void,
     ) {
         on_render_texts(
             &self.menu,

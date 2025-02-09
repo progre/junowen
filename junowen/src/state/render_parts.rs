@@ -1,11 +1,11 @@
 use std::ffi::c_void;
 
 use junowen_lib::{
-    structs::{others::RenderingText, settings::GameSettings},
     Th19,
+    structs::{others::RenderingText, settings::GameSettings},
 };
 
-pub fn render_names(th19: &Th19, text_renderer: *const c_void, p1_name: &str, p2_name: &str) {
+pub fn render_names(th19: &Th19, text_renderer: &c_void, p1_name: &str, p2_name: &str) {
     let mut text = RenderingText::default();
     text.set_text(p1_name.as_bytes());
     text.set_x(16, th19.window_inner());
@@ -20,11 +20,7 @@ pub fn render_names(th19: &Th19, text_renderer: *const c_void, p1_name: &str, p2
     th19.render_text(text_renderer, &text);
 }
 
-fn render_game_common_settings(
-    th19: &Th19,
-    text_renderer: *const c_void,
-    game_settings: &GameSettings,
-) {
+fn render_game_common_settings(th19: &Th19, text_renderer: &c_void, game_settings: &GameSettings) {
     let mut text = RenderingText::default();
     text.set_text(format!("Time Limit: {}", game_settings.time_limit()).as_bytes());
     text.set_x(16, th19.window_inner());
@@ -38,11 +34,7 @@ fn render_game_common_settings(
     th19.render_text(text_renderer, &text);
 }
 
-fn render_game_players_settings(
-    th19: &Th19,
-    text_renderer: *const c_void,
-    game_settings: &GameSettings,
-) {
+fn render_game_players_settings(th19: &Th19, text_renderer: &c_void, game_settings: &GameSettings) {
     let mut text = RenderingText::default();
 
     let y = 870;
@@ -68,16 +60,12 @@ fn render_game_players_settings(
     th19.render_text(text_renderer, &text);
 }
 
-pub fn render_game_settings(
-    th19: &Th19,
-    text_renderer: *const c_void,
-    game_settings: &GameSettings,
-) {
+pub fn render_game_settings(th19: &Th19, text_renderer: &c_void, game_settings: &GameSettings) {
     render_game_common_settings(th19, text_renderer, game_settings);
     render_game_players_settings(th19, text_renderer, game_settings);
 }
 
-pub fn render_footer(th19: &Th19, text_renderer: *const c_void, msg_front: &str, msg_rear: &str) {
+pub fn render_footer(th19: &Th19, text_renderer: &c_void, msg_front: &str, msg_rear: &str) {
     let version = env!("CARGO_PKG_VERSION");
     let version_blank = (0..version.len()).map(|_| " ").collect::<String>();
 

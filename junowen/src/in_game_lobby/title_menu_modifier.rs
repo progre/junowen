@@ -2,10 +2,10 @@ use std::ffi::c_void;
 
 use getset::CopyGetters;
 use junowen_lib::{
+    Th19,
     structs::app::{MainMenu, ScreenId},
     structs::input_devices::{Input, InputFlags, InputValue},
     structs::others::RenderingText,
-    Th19,
 };
 
 use super::helper::menu_item_color;
@@ -96,7 +96,7 @@ impl TitleMenuModifier {
         &self,
         main_menu: &MainMenu,
         th19: &Th19,
-        text_renderer: *const c_void,
+        text_renderer: &c_void,
         rendering_text: &mut RenderingText,
     ) {
         if main_menu.screen_id() != ScreenId::Title {

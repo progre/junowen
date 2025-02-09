@@ -6,7 +6,7 @@ mod spectator_session_state;
 
 use std::ffi::c_void;
 
-use junowen_lib::{structs::others::RenderingText, Th19, Th19EventListener};
+use junowen_lib::{Th19, Th19EventListener, structs::others::RenderingText};
 
 use self::junowen_state::JunowenState;
 use crate::{
@@ -53,7 +53,7 @@ impl Th19EventListener for Junowen {
             .on_before_render_object(&self.title_menu_modifier, obj)
     }
 
-    fn on_before_render_text(&self, text_renderer: *const c_void, text: &mut RenderingText) {
+    fn on_before_render_text(&self, text_renderer: &c_void, text: &mut RenderingText) {
         self.junowen_state.on_before_render_text(
             self.th19,
             &self.title_menu_modifier,
@@ -62,7 +62,7 @@ impl Th19EventListener for Junowen {
         );
     }
 
-    fn on_render_texts(&self, text_renderer: *const c_void) {
+    fn on_render_texts(&self, text_renderer: &c_void) {
         self.junowen_state.on_render_texts(
             &self.features,
             self.th19,

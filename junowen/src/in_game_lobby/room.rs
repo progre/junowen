@@ -3,7 +3,7 @@ pub mod shared;
 
 use std::{f64::consts::PI, ffi::c_void};
 
-use junowen_lib::{structs::others::RenderingText, Th19};
+use junowen_lib::{Th19, structs::others::RenderingText};
 
 use crate::signaling::waiting_for_match::WaitingInRoom;
 
@@ -29,7 +29,7 @@ fn progress_alphas(progress: f64) -> Vec<u8> {
 /// アルファと cos カーブを使った表現
 /// ボツ
 #[allow(unused)]
-fn render_progress_alpha(th19: &Th19, text_renderer: *const c_void, progress: f64) {
+fn render_progress_alpha(th19: &Th19, text_renderer: &c_void, progress: f64) {
     let text = b"|                    |";
     let x = 640;
     let y = 160 + 32 * 11;
@@ -92,7 +92,7 @@ fn progress_text(progress: f64) -> Vec<u8> {
     text
 }
 
-fn render_progress_item(th19: &Th19, text_renderer: *const c_void, alpha: u8, text: &[u8]) {
+fn render_progress_item(th19: &Th19, text_renderer: &c_void, alpha: u8, text: &[u8]) {
     let x = 640;
     let y = 160 + 32 * 11;
     let mut rt = RenderingText::default();
@@ -109,7 +109,7 @@ fn render_progress_item(th19: &Th19, text_renderer: *const c_void, alpha: u8, te
     th19.render_text(text_renderer, &rt);
 }
 
-fn render_progress(th19: &Th19, text_renderer: *const c_void, progress: f64) {
+fn render_progress(th19: &Th19, text_renderer: &c_void, progress: f64) {
     let base_text = progress_text(progress);
     render_progress_item(th19, text_renderer, 0xff, &base_text);
 }
@@ -119,7 +119,7 @@ pub fn on_render_texts<T>(
     waiting: Option<&WaitingInRoom<T>>,
     room_name: Option<&str>,
     th19: &Th19,
-    text_renderer: *const c_void,
+    text_renderer: &c_void,
 ) {
     menu.on_render_texts(th19, text_renderer);
 

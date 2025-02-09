@@ -5,7 +5,7 @@ use junowen_lib::Th19;
 
 use crate::in_game_lobby::helper::render_menu_item;
 
-use super::{menu_controller::MenuControllerInputResult, menu_item::MenuItem, Action, LobbyScene};
+use super::{Action, LobbyScene, menu_controller::MenuControllerInputResult, menu_item::MenuItem};
 
 #[derive(CopyGetters, Debug, Getters, MutGetters, Setters)]
 pub struct Menu {
@@ -73,7 +73,7 @@ impl Menu {
         sub_menu.sub_menu_mut().bury()
     }
 
-    pub fn on_render_texts(&self, base_height: u32, th19: &Th19, text_renderer: *const c_void) {
+    pub fn on_render_texts(&self, base_height: u32, th19: &Th19, text_renderer: &c_void) {
         for (i, item) in self.items().iter().enumerate() {
             let label = item.label().as_bytes();
             let height = base_height + 56 * i as u32;

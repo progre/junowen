@@ -2,7 +2,7 @@ use std::{ffi::c_void, num::NonZeroU8};
 
 use getset::Setters;
 use junowen_lib::Th19;
-use windows::Win32::UI::Input::KeyboardAndMouse::{MapVirtualKeyW, ToUnicode, MAPVK_VK_TO_VSC};
+use windows::Win32::UI::Input::KeyboardAndMouse::{MAPVK_VK_TO_VSC, MapVirtualKeyW, ToUnicode};
 
 use crate::in_game_lobby::helper::render_label_value;
 
@@ -123,7 +123,7 @@ impl TextInput {
         OnMenuInputResult::None
     }
 
-    pub fn on_render_texts(&self, th19: &Th19, text_renderer: *const c_void) {
+    pub fn on_render_texts(&self, th19: &Th19, text_renderer: &c_void) {
         render_label_value(th19, text_renderer, 480, 0, self.name, &self.value);
     }
 }

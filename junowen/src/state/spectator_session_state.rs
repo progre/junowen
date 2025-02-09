@@ -6,12 +6,12 @@ use std::{ffi::c_void, mem, sync::mpsc::RecvError};
 
 use anyhow::Result;
 use junowen_lib::{
+    Th19,
     structs::settings::GameSettings,
     structs::{
         app::{MainMenu, ScreenId},
         input_devices::InputFlags,
     },
-    Th19,
 };
 
 use crate::session::spectator::SpectatorSession;
@@ -184,7 +184,7 @@ impl SpectatorSessionState {
         Ok(true)
     }
 
-    pub fn on_render_texts(&self, th19: &Th19, text_renderer: *const c_void) {
+    pub fn on_render_texts(&self, th19: &Th19, text_renderer: &c_void) {
         let session = {
             match self {
                 Self::Null => unreachable!(),

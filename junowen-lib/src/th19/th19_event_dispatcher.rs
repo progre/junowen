@@ -1,16 +1,16 @@
 use std::{cell::OnceCell, ffi::c_void};
 
 use crate::{
+    Fn0b7d40, Fn0d5ae0, Fn0d6e10, Fn009fa0, Fn10f720, Fn1049e0, Fn011560, FnOfHookAssembly, Th19,
     structs::{others::RenderingText, selection::Selection},
-    Fn009fa0, Fn011560, Fn0b7d40, Fn0d5ae0, Fn0d6e10, Fn1049e0, Fn10f720, FnOfHookAssembly, Th19,
 };
 
 pub trait Th19EventListener {
     fn on_input_players(&mut self);
     fn on_input_menu(&mut self);
     fn on_before_render_object(&self, obj: *const c_void) -> bool;
-    fn on_before_render_text(&self, text_renderer: *const c_void, text: &mut RenderingText);
-    fn on_render_texts(&self, text_renderer: *const c_void);
+    fn on_before_render_text(&self, text_renderer: &c_void, text: &mut RenderingText);
+    fn on_render_texts(&self, text_renderer: &c_void);
     fn on_round_over(&mut self);
     fn on_before_is_online_vs(&self) -> Option<u8>;
     fn on_before_rewrite_controller_assignments(&mut self);
@@ -49,14 +49,16 @@ extern "thiscall" fn render_text(text_renderer: *const c_void, text: *mut Render
     let text = unsafe { text.as_mut().unwrap() };
     dispatcher
         .listener
-        .on_before_render_text(text_renderer, text);
+        .on_before_render_text(unsafe { &*text_renderer }, text);
     (dispatcher.old_fn_from_0d6e10_0039)(text_renderer, text)
 }
 
 extern "thiscall" fn on_render_texts(text_renderer: *const c_void, arg: *const c_void) -> u32 {
     let dispatcher = th19_event_dispatcher();
     let ret = (dispatcher.old_fn_from_0d7180_0008)(text_renderer, arg);
-    dispatcher.listener.on_render_texts(text_renderer);
+    dispatcher
+        .listener
+        .on_render_texts(unsafe { &*text_renderer });
     ret
 }
 

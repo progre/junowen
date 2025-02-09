@@ -8,9 +8,9 @@ use std::{ffi::c_void, mem, sync::mpsc::RecvError};
 
 use anyhow::Result;
 use junowen_lib::{
+    Th19,
     structs::app::{MainMenu, ScreenId},
     structs::settings::GameSettings,
-    Th19,
 };
 
 use crate::{
@@ -189,12 +189,7 @@ impl BattleSessionState {
         Ok(())
     }
 
-    pub fn on_render_texts(
-        &self,
-        features: &[Features],
-        th19: &Th19,
-        text_renderer: *const c_void,
-    ) {
+    pub fn on_render_texts(&self, features: &[Features], th19: &Th19, text_renderer: &c_void) {
         let (session, spectator_host_state) = {
             match self {
                 Self::Null => unreachable!(),

@@ -1,8 +1,8 @@
 use std::ffi::c_void;
 
-use junowen_lib::{structs::others::RenderingText, Th19};
+use junowen_lib::{Th19, structs::others::RenderingText};
 
-pub fn render_title(th19: &Th19, text_renderer: *const c_void, text: &[u8]) {
+pub fn render_title(th19: &Th19, text_renderer: &c_void, text: &[u8]) {
     let mut rt = RenderingText::default();
     rt.set_text(text);
     rt.set_x(640, th19.window_inner());
@@ -20,7 +20,7 @@ pub fn render_title(th19: &Th19, text_renderer: *const c_void, text: &[u8]) {
 
 pub fn render_menu_item(
     th19: &Th19,
-    text_renderer: *const c_void,
+    text_renderer: &c_void,
     text: &[u8],
     y: u32,
     enabled: bool,
@@ -40,7 +40,7 @@ pub fn render_menu_item(
     th19.render_text(text_renderer, &rt);
 }
 
-pub fn render_text_line(th19: &Th19, text_renderer: *const c_void, line: u32, text: &[u8]) {
+pub fn render_text_line(th19: &Th19, text_renderer: &c_void, line: u32, text: &[u8]) {
     let mut rt = RenderingText::default();
     rt.set_text(text);
     rt.set_x(32, th19.window_inner());
@@ -54,7 +54,7 @@ pub fn render_text_line(th19: &Th19, text_renderer: *const c_void, line: u32, te
     th19.render_text(text_renderer, &rt);
 }
 
-pub fn render_small_text_line(th19: &Th19, text_renderer: *const c_void, line: u32, text: &[u8]) {
+pub fn render_small_text_line(th19: &Th19, text_renderer: &c_void, line: u32, text: &[u8]) {
     let mut rt = RenderingText::default();
     rt.set_text(text);
     rt.set_x(32, th19.window_inner());
@@ -87,7 +87,7 @@ pub fn menu_item_color(font_type: u32, enabled: bool, selected: bool) -> u32 {
 
 pub fn render_label_value(
     th19: &Th19,
-    text_renderer: *const c_void,
+    text_renderer: &c_void,
     height: u32,
     vertical_align: u32,
     label: &str,

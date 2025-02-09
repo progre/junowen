@@ -1,14 +1,14 @@
 use std::ffi::c_void;
 
-use junowen_lib::{structs::input_devices::InputValue, Th19};
+use junowen_lib::{Th19, structs::input_devices::InputValue};
 
 use crate::{
+    TOKIO_RUNTIME,
     file::SettingsRepo,
     signaling::waiting_for_match::{
         WaitingForMatch, WaitingForOpponent, WaitingForOpponentInReservedRoom,
         WaitingForSpectatorHost, WaitingForSpectatorHostInReservedRoom, WaitingInRoom,
     },
-    TOKIO_RUNTIME,
 };
 
 use super::{
@@ -153,7 +153,7 @@ impl ReservedRoom {
         &self,
         mut waiting: Option<&WaitingInRoom<T>>,
         th19: &Th19,
-        text_renderer: *const c_void,
+        text_renderer: &c_void,
     ) {
         let mut room_name = Some(self.room_name());
         if !self.menu.menu().decided() {

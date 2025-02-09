@@ -1,7 +1,7 @@
 use std::{ffi::c_void, sync::mpsc::RecvError};
 
 use anyhow::Result;
-use junowen_lib::{structs::app::MainMenu, structs::settings::GameSettings, Th19};
+use junowen_lib::{Th19, structs::app::MainMenu, structs::settings::GameSettings};
 
 use crate::{
     file::Features,
@@ -62,12 +62,7 @@ impl Session {
         }
     }
 
-    pub fn on_render_texts(
-        &self,
-        features: &[Features],
-        th19: &Th19,
-        text_renderer: *const c_void,
-    ) {
+    pub fn on_render_texts(&self, features: &[Features], th19: &Th19, text_renderer: &c_void) {
         match self {
             Self::BattleSession(session_state) => {
                 session_state.on_render_texts(features, th19, text_renderer)

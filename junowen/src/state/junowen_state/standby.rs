@@ -1,9 +1,9 @@
 use std::ffi::c_void;
 
 use junowen_lib::{
+    Th19,
     structs::app::{MainMenu, ScreenId},
     structs::others::RenderingText,
-    Th19,
 };
 use tracing::trace;
 
@@ -74,7 +74,7 @@ pub fn update_th19_on_input_menu(
 pub fn on_before_render_text(
     th19: &Th19,
     title_menu_modifier: &TitleMenuModifier,
-    text_renderer: *const c_void,
+    text_renderer: &c_void,
     text: &mut RenderingText,
 ) {
     let Some(main_menu) = th19.app().main_loop_tasks().find_main_menu() else {
@@ -83,7 +83,7 @@ pub fn on_before_render_text(
     title_menu_modifier.on_before_render_text(main_menu, th19, text_renderer, text);
 }
 
-fn render_message(text_renderer: *const c_void, th19: &Th19, msg: &str, color: u32) {
+fn render_message(text_renderer: &c_void, th19: &Th19, msg: &str, color: u32) {
     let mut text = RenderingText::default();
     text.set_text(msg.as_bytes());
     text.set_x(16, th19.window_inner());
@@ -96,7 +96,7 @@ fn render_waiting_message<T>(
     room_type: &str,
     room: &WaitingInRoom<T>,
     th19: &Th19,
-    text_renderer: *const c_void,
+    text_renderer: &c_void,
 ) {
     let room_name = room.room_name();
     let dot = ".".repeat((room.elapsed().as_secs() % 4) as usize);
@@ -113,7 +113,7 @@ pub fn on_render_texts(
     th19: &Th19,
     title_menu_modifier: &TitleMenuModifier,
     lobby: &Lobby,
-    text_renderer: *const c_void,
+    text_renderer: &c_void,
 ) {
     match lobby.waiting_for_match() {
         None

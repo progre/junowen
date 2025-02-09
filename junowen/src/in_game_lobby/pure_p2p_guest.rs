@@ -2,12 +2,12 @@ use std::ffi::c_void;
 
 use clipboard_win::{get_clipboard_string, set_clipboard_string};
 use junowen_lib::{
+    Th19,
     connection::signaling::{
-        parse_signaling_code, socket::async_read_write_socket::SignalingServerMessage,
-        SignalingCodeType,
+        SignalingCodeType, parse_signaling_code,
+        socket::async_read_write_socket::SignalingServerMessage,
     },
     structs::input_devices::InputValue,
-    Th19,
 };
 use tokio::sync::mpsc;
 
@@ -137,7 +137,7 @@ impl PureP2pGuest {
         }
     }
 
-    pub fn on_render_texts(&self, th19: &Th19, text_renderer: *const c_void) {
+    pub fn on_render_texts(&self, th19: &Th19, text_renderer: &c_void) {
         self.common_menu.on_render_texts(th19, text_renderer);
 
         let mut line = 0;

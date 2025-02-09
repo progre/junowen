@@ -155,7 +155,7 @@ impl Th19 {
 
     hook!(0x0cc5a0 + 0x012c, hook_0bed70_00fc, Fn0b7d40);
 
-    pub fn render_text(&self, text_renderer: *const c_void, text: &RenderingText) -> u32 {
+    pub fn render_text(&self, text_renderer: &c_void, text: &RenderingText) -> u32 {
         const ADDR: usize = 0x0e5850;
         let ptr = self.hooked_process_memory_accessor().raw_ptr(ADDR);
         (unsafe { transmute::<*const c_void, Fn0d5ae0>(ptr) })(text_renderer, text as *const _ as _)

@@ -2,8 +2,8 @@ use std::ffi::c_void;
 
 use getset::{Getters, MutGetters};
 use junowen_lib::{
-    structs::input_devices::{InputFlags, InputValue},
     Th19,
+    structs::input_devices::{InputFlags, InputValue},
 };
 
 use crate::{
@@ -18,7 +18,7 @@ use crate::{
 use super::{
     common_menu::{CommonMenu, LobbyScene, Menu, MenuItem, OnMenuInputResult},
     pure_p2p_guest::PureP2pGuest,
-    pure_p2p_offerer::{pure_p2p_host, pure_p2p_spectator, PureP2pOfferer},
+    pure_p2p_offerer::{PureP2pOfferer, pure_p2p_host, pure_p2p_spectator},
     room::{reserved::ReservedRoom, shared::SharedRoom},
 };
 
@@ -79,7 +79,7 @@ impl Root {
         }
     }
 
-    pub fn on_render_texts(&self, th19: &Th19, text_renderer: *const c_void) {
+    pub fn on_render_texts(&self, th19: &Th19, text_renderer: &c_void) {
         self.common_menu.on_render_texts(th19, text_renderer);
     }
 }
@@ -224,7 +224,7 @@ impl Lobby {
         }
     }
 
-    pub fn on_render_texts(&self, th19: &Th19, text_renderer: *const c_void) {
+    pub fn on_render_texts(&self, th19: &Th19, text_renderer: &c_void) {
         match self.prev_scene {
             LobbyScene::Root => self.root.on_render_texts(th19, text_renderer),
             LobbyScene::SharedRoom => {

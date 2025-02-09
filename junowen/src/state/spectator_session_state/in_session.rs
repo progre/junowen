@@ -6,7 +6,7 @@ use crate::state::render_parts::{render_footer, render_names};
 
 pub fn on_render_texts_spectator(
     th19: &Th19,
-    text_renderer: *const c_void,
+    text_renderer: &c_void,
     p1_name: &str,
     p2_name: &str,
 ) {

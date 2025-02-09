@@ -3,7 +3,7 @@ mod standby;
 
 use std::ffi::c_void;
 
-use junowen_lib::{structs::app::MainMenu, structs::others::RenderingText, Th19};
+use junowen_lib::{Th19, structs::app::MainMenu, structs::others::RenderingText};
 use session::Session;
 use tracing::{debug, trace};
 
@@ -115,7 +115,7 @@ impl JunowenState {
         &self,
         th19: &Th19,
         title_menu_modifier: &TitleMenuModifier,
-        text_renderer: *const c_void,
+        text_renderer: &c_void,
         text: &mut RenderingText,
     ) {
         match self {
@@ -132,7 +132,7 @@ impl JunowenState {
         th19: &Th19,
         title_menu_modifier: &TitleMenuModifier,
         lobby: &Lobby,
-        text_renderer: *const c_void,
+        text_renderer: &c_void,
     ) {
         match self {
             Self::Standby => {

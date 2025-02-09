@@ -1,6 +1,6 @@
 use std::{borrow::Cow, ffi::c_void};
 
-use junowen_lib::{structs::settings::GameSettings, Th19};
+use junowen_lib::{Th19, structs::settings::GameSettings};
 
 use crate::{
     signaling::waiting_for_match::{WaitingForPureP2pSpectator, WaitingForSpectator},
@@ -18,7 +18,7 @@ pub struct RenderingStatus<'a> {
     pub spectator_host_state: Option<&'a SpectatorHostState>,
 }
 
-pub fn on_render_texts(th19: &Th19, text_renderer: *const c_void, status: RenderingStatus) {
+pub fn on_render_texts(th19: &Th19, text_renderer: &c_void, status: RenderingStatus) {
     render_names(th19, text_renderer, status.p1_name, status.p2_name);
     if let Some(game_settings) = status.game_settings {
         render_game_settings(th19, text_renderer, game_settings);
