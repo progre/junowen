@@ -110,7 +110,7 @@ impl GameSettings {
         value.try_into().unwrap_or_default()
     }
     pub fn set_round(&mut self, round: Round) {
-        self.common = self.common & !0b0011_0000 | (round as u32) << 4;
+        self.common = self.common & !0b0011_0000 | ((round as u32) << 4);
     }
 
     pub fn ability_card(&self) -> AbilityCard {
@@ -118,7 +118,7 @@ impl GameSettings {
         value.try_into().unwrap_or_default()
     }
     pub fn set_ability_card(&mut self, ability_card: AbilityCard) {
-        self.common = self.common & !0b1100_0000 | (ability_card as u32) << 6;
+        self.common = self.common & !0b1100_0000 | ((ability_card as u32) << 6);
     }
 
     pub fn p1_life(&self) -> u32 {
@@ -133,7 +133,7 @@ impl GameSettings {
         value.try_into().unwrap_or_default()
     }
     pub fn set_p1_barrier(&mut self, barrier: Barrier) {
-        self.p1 = self.p1 & !0b0001_1000 | (barrier as u32) << 3;
+        self.p1 = self.p1 & !0b0001_1000 | ((barrier as u32) << 3);
     }
 
     pub fn p2_life(&self) -> u32 {
@@ -148,7 +148,7 @@ impl GameSettings {
         value.try_into().unwrap_or_default()
     }
     pub fn set_p2_barrier(&mut self, barrier: Barrier) {
-        self.p2 = self.p2 & !0b0001_1000 | (barrier as u32) << 3;
+        self.p2 = self.p2 & !0b0001_1000 | ((barrier as u32) << 3);
     }
 }
 

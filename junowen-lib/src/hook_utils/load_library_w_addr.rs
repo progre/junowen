@@ -42,7 +42,7 @@ fn kernel32_module_entry(process_id: u32) -> Result<MODULEENTRY32W> {
     unsafe { Module32FirstW(snapshot.0, &mut me) }?;
     loop {
         let module_name = unsafe { PCWSTR::from_raw(me.szModule.as_ptr()).to_string() }?;
-        if module_name.to_ascii_uppercase() == "KERNEL32.DLL" {
+        if module_name.eq_ignore_ascii_case("KERNEL32.DLL") {
             return Ok(me);
         }
 

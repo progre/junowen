@@ -52,7 +52,7 @@ fn hook(direct_3d: *const IDirect3D9) {
                 .unwrap()
                 .to_ascii_uppercase()
                 .starts_with("TH19_")
-                && path.extension().unwrap().to_ascii_uppercase() == "DLL"
+                && path.extension().unwrap().eq_ignore_ascii_case("DLL")
         })
         .for_each(|path| {
             let path = path.to_string_lossy();
