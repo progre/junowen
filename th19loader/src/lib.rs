@@ -3,7 +3,6 @@ use std::{env::current_dir, ffi::c_void, mem::transmute, ptr::null};
 use junowen_lib::hook_utils::{calc_th19_hash, show_warn_dialog};
 
 use windows::{
-    core::{s, HSTRING, PCWSTR},
     Win32::{
         Foundation::{FreeLibrary, HINSTANCE, HMODULE, MAX_PATH},
         Graphics::Direct3D9::IDirect3D9,
@@ -14,6 +13,7 @@ use windows::{
             SystemServices::{DLL_PROCESS_ATTACH, DLL_PROCESS_DETACH},
         },
     },
+    core::{HSTRING, PCWSTR, s},
 };
 
 static mut ORIGINAL_DIRECT_3D_CREATE_9: usize = 0;
@@ -91,7 +91,7 @@ fn hook(direct_3d: *const IDirect3D9) {
         });
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "stdcall" fn DllMain(_inst_dll: HINSTANCE, reason: u32, _reserved: u32) -> bool {
     match reason {
         DLL_PROCESS_ATTACH => {
@@ -117,7 +117,7 @@ pub extern "stdcall" fn DllMain(_inst_dll: HINSTANCE, reason: u32, _reserved: u3
     true
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "stdcall" fn Direct3DCreate9(sdkversion: u32) -> *const IDirect3D9 {
     type Func = extern "stdcall" fn(sdkversion: u32) -> *const IDirect3D9;
     let func: Func = unsafe { transmute(ORIGINAL_DIRECT_3D_CREATE_9) };

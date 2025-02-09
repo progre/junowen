@@ -9,8 +9,8 @@ mod tracing_helper;
 use std::{cell::OnceCell, ffi::c_void, ptr::null, slice, sync::LazyLock};
 
 use junowen_lib::{
-    hook_utils::{calc_th19_hash, show_warn_dialog, WELL_KNOWN_VERSION_HASHES},
     Th19, Th19EventDispatcher,
+    hook_utils::{WELL_KNOWN_VERSION_HASHES, calc_th19_hash, show_warn_dialog},
 };
 use windows::Win32::{
     Foundation::{HINSTANCE, HMODULE},
@@ -20,8 +20,8 @@ use windows::Win32::{
 
 use crate::{
     file::{
-        move_old_log_to_new_path, to_dll_path, to_ini_file_path_log_dir_path_log_file_name,
-        SettingsRepo,
+        SettingsRepo, move_old_log_to_new_path, to_dll_path,
+        to_ini_file_path_log_dir_path_log_file_name,
     },
     state::Junowen,
 };
@@ -47,7 +47,7 @@ fn check_version(hash: &[u8]) -> bool {
 async fn init(dll_stem: &str, old_log_dir_path: Option<&str>) {
     if cfg!(debug_assertions) {
         let _ = unsafe { AllocConsole() };
-        std::env::set_var("RUST_BACKTRACE", "1");
+        unsafe { std::env::set_var("RUST_BACKTRACE", "1") };
     }
     let (ini_file_path, module_dir, log_file_name) =
         to_ini_file_path_log_dir_path_log_file_name(dll_stem);
@@ -89,7 +89,7 @@ fn self_init() -> bool {
     true
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32) -> bool {
     if reason == DLL_PROCESS_ATTACH {
         unsafe { MODULE = inst_dll.into() };
@@ -103,14 +103,14 @@ pub extern "stdcall" fn DllMain(inst_dll: HINSTANCE, reason: u32, _reserved: u32
 /// # Safety
 /// The size allocated by `hash` must be indicated by `length`.
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn CheckVersion(hash: *const u8, length: usize) -> bool {
     let hash = unsafe { slice::from_raw_parts(hash, length) };
     check_version(hash)
 }
 
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn Initialize(_direct_3d: *const IDirect3D9) -> bool {
     let dll_path = to_dll_path(unsafe { MODULE });
     let dll_stem = dll_path.file_stem().unwrap().to_string_lossy();

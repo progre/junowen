@@ -6,13 +6,13 @@ use std::{
 
 use anyhow::Result;
 use windows::{
-    core::HSTRING,
     Win32::System::{
         LibraryLoader::GetModuleHandleW,
-        Memory::{VirtualProtect, PAGE_PROTECTION_FLAGS},
+        Memory::{PAGE_PROTECTION_FLAGS, VirtualProtect},
         ProcessStatus::{GetModuleInformation, MODULEINFO},
         Threading::GetCurrentProcess,
     },
+    core::HSTRING,
 };
 
 pub type FnOfHookAssembly = extern "fastcall" fn();
@@ -34,29 +34,33 @@ fn module_base_addr(module_name: &str) -> Result<usize> {
 }
 
 unsafe fn assemble_call_and_manage_register(mut addr: *mut u8, target: usize) {
-    *(addr as *mut [u8; 3]) = [
-        0x50, // push eax
-        0x51, // push ecx
-        0x52, // push edx
-    ];
+    unsafe {
+        *(addr as *mut [u8; 3]) = [
+            0x50, // push eax
+            0x51, // push ecx
+            0x52, // push edx
+        ]
+    };
     addr = addr.wrapping_add(3);
 
-    *addr = 0xe8;
-    assemble_jmp_target(addr, target);
+    unsafe { *addr = 0xe8 };
+    unsafe { assemble_jmp_target(addr, target) };
     addr = addr.wrapping_add(5);
 
-    *(addr as *mut [u8; 3]) = [
-        0x5a, // pop edx
-        0x59, // pop ecx
-        0x58, // pop eax
-    ];
+    unsafe {
+        *(addr as *mut [u8; 3]) = [
+            0x5a, // pop edx
+            0x59, // pop ecx
+            0x58, // pop eax
+        ]
+    };
 }
 
 unsafe fn assemble_jmp_target(addr: *mut u8, target: usize) -> usize {
     let jump_base_addr = addr.wrapping_add(5) as i64;
     let p_jump_target = addr.wrapping_add(1) as *mut i32;
-    let old_value = read_unaligned(p_jump_target);
-    write_unaligned(p_jump_target, (target as i64 - jump_base_addr) as i32);
+    let old_value = unsafe { read_unaligned(p_jump_target) };
+    unsafe { write_unaligned(p_jump_target, (target as i64 - jump_base_addr) as i32) };
     (jump_base_addr + old_value as i64) as usize
 }
 
