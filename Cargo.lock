@@ -1802,7 +1802,6 @@ dependencies = [
  "derive-new",
  "getset",
  "junowen-lib",
- "once_cell",
  "reqwest",
  "rmp-serde",
  "serde",

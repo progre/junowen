@@ -6,14 +6,13 @@ mod signaling;
 mod state;
 mod tracing_helper;
 
-use std::{ffi::c_void, ptr::null, slice};
+use std::{ffi::c_void, ptr::null, slice, sync::LazyLock};
 
 use junowen_lib::{
     hook_utils::{calc_th19_hash, show_warn_dialog, WELL_KNOWN_VERSION_HASHES},
     structs::{others::RenderingText, selection::Selection},
     Fn009fa0, Fn011560, Fn0b7d40, Fn0d5ae0, Fn0d6e10, Fn1049e0, Fn10f720, FnOfHookAssembly, Th19,
 };
-use once_cell::sync::Lazy;
 use windows::Win32::{
     Foundation::{HINSTANCE, HMODULE},
     Graphics::Direct3D9::IDirect3D9,
@@ -28,7 +27,7 @@ use crate::{
     state::State,
 };
 
-static TOKIO_RUNTIME: Lazy<tokio::runtime::Runtime> = Lazy::new(|| {
+static TOKIO_RUNTIME: LazyLock<tokio::runtime::Runtime> = LazyLock::new(|| {
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
