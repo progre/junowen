@@ -6,7 +6,7 @@ mod signaling;
 mod state;
 mod tracing_helper;
 
-use std::{cell::OnceCell, ptr::null_mut, slice, sync::LazyLock};
+use std::{cell::OnceCell, path::Path, ptr::null_mut, slice, sync::LazyLock};
 
 use junowen_lib::{
     Th19, Th19EventDispatcher,
@@ -19,10 +19,7 @@ use windows::Win32::{
 };
 
 use crate::{
-    file::{
-        SettingsRepo, move_old_log_to_new_path, to_dll_path,
-        to_ini_file_path_log_dir_path_log_file_name,
-    },
+    file::{SettingsRepo, to_dll_path, to_ini_file_path_log_dir_path_log_file_name},
     state::Junowen,
 };
 
@@ -44,18 +41,16 @@ fn check_version(hash: &[u8]) -> bool {
         .any(|&valid_hash| valid_hash == hash)
 }
 
-async fn init(dll_stem: &str, old_log_dir_path: Option<&str>) {
+async fn init(dll_path: &Path) {
     if cfg!(debug_assertions) {
         let _ = unsafe { AllocConsole() };
         unsafe { std::env::set_var("RUST_BACKTRACE", "1") };
     }
+
+    let dll_stem = dll_path.file_stem().unwrap().to_string_lossy();
     let (ini_file_path, module_dir, log_file_name) =
-        to_ini_file_path_log_dir_path_log_file_name(dll_stem);
+        to_ini_file_path_log_dir_path_log_file_name(&dll_stem);
     tracing_helper::init_tracing(&module_dir, &log_file_name, false);
-    if let Some(old_log_dir_path) = old_log_dir_path {
-        let old_log_path = format!("{}/{}", old_log_dir_path, log_file_name);
-        move_old_log_to_new_path(&old_log_path, &module_dir, &log_file_name).await;
-    }
 
     let th19_ptr = &raw mut TH19;
     let th19 = Th19::new_hooked_process("th19.exe").unwrap();
@@ -72,8 +67,8 @@ async fn init(dll_stem: &str, old_log_dir_path: Option<&str>) {
     Th19EventDispatcher::init(th19, junowen);
 }
 
-fn launch_init(dll_stem: &str, old_log_dir_path: Option<&str>) {
-    TOKIO_RUNTIME.block_on(init(dll_stem, old_log_dir_path));
+fn launch_init(dll_path: &Path) {
+    TOKIO_RUNTIME.block_on(init(dll_path));
 }
 
 fn self_init() -> bool {
@@ -83,8 +78,7 @@ fn self_init() -> bool {
         show_warn_dialog(&format!("Hash mismatch: {}", dll_path.to_string_lossy()));
         return false;
     }
-    let dll_stem = dll_path.file_stem().unwrap().to_string_lossy().to_string();
-    std::thread::spawn(move || launch_init(&dll_stem, None));
+    std::thread::spawn(move || launch_init(&dll_path));
 
     true
 }
@@ -113,10 +107,7 @@ pub unsafe extern "C" fn CheckVersion(hash: *const u8, length: usize) -> bool {
 #[unsafe(no_mangle)]
 pub extern "C" fn Initialize(_direct_3d: *const IDirect3D9) -> bool {
     let dll_path = to_dll_path(unsafe { MODULE });
-    let dll_stem = dll_path.file_stem().unwrap().to_string_lossy();
-    let old_log_dir_path = dll_path.parent().unwrap().to_string_lossy();
-
-    launch_init(&dll_stem, Some(&old_log_dir_path));
+    launch_init(&dll_path);
 
     true
 }

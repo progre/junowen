@@ -1,21 +1,18 @@
-use std::{io::ErrorKind, path::PathBuf};
+use std::path::PathBuf;
 
 use derive_new::new;
 use junowen_lib::Th19;
 use serde::Deserialize;
-use tokio::{
-    fs::{self, read_to_string},
-    io,
-};
+use tokio::fs::read_to_string;
 use toml_edit::{Formatted, Item, Value};
 use tracing::error;
 use windows::{
-    core::PCWSTR,
     Win32::{
         Foundation::{HMODULE, MAX_PATH},
         System::LibraryLoader::GetModuleFileNameW,
-        UI::Shell::{FOLDERID_RoamingAppData, SHGetKnownFolderPath, KNOWN_FOLDER_FLAG},
+        UI::Shell::{FOLDERID_RoamingAppData, KNOWN_FOLDER_FLAG, SHGetKnownFolderPath},
     },
+    core::PCWSTR,
 };
 
 pub fn to_dll_path(module: HMODULE) -> PathBuf {
@@ -39,40 +36,6 @@ pub fn to_ini_file_path_log_dir_path_log_file_name(dll_stem: &str) -> (String, S
     let log_file_name = format!("{}.log", dll_stem);
 
     (ini_file_path, module_dir, log_file_name)
-}
-
-pub async fn move_old_log_to_new_path(old_log_path: &str, module_dir: &str, log_file_name: &str) {
-    let new_log_path = format!("{}/{}", module_dir, log_file_name);
-    if let Err(err) = (async {
-        let result = fs::OpenOptions::new().read(true).open(old_log_path).await;
-        let mut old_file = match result {
-            Ok(file) => file,
-            Err(err) => {
-                if err.kind() != ErrorKind::NotFound {
-                    return Err(err);
-                }
-                return Ok(());
-            }
-        };
-        let result = fs::OpenOptions::new().write(true).open(&new_log_path).await;
-        let mut new_file = result?;
-        if new_file.metadata().await?.len() > 0 {
-            return Err(io::Error::new(
-                ErrorKind::AlreadyExists,
-                format!("{} already exists", new_log_path),
-            ));
-        }
-        io::copy(&mut old_file, &mut new_file).await?;
-        fs::remove_file(old_log_path).await?;
-        Ok(())
-    })
-    .await
-    {
-        error!(
-            "Failed to mv {} {} Reason: {}",
-            old_log_path, new_log_path, err
-        );
-    }
 }
 
 #[derive(Debug, Deserialize, PartialEq, serde::Serialize)]
