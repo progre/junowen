@@ -1,3 +1,10 @@
+mod common_menu;
+mod helper;
+mod pure_p2p_guest;
+mod pure_p2p_offerer;
+mod room;
+mod title_menu_modifier;
+
 use std::ffi::c_void;
 
 use getset::{Getters, MutGetters};
@@ -15,12 +22,14 @@ use crate::{
     },
 };
 
-use super::{
+use self::{
     common_menu::{CommonMenu, LobbyScene, Menu, MenuItem, OnMenuInputResult},
     pure_p2p_guest::PureP2pGuest,
     pure_p2p_offerer::{PureP2pOfferer, pure_p2p_host, pure_p2p_spectator},
     room::{reserved::ReservedRoom, shared::SharedRoom},
 };
+
+pub use title_menu_modifier::TitleMenuModifier;
 
 pub struct Root {
     common_menu: CommonMenu,

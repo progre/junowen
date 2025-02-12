@@ -7,10 +7,11 @@ use junowen_lib::{
 };
 use tracing::trace;
 
-use crate::in_game_lobby::{Lobby, TitleMenuModifier};
-use crate::signaling::waiting_for_match::{WaitingForMatch, WaitingForOpponent, WaitingInRoom};
-
-use super::session::Session;
+use crate::{
+    lobby::{Lobby, TitleMenuModifier},
+    signaling::waiting_for_match::{WaitingForMatch, WaitingForOpponent, WaitingInRoom},
+    state::session::Session,
+};
 
 fn is_title(main_menu: &MainMenu) -> bool {
     main_menu.screen_id() == ScreenId::Title

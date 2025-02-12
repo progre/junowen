@@ -1,23 +1,27 @@
+mod battle_session;
+mod prepare;
+mod render_parts;
 mod session;
-mod standby;
+mod spectator_session;
+pub mod standby;
 
 use std::ffi::c_void;
 
 use junowen_lib::{Th19, structs::app::MainMenu, structs::others::RenderingText};
-use session::Session;
 use tracing::{debug, trace};
 
+use self::session::Session;
 use crate::{
     file::Features,
-    in_game_lobby::{Lobby, TitleMenuModifier},
+    lobby::{Lobby, TitleMenuModifier},
 };
 
-pub enum JunowenState {
+pub enum State {
     Standby,
     Session(Session),
 }
 
-impl JunowenState {
+impl State {
     fn start_session(&mut self, session: Session) {
         *self = Self::Session(session);
     }

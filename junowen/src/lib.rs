@@ -1,6 +1,7 @@
 mod file;
 mod helper;
-mod in_game_lobby;
+mod junowen;
+mod lobby;
 mod session;
 mod signaling;
 mod state;
@@ -20,7 +21,7 @@ use windows::Win32::{
 
 use crate::{
     file::{SettingsRepo, to_dll_path, to_ini_file_path_log_dir_path_log_file_name},
-    state::Junowen,
+    junowen::Junowen,
 };
 
 static TOKIO_RUNTIME: LazyLock<tokio::runtime::Runtime> = LazyLock::new(|| {

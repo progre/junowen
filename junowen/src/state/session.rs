@@ -10,7 +10,7 @@ use crate::{
         spectator::SpectatorSession as SpectatorSessionProps,
     },
     signaling::waiting_for_match::WaitingForSpectator,
-    state::{battle_session_state::BattleSession, spectator_session_state::SpectatorSession},
+    state::{battle_session::BattleSession, spectator_session::SpectatorSession},
 };
 
 pub enum Session {

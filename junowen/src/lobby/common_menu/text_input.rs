@@ -4,7 +4,7 @@ use getset::Setters;
 use junowen_lib::Th19;
 use windows::Win32::UI::Input::KeyboardAndMouse::{MAPVK_VK_TO_VSC, MapVirtualKeyW, ToUnicode};
 
-use crate::in_game_lobby::helper::render_label_value;
+use crate::lobby::helper::render_label_value;
 
 fn to_ascii(vk: u32, current: &[u8; 256]) -> Option<NonZeroU8> {
     let mut buf = [0u16; 2];

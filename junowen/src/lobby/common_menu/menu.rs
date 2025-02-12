@@ -3,7 +3,7 @@ use std::ffi::c_void;
 use getset::{CopyGetters, Getters, MutGetters, Setters};
 use junowen_lib::Th19;
 
-use crate::in_game_lobby::helper::render_menu_item;
+use crate::lobby::helper::render_menu_item;
 
 use super::{Action, LobbyScene, menu_controller::MenuControllerInputResult, menu_item::MenuItem};
 
