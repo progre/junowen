@@ -1,0 +1,18 @@
+[lobby]
+shared_room = '''
+Konkurencu kontraŭ uzantoj
+kun kongruaj nomoj de ĉambro.
+Dum atendado por konekto,
+vi povas uzi aliajn funkciojn kiel Homoj kontraŭ CPU.
+Bonvolu uzi ĉi tiun opcion por la norma sperto.'''
+reserved_room = '''
+Konkurencu kontraŭ uzantoj
+kun kongruaj nomoj de ĉambro.
+La spektada funkcio estas disponebla.'''
+pure_p2p = '''
+Konekti per ekstera ĉato,
+sen uzi konekton servilo.'''
+shared_room_waiting = '''
+Konfirmi butonon: Nuligi la matĉon
+Nuligi butonon: Reveni al la titola ekrano
+                      dum atendado por matĉo'''

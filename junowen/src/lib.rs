@@ -8,6 +8,8 @@ mod signaling;
 mod state;
 mod tracing_helper;
 
+rust_i18n::i18n!("locales");
+
 use std::{cell::OnceCell, mem::take, path::Path, ptr::null_mut, slice, sync::LazyLock};
 
 use custom_direct_3d::CustomDirect3D9;

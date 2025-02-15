@@ -13,6 +13,7 @@ use junowen_lib::{
     Th19,
     structs::input_devices::{InputFlags, InputValue},
 };
+use rust_i18n::t;
 
 use crate::{
     file::SettingsRepo,
@@ -96,19 +97,15 @@ impl Root {
 
     fn text(&self) -> String {
         match self.common_menu.menu().cursor() {
-            0 => concat!(
-                "ルーム名が一致したユーザーと対戦します。\n",
-                "接続を待っている間も CPU 戦など他の機能を使用できます。\n",
-                "通常はこちらを使用してください。"
-            )
-            .into(),
-            1 => "ルーム名が一致したユーザーと対戦します。\n観戦機能が使用できます。".into(),
-            2 => if self.common_menu.menu().decided() {
-                ""
-            } else {
-                "接続サーバーを使わず、\n外部のチャットなどを介して対戦相手と接続します。"
+            0 => t!("lobby.shared_room").into(),
+            1 => t!("lobby.reserved_room").into(),
+            2 => {
+                if self.common_menu.menu().decided() {
+                    "".into()
+                } else {
+                    t!("lobby.pure_p2p").into()
+                }
             }
-            .into(),
             _ => unreachable!(),
         }
     }

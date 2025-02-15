@@ -1,0 +1,16 @@
+[lobby]
+shared_room = '''
+Compete against users with matching room names.
+While waiting for a connection,
+you can use other features such as Human vs CPU.
+Please use this option for the standard experience.'''
+reserved_room = '''
+Compete against users with matching room names.
+The spectating feature is available.'''
+pure_p2p = '''
+Connect via external chat,
+without using a connection server.'''
+shared_room_waiting = '''
+Confirm button: Cancel the match
+Cancel button: Return to the title screen
+                     while waiting for a match'''

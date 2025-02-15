@@ -1,6 +1,7 @@
 use std::ffi::c_void;
 
 use junowen_lib::{Th19, structs::input_devices::InputValue};
+use rust_i18n::t;
 
 use crate::{
     TOKIO_RUNTIME, file::SettingsRepo, signaling::waiting_for_match::WaitingForOpponentInSharedRoom,
@@ -129,8 +130,7 @@ impl SharedRoom {
 
     pub fn text(&self, waiting: bool) -> String {
         if waiting {
-            "　　　決定ボタン: 対戦を中止する\nキャンセルボタン: 対戦待ちのままタイトルに戻る"
-                .into()
+            t!("lobby.shared_room_waiting").into()
         } else {
             String::new()
         }
