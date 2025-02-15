@@ -1,30 +1,30 @@
 use std::mem::size_of;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use windows::{
-    core::{PCSTR, PCWSTR},
     Win32::{
         Storage::FileSystem::{
-            CreateFileW, FILE_ATTRIBUTE_NORMAL, FILE_GENERIC_READ, FILE_SHARE_NONE, OPEN_EXISTING,
+            CreateFileW, FILE_ATTRIBUTE_NORMAL, FILE_GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING,
         },
         System::{
             Diagnostics::{
                 Debug::{
-                    ImageDirectoryEntryToDataEx, ImageNtHeader, ImageRvaToVa,
-                    IMAGE_DIRECTORY_ENTRY_EXPORT,
+                    IMAGE_DIRECTORY_ENTRY_EXPORT, ImageDirectoryEntryToDataEx, ImageNtHeader,
+                    ImageRvaToVa,
                 },
                 ToolHelp::{
-                    CreateToolhelp32Snapshot, Module32FirstW, Module32NextW, MODULEENTRY32W,
+                    CreateToolhelp32Snapshot, MODULEENTRY32W, Module32FirstW, Module32NextW,
                     TH32CS_SNAPMODULE, TH32CS_SNAPMODULE32,
                 },
             },
             Memory::{
-                CreateFileMappingW, MapViewOfFile, UnmapViewOfFile, FILE_MAP_READ,
-                MEMORY_MAPPED_VIEW_ADDRESS, PAGE_READONLY,
+                CreateFileMappingW, FILE_MAP_READ, MEMORY_MAPPED_VIEW_ADDRESS, MapViewOfFile,
+                PAGE_READONLY, UnmapViewOfFile,
             },
             SystemServices::IMAGE_EXPORT_DIRECTORY,
         },
     },
+    core::{PCSTR, PCWSTR},
 };
 
 use crate::win_api_wrappers::SafeHandle;
@@ -122,7 +122,7 @@ pub fn load_library_w_addr(process_id: u32) -> Result<usize> {
         CreateFileW(
             PCWSTR::from_raw(me.szExePath.as_ptr()),
             FILE_GENERIC_READ.0,
-            FILE_SHARE_NONE,
+            FILE_SHARE_READ,
             None,
             OPEN_EXISTING,
             FILE_ATTRIBUTE_NORMAL,
