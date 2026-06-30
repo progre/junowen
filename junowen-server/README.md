@@ -22,3 +22,39 @@ cargo lambda deploy \
 * Capacity mode = ondemand
 * delete protection
 * TTL = ttl_sec
+
+## CloudWatch access stats
+
+```sh
+cargo --bin access-stats -- iam-check \
+  --profile $PROFILE \
+  --function-name junowen-server
+```
+
+```sh
+cargo --bin access-stats -- room-activity \
+  --profile $PROFILE \
+  --function-name junowen-server \
+  --start 2026-06-01T00:00:00+09:00 \
+  --end 2026-07-01T00:00:00+09:00
+```
+
+Minimum IAM policy:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:StartQuery",
+        "logs:GetQueryResults"
+      ],
+      "Resource": [
+        "arn:aws:logs:ap-northeast-1:<account-id>:log-group:/aws/lambda/junowen-server:*"
+      ]
+    }
+  ]
+}
+```

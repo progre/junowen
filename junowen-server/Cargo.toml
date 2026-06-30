@@ -9,10 +9,14 @@ license.workspace = true
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
-aws-config = "*"
+aws-config = "0.56.1"
+aws-credential-types = "0.56.1"
+aws-sdk-cloudwatchlogs = "0.34.0"
 aws-sdk-dynamodb = "*"
+aws-types = "0.56.1"
 base_custom = "0.2.0"
 chrono = "0.4.31"
+clap = { version = "4.5", features = ["derive"] }
 derive-new = "0.6.0"
 getset = "0.1.2"
 junowen-lib.workspace = true
