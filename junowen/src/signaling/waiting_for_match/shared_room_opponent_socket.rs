@@ -1,11 +1,11 @@
 use std::time::Duration;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use async_trait::async_trait;
 use junowen_lib::{
     connection::signaling::{
-        socket::{OfferResponse, SignalingSocket},
         CompressedSdp,
+        socket::{OfferResponse, SignalingSocket},
     },
     signaling_server::{
         custom::{
@@ -61,7 +61,7 @@ impl SignalingSocket for SignalingServerSharedRoomOpponentSocket {
         info!("{:?}", res);
         let key = match res {
             PutSharedRoomResponse::Conflict { body, .. } => {
-                return Ok(OfferResponse::Offer(body.into_offer()))
+                return Ok(OfferResponse::Offer(body.into_offer()));
             }
             PutSharedRoomResponse::CreatedWithAnswer { body, .. } => {
                 return Ok(OfferResponse::Answer(body.into_answer()));

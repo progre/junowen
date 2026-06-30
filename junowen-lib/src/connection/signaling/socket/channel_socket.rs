@@ -5,8 +5,8 @@ use async_trait::async_trait;
 use tokio::sync::oneshot;
 
 use super::{
-    super::CompressedSdp, async_read_write_socket::SignalingServerMessage, OfferResponse,
-    SignalingSocket,
+    super::CompressedSdp, OfferResponse, SignalingSocket,
+    async_read_write_socket::SignalingServerMessage,
 };
 
 pub struct ChannelSocket {

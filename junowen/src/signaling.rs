@@ -3,14 +3,14 @@ pub mod waiting_for_match;
 use anyhow::Error;
 use getset::{CopyGetters, Getters, MutGetters};
 use junowen_lib::connection::{
-    signaling::{
-        socket::{
-            async_read_write_socket::SignalingServerMessage, channel_socket::ChannelSocket,
-            SignalingSocket,
-        },
-        CompressedSdp,
-    },
     DataChannel, PeerConnection,
+    signaling::{
+        CompressedSdp,
+        socket::{
+            SignalingSocket, async_read_write_socket::SignalingServerMessage,
+            channel_socket::ChannelSocket,
+        },
+    },
 };
 use tokio::sync::{mpsc, oneshot};
 use tracing::info;

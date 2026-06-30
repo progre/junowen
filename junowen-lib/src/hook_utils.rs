@@ -5,17 +5,17 @@ use std::{fs::File, io::Read};
 
 use hex_literal::hex;
 use sha3::digest::Digest; // using for Sha3_224::new()
-use sha3::{digest::generic_array::GenericArray, Sha3_224};
+use sha3::{Sha3_224, digest::generic_array::GenericArray};
 use windows::{
-    core::{HSTRING, PCWSTR},
     Win32::{
         Foundation::MAX_PATH,
         System::LibraryLoader::GetModuleFileNameW,
-        UI::WindowsAndMessaging::{MessageBoxW, MB_ICONWARNING, MB_OK},
+        UI::WindowsAndMessaging::{MB_ICONWARNING, MB_OK, MessageBoxW},
     },
+    core::{HSTRING, PCWSTR},
 };
 
-pub use dll_injection::{do_dll_injection, DllInjectionError};
+pub use dll_injection::{DllInjectionError, do_dll_injection};
 
 pub fn show_warn_dialog(msg: &str) {
     unsafe {

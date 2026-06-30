@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use tokio::{
     select,
     sync::{broadcast, oneshot},
@@ -11,14 +11,14 @@ use webrtc::{
     data_channel::data_channel_init::RTCDataChannelInit,
     ice_transport::ice_server::RTCIceServer,
     peer_connection::{
-        configuration::RTCConfiguration, peer_connection_state::RTCPeerConnectionState,
-        sdp::sdp_type::RTCSdpType, RTCPeerConnection,
+        RTCPeerConnection, configuration::RTCConfiguration,
+        peer_connection_state::RTCPeerConnectionState, sdp::sdp_type::RTCSdpType,
     },
 };
 
 use super::{
     data_channel::DataChannel,
-    signaling::{decompress_session_description, CompressedSdp},
+    signaling::{CompressedSdp, decompress_session_description},
 };
 
 fn create_default_config() -> RTCConfiguration {

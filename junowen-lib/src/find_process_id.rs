@@ -1,8 +1,8 @@
 use std::mem::{size_of, transmute};
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use windows::Win32::System::Diagnostics::ToolHelp::{
-    CreateToolhelp32Snapshot, Process32First, Process32Next, PROCESSENTRY32, TH32CS_SNAPPROCESS,
+    CreateToolhelp32Snapshot, PROCESSENTRY32, Process32First, Process32Next, TH32CS_SNAPPROCESS,
 };
 
 use crate::win_api_wrappers::SafeHandle;

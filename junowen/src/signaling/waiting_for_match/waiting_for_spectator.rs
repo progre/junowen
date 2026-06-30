@@ -3,12 +3,12 @@ use std::mem;
 use anyhow::Result;
 use clipboard_win::{get_clipboard_string, set_clipboard_string};
 use junowen_lib::{
+    Th19,
     connection::signaling::{
-        parse_signaling_code, socket::async_read_write_socket::SignalingServerMessage,
-        SignalingCodeType,
+        SignalingCodeType, parse_signaling_code,
+        socket::async_read_write_socket::SignalingServerMessage,
     },
     structs::app::{MainMenu, ScreenId},
-    Th19,
 };
 use tokio::sync::mpsc::{self, error::TryRecvError};
 use tracing::info;

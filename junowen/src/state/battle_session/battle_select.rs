@@ -4,15 +4,15 @@ use anyhow::Result;
 use derive_new::new;
 use getset::{Getters, MutGetters};
 use junowen_lib::{
+    Th19,
     structs::app::{MainMenu, ScreenId},
     th19_helpers::reset_cursors,
-    Th19,
 };
 use tracing::trace;
 
 use crate::{
     helper::{inputed_number, pushed_f1},
-    session::{battle::BattleSession, MatchInitial},
+    session::{MatchInitial, battle::BattleSession},
 };
 
 use super::{spectator_host::SpectatorHostState, utils::init_round};

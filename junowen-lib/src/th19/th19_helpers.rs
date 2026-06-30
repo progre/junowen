@@ -1,12 +1,12 @@
 use tracing::{trace, warn};
 
 use crate::{
+    Th19,
     structs::{
         app::{MainMenu, ScreenId},
         input_devices::{InputFlags, InputValue},
         selection::{GameMode, PlayerMatchup},
     },
-    Th19,
 };
 
 pub fn shot_repeatedly(prev: InputValue) -> InputValue {

@@ -4,8 +4,9 @@ use junowen_lib::connection::{DataChannel, PeerConnection};
 use tracing::info;
 
 use super::{
+    session_message::RoundInitial,
     spectator::{SpectatorInitial, SpectatorSessionMessage},
-    to_channel, session_message::RoundInitial,
+    to_channel,
 };
 
 #[derive(CopyGetters, Getters, Setters)]

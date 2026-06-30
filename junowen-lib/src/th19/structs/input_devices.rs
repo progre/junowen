@@ -1,4 +1,4 @@
-use flagset::{flags, FlagSet, InvalidBits};
+use flagset::{FlagSet, InvalidBits, flags};
 use getset::{CopyGetters, Getters, MutGetters, Setters};
 
 flags! {

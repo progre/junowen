@@ -1,7 +1,7 @@
 use std::sync::mpsc::RecvError;
 
 use anyhow::Result;
-use junowen_lib::{structs::input_devices::InputValue, Th19};
+use junowen_lib::{Th19, structs::input_devices::InputValue};
 
 use crate::{helper::inputed_number, session::battle::BattleSession};
 

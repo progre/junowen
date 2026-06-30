@@ -1,11 +1,11 @@
 use std::{num::NonZeroU8, panic};
 
-use time::format_description::well_known::{iso8601, Iso8601};
-use tracing::{error, Level};
+use time::format_description::well_known::{Iso8601, iso8601};
+use tracing::{Level, error};
 use tracing_subscriber::{
+    EnvFilter, Layer,
     fmt::{time::LocalTime, writer::MakeWriterExt},
     prelude::__tracing_subscriber_SubscriberExt,
-    EnvFilter, Layer,
 };
 
 const MY_CONFIG: iso8601::EncodedConfig = iso8601::Config::DEFAULT

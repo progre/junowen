@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use derive_new::new;
 use getset::Getters;
 use http::StatusCode;

@@ -2,7 +2,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::Error;
 use getset::Getters;
-use junowen_lib::connection::{signaling::socket::SignalingSocket, DataChannel, PeerConnection};
+use junowen_lib::connection::{DataChannel, PeerConnection, signaling::socket::SignalingSocket};
 use tokio::{
     sync::{
         mpsc::{self},
@@ -12,9 +12,10 @@ use tokio::{
     task::JoinHandle,
     time::sleep,
 };
-use tracing::{debug, debug_span, info, Instrument};
+use tracing::{Instrument, debug, debug_span, info};
 
 use crate::{
+    TOKIO_RUNTIME,
     session::{
         battle::BattleSession, spectator::SpectatorSession, spectator_host::SpectatorHostSession,
     },
@@ -24,11 +25,10 @@ use crate::{
         shared_room_opponent_socket::SignalingServerSharedRoomOpponentSocket,
         waiting_for_spectator::WaitingForPureP2pSpectator,
     },
-    TOKIO_RUNTIME,
 };
 
 use super::{
-    reserved_room_spectator_socket::SignalingServerReservedRoomSpectatorSocket, WaitingForSpectator,
+    WaitingForSpectator, reserved_room_spectator_socket::SignalingServerReservedRoomSpectatorSocket,
 };
 
 pub struct RoomKey(String);

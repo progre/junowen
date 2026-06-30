@@ -10,8 +10,8 @@ use tokio::{
 use crate::{connection::signaling::SignalingCodeType, lang::Lang};
 
 use super::{
-    socket::async_read_write_socket::{SignalingClientMessage, SignalingServerMessage},
     CompressedSdp,
+    socket::async_read_write_socket::{SignalingClientMessage, SignalingServerMessage},
 };
 
 fn read_line() -> String {

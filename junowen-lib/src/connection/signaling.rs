@@ -4,11 +4,11 @@ pub mod stdio_signaling_interface;
 
 use std::io::Write;
 
-use anyhow::{anyhow, bail, Result};
-use base64::{prelude::BASE64_STANDARD_NO_PAD, Engine};
+use anyhow::{Result, anyhow, bail};
+use base64::{Engine, prelude::BASE64_STANDARD_NO_PAD};
 use flate2::{
-    write::{DeflateDecoder, DeflateEncoder},
     Compression,
+    write::{DeflateDecoder, DeflateEncoder},
 };
 use regex::Regex;
 use serde::{Deserialize, Serialize};

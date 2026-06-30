@@ -4,12 +4,12 @@ use anyhow::Result;
 use derive_new::new;
 use getset::{Getters, MutGetters};
 use junowen_lib::{
+    Th19,
     structs::{
         app::{MainMenu, ScreenId},
         input_devices::InputValue,
     },
     th19_helpers::reset_cursors,
-    Th19,
 };
 use tracing::trace;
 

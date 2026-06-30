@@ -1,12 +1,12 @@
 use std::time::Duration;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use async_trait::async_trait;
 
 use junowen_lib::{
     connection::signaling::{
-        socket::{OfferResponse, SignalingSocket},
         CompressedSdp,
+        socket::{OfferResponse, SignalingSocket},
     },
     signaling_server::reserved_room::{
         PostReservedRoomKeepRequestBody, PostReservedRoomKeepResponse,
@@ -18,7 +18,7 @@ use tracing::info;
 
 use crate::signaling::waiting_for_match::socket::retry_after;
 
-use super::{socket::sleep_or_abort_and_delete_room, encode_room_name};
+use super::{encode_room_name, socket::sleep_or_abort_and_delete_room};
 
 pub struct SignalingServerReservedRoomSpectatorHostSocket {
     client: reqwest::Client,

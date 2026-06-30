@@ -1,6 +1,6 @@
 use getset::{CopyGetters, Getters, MutGetters, Setters};
 
-use super::{menu::Menu, text_input::TextInput, Action, LobbyScene};
+use super::{Action, LobbyScene, menu::Menu, text_input::TextInput};
 
 #[derive(Debug, Setters)]
 pub struct MenuPlainItem {

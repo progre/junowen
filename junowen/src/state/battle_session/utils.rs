@@ -3,7 +3,7 @@ use std::sync::mpsc::RecvError;
 use anyhow::Result;
 use junowen_lib::Th19;
 
-use crate::session::{battle::BattleSession, RoundInitial};
+use crate::session::{RoundInitial, battle::BattleSession};
 
 use super::spectator_host::SpectatorHostState;
 

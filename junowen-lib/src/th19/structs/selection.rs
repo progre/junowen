@@ -1,6 +1,6 @@
 use std::mem::transmute;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use getset::{Getters, MutGetters};
 
 /// length=c0

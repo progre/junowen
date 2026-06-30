@@ -1,9 +1,9 @@
 use std::time::Duration;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 use junowen_lib::signaling_server::room::DeleteRoomRequestBody;
-use reqwest::{header::RETRY_AFTER, Response};
+use reqwest::{Response, header::RETRY_AFTER};
 use tokio::{sync::watch, time::sleep};
 use tracing::info;
 

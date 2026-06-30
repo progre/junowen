@@ -1,18 +1,18 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use getset::Getters;
 use junowen_lib::{
+    Th19,
     structs::app::{MainMenu, ScreenId},
     structs::selection::Selection,
-    Th19,
 };
 use tracing::info;
 
 use crate::{
     session::{
+        RoundInitial,
         battle::BattleSession,
         spectator::{self, InitialState, SpectatorInitial},
         spectator_host::SpectatorHostSession,
-        RoundInitial,
     },
     signaling::waiting_for_match::WaitingForSpectator,
 };

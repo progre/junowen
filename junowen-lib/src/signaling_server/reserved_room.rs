@@ -1,5 +1,5 @@
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use derive_new::new;
 use getset::Getters;
 use http::StatusCode;

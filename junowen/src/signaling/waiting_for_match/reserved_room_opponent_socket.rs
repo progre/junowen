@@ -1,11 +1,11 @@
 use std::time::Duration;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use async_trait::async_trait;
 use junowen_lib::{
     connection::signaling::{
-        socket::{OfferResponse, SignalingSocket},
         CompressedSdp,
+        socket::{OfferResponse, SignalingSocket},
     },
     signaling_server::{
         reserved_room::{

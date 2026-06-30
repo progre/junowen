@@ -2,15 +2,15 @@ use std::{mem::transmute, os::raw::c_void, path::Path};
 
 use anyhow::{Error, Result};
 use windows::{
-    core::HSTRING,
     Win32::System::{
         Diagnostics::Debug::WriteProcessMemory,
-        Memory::{VirtualAllocEx, VirtualFreeEx, MEM_COMMIT, MEM_RELEASE, PAGE_READWRITE},
+        Memory::{MEM_COMMIT, MEM_RELEASE, PAGE_READWRITE, VirtualAllocEx, VirtualFreeEx},
         Threading::{
-            CreateRemoteThread, OpenProcess, WaitForSingleObject, LPTHREAD_START_ROUTINE,
-            PROCESS_ALL_ACCESS,
+            CreateRemoteThread, LPTHREAD_START_ROUTINE, OpenProcess, PROCESS_ALL_ACCESS,
+            WaitForSingleObject,
         },
     },
+    core::HSTRING,
 };
 
 use crate::{find_process_id::find_process_id, win_api_wrappers::SafeHandle};

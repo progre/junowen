@@ -1,6 +1,6 @@
 use std::{ffi::c_void, mem::size_of};
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use windows::Win32::{
     Foundation::{CloseHandle, HANDLE, HMODULE, MAX_PATH},
     System::{

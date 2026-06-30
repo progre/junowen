@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use derive_new::new;
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
