@@ -45,8 +45,11 @@ pub enum Features {
 }
 
 const FEATURES: &str = "features";
+const LAN_ADDRESS: &str = "lan_address";
 const SHARED_ROOM_NAME: &str = "shared_room_name";
 const RESERVED_ROOM_NAME: &str = "reserved_room_name";
+
+const DEFAULT_LAN_ADDRESS: &str = "127.0.0.1:31337";
 
 #[derive(new)]
 pub struct SettingsRepo {
@@ -95,6 +98,20 @@ impl SettingsRepo {
                     .collect::<Vec<_>>()
             })
             .unwrap_or_default()
+    }
+
+    pub async fn lan_address(&self) -> String {
+        match self.read_string(LAN_ADDRESS).await {
+            Some(value) => value,
+            None => {
+                let value = DEFAULT_LAN_ADDRESS.to_owned();
+                self.set_lan_address(value.clone()).await;
+                value
+            }
+        }
+    }
+    pub async fn set_lan_address(&self, value: String) {
+        self.write_string(LAN_ADDRESS, value).await;
     }
 
     pub async fn reserved_room_name(&self, th19: &Th19) -> String {

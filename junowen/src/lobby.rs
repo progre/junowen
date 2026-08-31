@@ -28,7 +28,7 @@ use self::{
     common_menu::{CommonMenu, LobbyScene, Menu, MenuItem, OnMenuInputResult},
     pure_p2p_guest::PureP2pGuest,
     pure_p2p_offerer::{PureP2pOfferer, pure_p2p_host, pure_p2p_spectator},
-    room::{reserved::ReservedRoom, shared::SharedRoom},
+    room::{lan::Lan, reserved::ReservedRoom, shared::SharedRoom},
 };
 
 pub use overlay::overlay;
@@ -46,6 +46,7 @@ impl Root {
             vec![
                 MenuItem::sub_scene("Shared Room", LobbyScene::SharedRoom),
                 MenuItem::sub_scene("Reserved Room", LobbyScene::ReservedRoom),
+                MenuItem::sub_scene("LAN", LobbyScene::Lan),
                 MenuItem::sub_menu(
                     "Pure P2P",
                     None,
@@ -99,7 +100,8 @@ impl Root {
         match self.common_menu.menu().cursor() {
             0 => t!("lobby.shared_room").into(),
             1 => t!("lobby.reserved_room").into(),
-            2 => {
+            2 => t!("lobby.lan").into(),
+            3 => {
                 if self.common_menu.menu().decided() {
                     "".into()
                 } else {
@@ -119,6 +121,7 @@ pub struct Lobby {
     root: Root,
     shared_room: SharedRoom,
     reserved_room: ReservedRoom,
+    lan: Lan,
     pure_p2p_host: Option<PureP2pOfferer<BattleSession>>,
     pure_p2p_guest: Option<PureP2pGuest>,
     pure_p2p_spectator: Option<PureP2pOfferer<SpectatorSession>>,
@@ -137,6 +140,7 @@ impl Lobby {
             waiting_for_match: None,
             shared_room: SharedRoom::new(),
             reserved_room: ReservedRoom::new(),
+            lan: Lan::new(),
             pure_p2p_host: None,
             pure_p2p_guest: None,
             pure_p2p_spectator: None,
@@ -183,6 +187,25 @@ impl Lobby {
                 th19,
                 &mut self.waiting_for_match,
             ),
+            LobbyScene::Lan => {
+                let mut waiting = match self.waiting_for_match.take() {
+                    Some(WaitingForMatch::Opponent(WaitingForOpponent::Lan(waiting))) => {
+                        Some(waiting)
+                    }
+                    _ => None,
+                };
+                let ret = self.lan.on_input_menu(
+                    &self.settings_repo,
+                    current_input,
+                    self.prev_input,
+                    th19,
+                    &mut waiting,
+                );
+                self.waiting_for_match = waiting
+                    .map(WaitingForOpponent::Lan)
+                    .map(WaitingForMatch::Opponent);
+                ret
+            }
             LobbyScene::PureP2pHost => {
                 if self.pure_p2p_host.is_none() {
                     self.waiting_for_match = None;
@@ -281,6 +304,13 @@ impl Lobby {
                         .on_render_texts(none, th19, text_renderer);
                 }
             },
+            LobbyScene::Lan => {
+                let waiting = self.waiting_for_match.as_ref().and_then(|x| match x {
+                    WaitingForMatch::Opponent(WaitingForOpponent::Lan(waiting)) => Some(waiting),
+                    _ => None,
+                });
+                self.lan.on_render_texts(waiting, th19, text_renderer);
+            }
             LobbyScene::PureP2pHost => self
                 .pure_p2p_host
                 .as_ref()
@@ -304,6 +334,7 @@ impl Lobby {
             LobbyScene::Root => self.root.text(),
             LobbyScene::SharedRoom => self.shared_room.text(self.waiting_for_match.is_some()),
             LobbyScene::ReservedRoom => String::new(),
+            LobbyScene::Lan => String::new(),
             LobbyScene::PureP2pHost => String::new(),
             LobbyScene::PureP2pGuest => String::new(),
             LobbyScene::PureP2pSpectator => String::new(),

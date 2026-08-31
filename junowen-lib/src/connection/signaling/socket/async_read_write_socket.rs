@@ -1,11 +1,15 @@
-use std::{io, time::Duration};
+use std::time::Duration;
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+use tokio::io::{AsyncRead, AsyncWrite};
 
-use super::{super::CompressedSdp, OfferResponse, SignalingSocket};
+use super::{
+    super::CompressedSdp,
+    OfferResponse, SignalingSocket,
+    frame::{read_frame, write_frame},
+};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum SignalingServerMessage {
@@ -34,17 +38,12 @@ where
         Self { read_write }
     }
 
-    async fn send(&mut self, msg: SignalingClientMessage) -> Result<(), io::Error> {
-        self.read_write
-            .write_all(&rmp_serde::to_vec(&msg).unwrap())
-            .await
+    async fn send(&mut self, msg: SignalingClientMessage) -> Result<()> {
+        write_frame(&mut self.read_write, msg).await
     }
 
     async fn recv(&mut self) -> Result<SignalingServerMessage> {
-        let mut buf = [0u8; 4 * 1024];
-        let len = self.read_write.read(&mut buf).await?;
-        rmp_serde::from_slice(&buf[..len])
-            .map_err(|err| anyhow!("parse failed (len={}): {}", len, err))
+        read_frame(&mut self.read_write).await
     }
 
     pub fn into_inner(self) -> T {
@@ -72,6 +71,6 @@ where
     }
 
     async fn answer(&mut self, desc: CompressedSdp) -> Result<()> {
-        Ok(self.send(SignalingClientMessage::AnswerDesc(desc)).await?)
+        self.send(SignalingClientMessage::AnswerDesc(desc)).await
     }
 }

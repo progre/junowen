@@ -1,3 +1,5 @@
+mod lan_guest_socket;
+mod lan_host_socket;
 mod reserved_room_opponent_socket;
 mod reserved_room_spectator_host_socket;
 mod reserved_room_spectator_socket;
@@ -13,7 +15,7 @@ use crate::session::{battle::BattleSession, spectator::SpectatorSession};
 
 pub use waiting_for_spectator::{WaitingForPureP2pSpectator, WaitingForSpectator};
 pub use waiting_in_room::{
-    WaitingForOpponentInReservedRoom, WaitingForOpponentInSharedRoom,
+    WaitingForOpponentInReservedRoom, WaitingForOpponentInSharedRoom, WaitingForOpponentOnLan,
     WaitingForSpectatorHostInReservedRoom, WaitingInRoom,
 };
 
@@ -29,6 +31,7 @@ pub struct WaitingForPureP2pOpponent {
 pub enum WaitingForOpponent {
     SharedRoom(WaitingForOpponentInSharedRoom),
     ReservedRoom(WaitingForOpponentInReservedRoom),
+    Lan(WaitingForOpponentOnLan),
     PureP2p(WaitingForPureP2pOpponent),
 }
 
@@ -49,6 +52,15 @@ impl WaitingForOpponent {
             Self::ReservedRoom(waiting) => waiting
                 .try_into_session_and_waiting_for_spectator()
                 .map_err(WaitingForOpponent::ReservedRoom),
+            Self::Lan(waiting) => waiting
+                .try_into_session()
+                .map(|session| {
+                    (
+                        session,
+                        WaitingForSpectator::PureP2p(WaitingForPureP2pSpectator::standby()),
+                    )
+                })
+                .map_err(WaitingForOpponent::Lan),
             Self::PureP2p(mut waiting) => waiting
                 .battle_session_rx
                 .try_recv()

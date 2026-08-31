@@ -1,3 +1,4 @@
+pub mod lan;
 pub mod reserved;
 pub mod shared;
 
@@ -117,7 +118,8 @@ fn render_progress(th19: &Th19, text_renderer: &c_void, progress: f64) {
 pub fn on_render_texts<T>(
     menu: &CommonMenu,
     waiting: Option<&WaitingInRoom<T>>,
-    room_name: Option<&str>,
+    label: &str,
+    value: Option<&str>,
     th19: &Th19,
     text_renderer: &c_void,
 ) {
@@ -130,7 +132,7 @@ pub fn on_render_texts<T>(
             let error_msg = format!("Failed: {}", error);
             render_text_line(th19, text_renderer, 13 + i as u32, error_msg.as_bytes());
         }
-    } else if let Some(room_name) = room_name {
-        render_label_value(th19, text_renderer, 240 - 56, 1, "Room name", room_name);
+    } else if let Some(value) = value {
+        render_label_value(th19, text_renderer, 240 - 56, 1, label, value);
     }
 }

@@ -21,24 +21,30 @@ use super::{
     signaling::{CompressedSdp, decompress_session_description},
 };
 
-fn create_default_config() -> RTCConfiguration {
+fn create_config(ice_server_urls: Vec<String>) -> RTCConfiguration {
     RTCConfiguration {
-        ice_servers: vec![RTCIceServer {
-            urls: vec!["stun:stun.l.google.com:19302".to_owned()],
-            ..Default::default()
-        }],
+        ice_servers: ice_server_urls
+            .into_iter()
+            .map(|url| RTCIceServer {
+                urls: vec![url],
+                ..Default::default()
+            })
+            .collect(),
         ..Default::default()
     }
 }
 
-async fn create_default_peer_connection(timeout: Duration) -> Result<RTCPeerConnection> {
+async fn create_default_peer_connection(
+    timeout: Duration,
+    ice_server_urls: Vec<String>,
+) -> Result<RTCPeerConnection> {
     let mut setting_engine = SettingEngine::default();
     // NOTE: The timeout is the time from receiving the opponent's signaling code
     setting_engine.set_ice_timeouts(None, Some(timeout), None);
     Ok(webrtc::api::APIBuilder::new()
         .with_setting_engine(setting_engine)
         .build()
-        .new_peer_connection(create_default_config())
+        .new_peer_connection(create_config(ice_server_urls))
         .await?)
 }
 
@@ -73,8 +79,8 @@ impl Drop for PeerConnection {
 const PROTOCOL: &str = "JUNOWEN/1.1";
 
 impl PeerConnection {
-    pub async fn new(timeout: Duration) -> Result<Self> {
-        let rtc = create_default_peer_connection(timeout).await?;
+    pub async fn new(timeout: Duration, ice_server_urls: Vec<String>) -> Result<Self> {
+        let rtc = create_default_peer_connection(timeout, ice_server_urls).await?;
 
         let (peer_connection_state_failed_tx, peer_connection_state_failed_rx) = oneshot::channel();
         let mut peer_connection_state_failed_tx = Some(peer_connection_state_failed_tx);

@@ -26,7 +26,7 @@ It works in the same way as adonis and th075caster.
 
 ## How to use
 
-Three connection methods are currently supported.
+Four connection methods are currently supported.
 
 ### Shared Room
 
@@ -41,6 +41,26 @@ Pressing the shot button on the waiting for connection screen interrupts, and pr
 
 This method connects to users whose room name matches the set room name.  
 You can have other players spectate your matches.
+
+### LAN
+
+This method does not use a connection server.  
+Connection information is exchanged directly over TCP within a LAN.  
+A STUN server is not used either, so it works without Internet access.
+
+#### Using LAN competition
+
+1. Select "Ju.N.Owen" -> "LAN" on both sides.
+2. Select "Change Address" and enter the address of the waiting side,
+   such as `192.168.0.2:31337`.
+    - The waiting side uses only the port number,
+      and listens on all addresses.
+3. Select "Wait for a Guest" on the waiting side,
+   then "Connect to a Host" on the other side.
+4. If all goes well, you will be redirected to the difficulty selection
+   screen and the game will begin.
+
+The waiting side becomes the host of the match.
 
 ### Pure P2P
 

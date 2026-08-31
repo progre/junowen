@@ -9,6 +9,10 @@ reserved_room = '''
 Konkurencu kontraŭ uzantoj
 kun kongruaj nomoj de ĉambro.
 La spektada funkcio estas disponebla.'''
+lan = '''
+Konkurencu per LAN, sen uzi konekton servilo.
+Unu flanko atendas ĉe la agordita pordo,
+kaj la alia konektas al tiu adreso.'''
 pure_p2p = '''
 Konekti per ekstera ĉato,
 sen uzi konekton servilo.'''

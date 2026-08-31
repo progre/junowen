@@ -161,6 +161,13 @@ impl ReservedRoom {
         } else if waiting.is_none() {
             room_name = None;
         }
-        on_render_texts(&self.menu, waiting, room_name, th19, text_renderer);
+        on_render_texts(
+            &self.menu,
+            waiting,
+            "Room name",
+            room_name,
+            th19,
+            text_renderer,
+        );
     }
 }

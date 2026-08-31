@@ -20,6 +20,7 @@ use crate::{
         battle::BattleSession, spectator::SpectatorSession, spectator_host::SpectatorHostSession,
     },
     signaling::waiting_for_match::{
+        lan_guest_socket::LanGuestSocket, lan_host_socket::LanHostSocket,
         reserved_room_opponent_socket::SignalingServerReservedRoomOpponentSocket,
         reserved_room_spectator_host_socket::SignalingServerReservedRoomSpectatorHostSocket,
         shared_room_opponent_socket::SignalingServerSharedRoomOpponentSocket,
@@ -45,6 +46,8 @@ pub struct WaitingInRoom<TSession> {
 }
 
 pub type WaitingForOpponentInSharedRoom = WaitingInRoom<BattleSession>;
+/// LAN 対戦の待機。`room_name` には接続先アドレスが入る
+pub type WaitingForOpponentOnLan = WaitingInRoom<BattleSession>;
 pub type WaitingForOpponentInReservedRoom = WaitingInRoom<(BattleSession, Option<RoomKey>)>;
 pub type WaitingForSpectatorInReservedRoom = WaitingInRoom<(SpectatorHostSession, RoomKey)>;
 pub type WaitingForSpectatorHostInReservedRoom = WaitingInRoom<SpectatorSession>;
@@ -117,6 +120,25 @@ impl WaitingForOpponentInSharedRoom {
             SignalingServerSharedRoomOpponentSocket::new,
             |pc, dc, host, _socket| BattleSession::new(pc, dc, host),
             room_name,
+        )
+    }
+}
+
+// NOTE: `WaitingForOpponentInSharedRoom` と同一の型のため、`new` とは別の名前にする
+impl WaitingForOpponentOnLan {
+    pub fn new_lan_host(address: String) -> Self {
+        Self::internal_new(
+            |_origin, address, abort_rx| LanHostSocket::new(address.to_owned(), abort_rx),
+            |conn, dc, host, _socket| BattleSession::new(conn, dc, host),
+            address,
+        )
+    }
+
+    pub fn new_lan_guest(address: String) -> Self {
+        Self::internal_new(
+            |_origin, address, abort_rx| LanGuestSocket::new(address.to_owned(), abort_rx),
+            |conn, dc, host, _socket| BattleSession::new(conn, dc, host),
+            address,
         )
     }
 }

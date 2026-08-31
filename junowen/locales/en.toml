@@ -7,6 +7,10 @@ Please use this option for the standard experience.'''
 reserved_room = '''
 Compete against users with matching room names.
 The spectating feature is available.'''
+lan = '''
+Compete over a LAN, without using a connection server.
+One side waits on the configured port,
+and the other connects to that address.'''
 pure_p2p = '''
 Connect via external chat,
 without using a connection server.'''
