@@ -17,8 +17,8 @@ fn make_menu() -> CommonMenu {
         "LAN",
         None,
         vec![
-            MenuItem::sub_menu("Wait for a Guest", Some(0), leave_menu()),
-            MenuItem::sub_menu("Connect to a Host", Some(3), leave_menu()),
+            MenuItem::sub_menu("Connect as a Host", Some(0), leave_menu()),
+            MenuItem::sub_menu("Connect as a Guest", Some(3), leave_menu()),
             MenuItem::text_input("Change Address", 11, 12, "Address"),
         ],
         0,

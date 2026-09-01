@@ -55,8 +55,8 @@ A STUN server is not used either, so it works without Internet access.
    such as `192.168.0.2:31337`.
     - The waiting side uses only the port number,
       and listens on all addresses.
-3. Select "Wait for a Guest" on the waiting side,
-   then "Connect to a Host" on the other side.
+3. Select "Connect as a Host" on the waiting side,
+   then "Connect as a Guest" on the other side.
 4. If all goes well, you will be redirected to the difficulty selection
    screen and the game will begin.
 
