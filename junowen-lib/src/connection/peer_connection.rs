@@ -23,13 +23,14 @@ use super::{
 
 fn create_config(ice_server_urls: Vec<String>) -> RTCConfiguration {
     RTCConfiguration {
-        ice_servers: ice_server_urls
-            .into_iter()
-            .map(|url| RTCIceServer {
-                urls: vec![url],
+        ice_servers: if ice_server_urls.is_empty() {
+            vec![]
+        } else {
+            vec![RTCIceServer {
+                urls: ice_server_urls,
                 ..Default::default()
-            })
-            .collect(),
+            }]
+        },
         ..Default::default()
     }
 }
