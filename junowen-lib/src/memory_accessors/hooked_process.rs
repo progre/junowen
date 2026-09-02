@@ -67,7 +67,7 @@ unsafe fn assemble_jmp_target(addr: *mut u8, target: usize) -> usize {
 fn jmp_target(addr: *const u8) -> usize {
     let jump_base_addr = addr.wrapping_add(5) as i64;
     let p_jump_target = addr.wrapping_add(1) as *const i32;
-    let value = unsafe { *p_jump_target };
+    let value = unsafe { read_unaligned(p_jump_target) };
     (jump_base_addr + value as i64) as usize
 }
 
