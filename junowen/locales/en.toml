@@ -25,6 +25,6 @@ Confirm button: Cancel the match
 Cancel button: Return to the title screen
                      while waiting for a match'''
 tcp_signaling_offline_mode = '''
-Offline Mode: ON stops using a STUN server,
+Turning this ON skips the STUN server,
 which is convenient when you don't have
 Internet access, such as over a LAN.'''
