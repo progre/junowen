@@ -45,14 +45,13 @@ pub enum Features {
 }
 
 const FEATURES: &str = "features";
-const LAN_ADDRESS: &str = "lan_address";
-const LAN_OFFLINE: &str = "lan_offline";
 const SHARED_ROOM_NAME: &str = "shared_room_name";
 const RESERVED_ROOM_NAME: &str = "reserved_room_name";
+const TCP_SIGNALING_ADDRESS: &str = "tcp_signaling_address";
+const TCP_SIGNALING_OFFLINE: &str = "tcp_signaling_offline";
 
-const DEFAULT_LAN_ADDRESS: &str = "127.0.0.1:19000";
-/// STUN サーバーが到達できない環境でも待ち時間なく接続できるよう、既定はオフライン(STUN 無効)とする
-const DEFAULT_LAN_OFFLINE: bool = true;
+const DEFAULT_TCP_SIGNALING_ADDRESS: &str = "127.0.0.1:19000";
+const DEFAULT_TCP_SIGNALING_OFFLINE: bool = false;
 
 #[derive(new)]
 pub struct SettingsRepo {
@@ -120,33 +119,6 @@ impl SettingsRepo {
             .unwrap_or_default()
     }
 
-    pub async fn lan_address(&self) -> String {
-        match self.read_string(LAN_ADDRESS).await {
-            Some(value) => value,
-            None => {
-                let value = DEFAULT_LAN_ADDRESS.to_owned();
-                self.set_lan_address(value.clone()).await;
-                value
-            }
-        }
-    }
-    pub async fn set_lan_address(&self, value: String) {
-        self.write_string(LAN_ADDRESS, value).await;
-    }
-
-    pub async fn lan_offline(&self) -> bool {
-        match self.read_bool(LAN_OFFLINE).await {
-            Some(value) => value,
-            None => {
-                self.set_lan_offline(DEFAULT_LAN_OFFLINE).await;
-                DEFAULT_LAN_OFFLINE
-            }
-        }
-    }
-    pub async fn set_lan_offline(&self, value: bool) {
-        self.write_bool(LAN_OFFLINE, value).await;
-    }
-
     pub async fn reserved_room_name(&self, th19: &Th19) -> String {
         match self.read_string(RESERVED_ROOM_NAME).await {
             Some(value) => value,
@@ -173,5 +145,33 @@ impl SettingsRepo {
     }
     pub async fn set_shared_room_name(&self, value: String) {
         self.write_string(SHARED_ROOM_NAME, value).await;
+    }
+
+    pub async fn tcp_signaling_address(&self) -> String {
+        match self.read_string(TCP_SIGNALING_ADDRESS).await {
+            Some(value) => value,
+            None => {
+                let value = DEFAULT_TCP_SIGNALING_ADDRESS.to_owned();
+                self.set_tcp_signaling_address(value.clone()).await;
+                value
+            }
+        }
+    }
+    pub async fn set_tcp_signaling_address(&self, value: String) {
+        self.write_string(TCP_SIGNALING_ADDRESS, value).await;
+    }
+
+    pub async fn tcp_signaling_offline(&self) -> bool {
+        match self.read_bool(TCP_SIGNALING_OFFLINE).await {
+            Some(value) => value,
+            None => {
+                self.set_tcp_signaling_offline(DEFAULT_TCP_SIGNALING_OFFLINE)
+                    .await;
+                DEFAULT_TCP_SIGNALING_OFFLINE
+            }
+        }
+    }
+    pub async fn set_tcp_signaling_offline(&self, value: bool) {
+        self.write_bool(TCP_SIGNALING_OFFLINE, value).await;
     }
 }

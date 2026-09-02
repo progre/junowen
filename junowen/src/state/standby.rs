@@ -126,8 +126,8 @@ pub fn on_render_texts(
         Some(WaitingForMatch::Opponent(WaitingForOpponent::ReservedRoom(waiting))) => {
             render_waiting_message("Reserved Room", waiting, th19, text_renderer);
         }
-        Some(WaitingForMatch::Opponent(WaitingForOpponent::Lan(waiting))) => {
-            render_waiting_message("LAN", waiting, th19, text_renderer);
+        Some(WaitingForMatch::Opponent(WaitingForOpponent::TcpSignaling(waiting))) => {
+            render_waiting_message("TCP Signaling", waiting, th19, text_renderer);
         }
     }
     let Some(main_menu) = th19.app().main_loop_tasks().find_main_menu() else {

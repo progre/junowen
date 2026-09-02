@@ -7,8 +7,9 @@ Please use this option for the standard experience.'''
 reserved_room = '''
 Compete against users with matching room names.
 The spectating feature is available.'''
-lan = '''
-Compete over a LAN, without using a connection server.
+tcp_signaling = '''
+Connect directly over TCP, without using a connection server.
+Convenient when you don't have Internet access.
 One side waits on the configured port,
 and the other connects to that address.'''
 pure_p2p = '''

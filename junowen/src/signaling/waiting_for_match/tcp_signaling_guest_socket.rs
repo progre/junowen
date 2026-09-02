@@ -9,15 +9,16 @@ use junowen_lib::connection::signaling::{
 use tokio::{net::TcpStream, sync::watch};
 use tracing::info;
 
-/// LAN 対戦の接続側。[`super::lan_host_socket::LanHostSocket`] に TCP で接続し、answerer となる。
-pub struct LanGuestSocket {
+/// TCP シグナリングの接続側。
+/// [`super::tcp_signaling_host_socket::TcpSignalingHostSocket`] に接続し、answerer となる。
+pub struct TcpSignalingGuestSocket {
     address: String,
     offline: bool,
     inner: Option<AsyncReadWriteSocket<TcpStream>>,
     abort_rx: watch::Receiver<bool>,
 }
 
-impl LanGuestSocket {
+impl TcpSignalingGuestSocket {
     pub fn new(address: String, offline: bool, abort_rx: watch::Receiver<bool>) -> Self {
         Self {
             address,
@@ -42,7 +43,7 @@ impl LanGuestSocket {
 }
 
 #[async_trait]
-impl SignalingSocket for LanGuestSocket {
+impl SignalingSocket for TcpSignalingGuestSocket {
     fn timeout() -> Duration {
         Duration::from_secs(20 * 60)
     }

@@ -42,23 +42,25 @@ Pressing the shot button on the waiting for connection screen interrupts, and pr
 This method connects to users whose room name matches the set room name.  
 You can have other players spectate your matches.
 
-### LAN
+### TCP Signaling
 
 This method does not use a connection server.  
-Connection information is exchanged directly over TCP within a LAN.  
-By default, a STUN server is not used either ("Offline Mode: ON"),
-so it works without Internet access.
+Connection information is exchanged directly over TCP.  
+A STUN server is used by default, so this also works after the
+signaling server is retired. Turning "Offline Mode" ON disables the
+STUN server, which is convenient when you don't have Internet access
+(e.g. over a LAN).
 
-#### Using LAN competition
+#### Using TCP Signaling competition
 
-1. Select "Ju.N.Owen" -> "LAN" on both sides.
+1. Select "Ju.N.Owen" -> "TCP Signaling" on both sides.
 2. Select "Change Address" and enter the address of the waiting side,
    such as `192.168.0.2:19000`.
     - The waiting side uses only the port number,
       and listens on all addresses.
-    - If both sides have Internet access, select "Offline Mode: ON" to
-      turn it "OFF". This uses a STUN server, so the game can be played
-      even after the signaling server is retired.
+    - If you don't have Internet access (e.g. over a LAN), select
+      "Offline Mode: OFF" to turn it "ON". This skips the STUN server,
+      avoiding a wait for a response that will never arrive.
 3. Select "Connect as a Host" on the waiting side,
    then "Connect as a Guest" on the other side.
 4. If all goes well, you will be redirected to the difficulty selection

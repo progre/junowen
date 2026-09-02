@@ -3,7 +3,8 @@ use std::ffi::c_void;
 use junowen_lib::{Th19, structs::input_devices::InputValue};
 
 use crate::{
-    TOKIO_RUNTIME, file::SettingsRepo, signaling::waiting_for_match::WaitingForOpponentOnLan,
+    TOKIO_RUNTIME, file::SettingsRepo,
+    signaling::waiting_for_match::WaitingForOpponentOverTcpSignaling,
 };
 
 use super::{
@@ -15,9 +16,16 @@ const OFFLINE_LABEL: &str = "Offline Mode: ON";
 const ONLINE_LABEL: &str = "Offline Mode: OFF";
 
 fn make_menu() -> CommonMenu {
-    let leave_menu = || Menu::new("LAN", Some(1), vec![MenuItem::plain("Leave", 1, false)], 0);
+    let leave_menu = || {
+        Menu::new(
+            "TCP Signaling",
+            Some(1),
+            vec![MenuItem::plain("Leave", 1, false)],
+            0,
+        )
+    };
     let menu = Menu::new(
-        "LAN",
+        "TCP Signaling",
         None,
         vec![
             MenuItem::sub_menu("Connect as a Host", Some(0), leave_menu()),
@@ -30,14 +38,14 @@ fn make_menu() -> CommonMenu {
     CommonMenu::new(false, 240 + 56, menu)
 }
 
-pub struct Lan {
+pub struct TcpSignaling {
     menu: CommonMenu,
     enter: bool,
     address: Option<String>,
     offline: Option<bool>,
 }
 
-impl Lan {
+impl TcpSignaling {
     pub fn new() -> Self {
         Self {
             menu: make_menu(),
@@ -55,8 +63,8 @@ impl Lan {
         self.offline.unwrap()
     }
 
-    /// STUN の到達性はネットワークによって変わるため、LAN 対戦の待ち時間を避けるかどうかを
-    /// 手動で切り替えられるようにする(既定はオフライン=STUN 無効)
+    /// STUN の到達性はネットワークによって変わるため、待ち時間を避けるかどうかを
+    /// 手動で切り替えられるようにする
     fn set_offline(&mut self, offline: bool) {
         self.offline = Some(offline);
         let label = if offline { OFFLINE_LABEL } else { ONLINE_LABEL };
@@ -69,13 +77,13 @@ impl Lan {
         current_input: InputValue,
         prev_input: InputValue,
         th19: &Th19,
-        waiting: &mut Option<WaitingForOpponentOnLan>,
+        waiting: &mut Option<WaitingForOpponentOverTcpSignaling>,
     ) -> Option<LobbyScene> {
         if self.address.is_none() {
-            self.address = Some(TOKIO_RUNTIME.block_on(settings_repo.lan_address()));
+            self.address = Some(TOKIO_RUNTIME.block_on(settings_repo.tcp_signaling_address()));
         }
         if self.offline.is_none() {
-            let offline = TOKIO_RUNTIME.block_on(settings_repo.lan_offline());
+            let offline = TOKIO_RUNTIME.block_on(settings_repo.tcp_signaling_offline());
             self.set_offline(offline);
         }
         if waiting.is_none() && self.enter {
@@ -97,7 +105,7 @@ impl Lan {
             OnMenuInputResult::Action(action) => match action.id() {
                 0 => {
                     self.enter = true;
-                    *waiting = Some(WaitingForOpponentOnLan::new_lan_host(
+                    *waiting = Some(WaitingForOpponentOverTcpSignaling::new_tcp_signaling_host(
                         self.address().to_owned(),
                         self.offline(),
                     ));
@@ -112,7 +120,7 @@ impl Lan {
                 }
                 3 => {
                     self.enter = true;
-                    *waiting = Some(WaitingForOpponentOnLan::new_lan_guest(
+                    *waiting = Some(WaitingForOpponentOverTcpSignaling::new_tcp_signaling_guest(
                         self.address().to_owned(),
                         self.offline(),
                     ));
@@ -131,13 +139,13 @@ impl Lan {
                 12 => {
                     let new_address = action.value().unwrap().to_owned();
                     self.address = Some(new_address.clone());
-                    TOKIO_RUNTIME.block_on(settings_repo.set_lan_address(new_address));
+                    TOKIO_RUNTIME.block_on(settings_repo.set_tcp_signaling_address(new_address));
                     None
                 }
                 20 => {
                     let offline = !self.offline();
                     self.set_offline(offline);
-                    TOKIO_RUNTIME.block_on(settings_repo.set_lan_offline(offline));
+                    TOKIO_RUNTIME.block_on(settings_repo.set_tcp_signaling_offline(offline));
                     None
                 }
                 _ => unreachable!(),
@@ -147,7 +155,7 @@ impl Lan {
 
     pub fn on_render_texts(
         &self,
-        mut waiting: Option<&WaitingForOpponentOnLan>,
+        mut waiting: Option<&WaitingForOpponentOverTcpSignaling>,
         th19: &Th19,
         text_renderer: &c_void,
     ) {

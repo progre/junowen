@@ -21,15 +21,15 @@ fn parse_port(address: &str) -> Result<u16> {
         .with_context(|| format!("Invalid port: {}", port))
 }
 
-/// LAN 対戦の待ち受け側。接続してきた相手に対し、常に自身が offerer となる。
-pub struct LanHostSocket {
+/// TCP シグナリングの待ち受け側。接続してきた相手に対し、常に自身が offerer となる。
+pub struct TcpSignalingHostSocket {
     address: String,
     offline: bool,
     listener: Option<TcpListener>,
     abort_rx: watch::Receiver<bool>,
 }
 
-impl LanHostSocket {
+impl TcpSignalingHostSocket {
     pub fn new(address: String, offline: bool, abort_rx: watch::Receiver<bool>) -> Self {
         Self {
             address,
@@ -66,7 +66,7 @@ impl LanHostSocket {
 }
 
 #[async_trait]
-impl SignalingSocket for LanHostSocket {
+impl SignalingSocket for TcpSignalingHostSocket {
     fn timeout() -> Duration {
         Duration::from_secs(20 * 60)
     }

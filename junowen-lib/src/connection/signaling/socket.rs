@@ -31,7 +31,7 @@ pub trait SignalingSocket {
     async fn answer(&mut self, desc: CompressedSdp) -> Result<()>;
 
     /// 空を返すとホスト候補のみで ICE を確立する。
-    /// LAN 内など STUN に到達できない経路では、応答待ちを避けるために空にする。
+    /// STUN に到達できない経路(オフラインネットワークなど)では、応答待ちを避けるために空にする。
     fn ice_server_urls(&self) -> Vec<String> {
         vec![DEFAULT_STUN_SERVER_URL.to_owned()]
     }

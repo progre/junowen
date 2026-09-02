@@ -1,6 +1,6 @@
-pub mod lan;
 pub mod reserved;
 pub mod shared;
+pub mod tcp_signaling;
 
 use std::{f64::consts::PI, ffi::c_void};
 
