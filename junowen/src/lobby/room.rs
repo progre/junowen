@@ -125,6 +125,9 @@ pub fn on_render_texts<T>(
 ) {
     menu.on_render_texts(th19, text_renderer);
 
+    if let Some(value) = value {
+        render_label_value(th19, text_renderer, 240 - 56, 1, label, value);
+    }
     if let Some(waiting) = waiting {
         let elapsed = waiting.elapsed();
         render_progress(th19, text_renderer, elapsed.as_secs_f64() / 4.0);
@@ -132,7 +135,5 @@ pub fn on_render_texts<T>(
             let error_msg = format!("Failed: {}", error);
             render_text_line(th19, text_renderer, 13 + i as u32, error_msg.as_bytes());
         }
-    } else if let Some(value) = value {
-        render_label_value(th19, text_renderer, 240 - 56, 1, label, value);
     }
 }
