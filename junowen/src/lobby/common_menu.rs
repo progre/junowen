@@ -40,6 +40,7 @@ pub enum LobbyScene {
     Root,
     SharedRoom,
     ReservedRoom,
+    TcpSignaling,
     PureP2pHost,
     PureP2pGuest,
     PureP2pSpectator,

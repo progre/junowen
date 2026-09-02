@@ -122,6 +122,7 @@ impl SharedRoom {
         on_render_texts(
             &self.menu,
             waiting,
+            "Room name",
             Some(self.room_name()),
             th19,
             text_renderer,

@@ -1,5 +1,7 @@
+pub mod async_read_write_server_socket;
 pub mod async_read_write_socket;
 pub mod channel_socket;
+pub mod frame;
 
 use std::time::Duration;
 
@@ -12,6 +14,7 @@ use super::super::peer_connection::PeerConnection;
 
 use super::CompressedSdp;
 
+pub use async_read_write_server_socket::AsyncReadWriteServerSocket;
 pub use async_read_write_socket::AsyncReadWriteSocket;
 
 pub enum OfferResponse {
@@ -19,14 +22,22 @@ pub enum OfferResponse {
     Answer(CompressedSdp),
 }
 
+pub const DEFAULT_STUN_SERVER_URL: &str = "stun:stun.l.google.com:19302";
+
 #[async_trait]
 pub trait SignalingSocket {
     fn timeout() -> Duration;
     async fn offer(&mut self, desc: CompressedSdp) -> Result<OfferResponse>;
     async fn answer(&mut self, desc: CompressedSdp) -> Result<()>;
 
+    /// 空を返すとホスト候補のみで ICE を確立する。
+    /// STUN に到達できない経路(オフラインネットワークなど)では、応答待ちを避けるために空にする。
+    fn ice_server_urls(&self) -> Vec<String> {
+        vec![DEFAULT_STUN_SERVER_URL.to_owned()]
+    }
+
     async fn receive_signaling(&mut self) -> Result<(PeerConnection, DataChannel, bool)> {
-        let mut conn = PeerConnection::new(Self::timeout()).await?;
+        let mut conn = PeerConnection::new(Self::timeout(), self.ice_server_urls()).await?;
         let offer_desc = conn
             .start_as_offerer()
             .await
@@ -40,7 +51,7 @@ pub trait SignalingSocket {
                 (conn, true)
             }
             OfferResponse::Offer(offer_desc) => {
-                let mut conn = PeerConnection::new(Self::timeout()).await?;
+                let mut conn = PeerConnection::new(Self::timeout(), self.ice_server_urls()).await?;
                 let answer_desc = conn
                     .start_as_answerer(offer_desc)
                     .await

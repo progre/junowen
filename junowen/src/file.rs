@@ -47,6 +47,11 @@ pub enum Features {
 const FEATURES: &str = "features";
 const SHARED_ROOM_NAME: &str = "shared_room_name";
 const RESERVED_ROOM_NAME: &str = "reserved_room_name";
+const TCP_SIGNALING_ADDRESS: &str = "tcp_signaling_address";
+const TCP_SIGNALING_OFFLINE: &str = "tcp_signaling_offline";
+
+const DEFAULT_TCP_SIGNALING_ADDRESS: &str = "127.0.0.1:19000";
+const DEFAULT_TCP_SIGNALING_OFFLINE: bool = false;
 
 #[derive(new)]
 pub struct SettingsRepo {
@@ -76,6 +81,23 @@ impl SettingsRepo {
             *item = Item::Value(Value::String(Formatted::new(value)));
         } else {
             let _ = doc.insert(key, Item::Value(Value::String(Formatted::new(value))));
+        }
+        doc.sort_values();
+        if let Err(err) = tokio::fs::write(&self.path, doc.to_string()).await {
+            error!("{}", err);
+        }
+    }
+
+    async fn read_bool(&self, key: &str) -> Option<bool> {
+        self.load().await.get(key).and_then(|x| x.as_bool())
+    }
+
+    async fn write_bool(&self, key: &str, value: bool) {
+        let mut doc = self.load().await;
+        if let Some(item) = doc.as_table_mut().get_mut(key) {
+            *item = Item::Value(Value::Boolean(Formatted::new(value)));
+        } else {
+            let _ = doc.insert(key, Item::Value(Value::Boolean(Formatted::new(value))));
         }
         doc.sort_values();
         if let Err(err) = tokio::fs::write(&self.path, doc.to_string()).await {
@@ -123,5 +145,33 @@ impl SettingsRepo {
     }
     pub async fn set_shared_room_name(&self, value: String) {
         self.write_string(SHARED_ROOM_NAME, value).await;
+    }
+
+    pub async fn tcp_signaling_address(&self) -> String {
+        match self.read_string(TCP_SIGNALING_ADDRESS).await {
+            Some(value) => value,
+            None => {
+                let value = DEFAULT_TCP_SIGNALING_ADDRESS.to_owned();
+                self.set_tcp_signaling_address(value.clone()).await;
+                value
+            }
+        }
+    }
+    pub async fn set_tcp_signaling_address(&self, value: String) {
+        self.write_string(TCP_SIGNALING_ADDRESS, value).await;
+    }
+
+    pub async fn tcp_signaling_offline(&self) -> bool {
+        match self.read_bool(TCP_SIGNALING_OFFLINE).await {
+            Some(value) => value,
+            None => {
+                self.set_tcp_signaling_offline(DEFAULT_TCP_SIGNALING_OFFLINE)
+                    .await;
+                DEFAULT_TCP_SIGNALING_OFFLINE
+            }
+        }
+    }
+    pub async fn set_tcp_signaling_offline(&self, value: bool) {
+        self.write_bool(TCP_SIGNALING_OFFLINE, value).await;
     }
 }

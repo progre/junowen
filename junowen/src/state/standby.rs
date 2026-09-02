@@ -94,14 +94,14 @@ fn render_message(text_renderer: &c_void, th19: &Th19, msg: &str, color: u32) {
 }
 
 fn render_waiting_message<T>(
-    room_type: &str,
+    location: &str,
     room: &WaitingInRoom<T>,
     th19: &Th19,
     text_renderer: &c_void,
 ) {
     let room_name = room.room_name();
     let dot = ".".repeat((room.elapsed().as_secs() % 4) as usize);
-    let msg = format!("Waiting in {} Room: {} {:<3}", room_type, room_name, dot);
+    let msg = format!("Waiting in {}: {} {:<3}", location, room_name, dot);
     render_message(text_renderer, th19, &msg, 0xffc0c0c0);
     if !room.errors().is_empty() {
         let padding = " ".repeat(msg.chars().count());
@@ -121,10 +121,13 @@ pub fn on_render_texts(
         | Some(WaitingForMatch::SpectatorHost(_))
         | Some(WaitingForMatch::Opponent(WaitingForOpponent::PureP2p(_))) => {}
         Some(WaitingForMatch::Opponent(WaitingForOpponent::SharedRoom(waiting))) => {
-            render_waiting_message("Shared", waiting, th19, text_renderer);
+            render_waiting_message("Shared Room", waiting, th19, text_renderer);
         }
         Some(WaitingForMatch::Opponent(WaitingForOpponent::ReservedRoom(waiting))) => {
-            render_waiting_message("Reserved", waiting, th19, text_renderer);
+            render_waiting_message("Reserved Room", waiting, th19, text_renderer);
+        }
+        Some(WaitingForMatch::Opponent(WaitingForOpponent::TcpSignaling(waiting))) => {
+            render_waiting_message("TCP Signaling", waiting, th19, text_renderer);
         }
     }
     let Some(main_menu) = th19.app().main_loop_tasks().find_main_menu() else {

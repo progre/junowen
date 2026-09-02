@@ -23,6 +23,8 @@ use crate::{
         reserved_room_opponent_socket::SignalingServerReservedRoomOpponentSocket,
         reserved_room_spectator_host_socket::SignalingServerReservedRoomSpectatorHostSocket,
         shared_room_opponent_socket::SignalingServerSharedRoomOpponentSocket,
+        tcp_signaling_guest_socket::TcpSignalingGuestSocket,
+        tcp_signaling_host_socket::TcpSignalingHostSocket,
         waiting_for_spectator::WaitingForPureP2pSpectator,
     },
 };
@@ -45,6 +47,8 @@ pub struct WaitingInRoom<TSession> {
 }
 
 pub type WaitingForOpponentInSharedRoom = WaitingInRoom<BattleSession>;
+/// TCP シグナリングでの対戦の待機。`room_name` には接続先アドレスが入る
+pub type WaitingForOpponentOverTcpSignaling = WaitingInRoom<BattleSession>;
 pub type WaitingForOpponentInReservedRoom = WaitingInRoom<(BattleSession, Option<RoomKey>)>;
 pub type WaitingForSpectatorInReservedRoom = WaitingInRoom<(SpectatorHostSession, RoomKey)>;
 pub type WaitingForSpectatorHostInReservedRoom = WaitingInRoom<SpectatorSession>;
@@ -117,6 +121,29 @@ impl WaitingForOpponentInSharedRoom {
             SignalingServerSharedRoomOpponentSocket::new,
             |pc, dc, host, _socket| BattleSession::new(pc, dc, host),
             room_name,
+        )
+    }
+}
+
+// NOTE: `WaitingForOpponentInSharedRoom` と同一の型のため、`new` とは別の名前にする
+impl WaitingForOpponentOverTcpSignaling {
+    pub fn new_tcp_signaling_host(address: String, offline: bool) -> Self {
+        Self::internal_new(
+            move |_origin, address, abort_rx| {
+                TcpSignalingHostSocket::new(address.to_owned(), offline, abort_rx)
+            },
+            |conn, dc, host, _socket| BattleSession::new(conn, dc, host),
+            address,
+        )
+    }
+
+    pub fn new_tcp_signaling_guest(address: String, offline: bool) -> Self {
+        Self::internal_new(
+            move |_origin, address, abort_rx| {
+                TcpSignalingGuestSocket::new(address.to_owned(), offline, abort_rx)
+            },
+            |conn, dc, host, _socket| BattleSession::new(conn, dc, host),
+            address,
         )
     }
 }

@@ -2,16 +2,16 @@ use std::{io, process::exit};
 
 use anyhow::Result;
 use clipboard_win::set_clipboard_string;
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    net::windows::named_pipe::NamedPipeClient,
-};
+use tokio::net::windows::named_pipe::NamedPipeClient;
 
 use crate::{connection::signaling::SignalingCodeType, lang::Lang};
 
 use super::{
     CompressedSdp,
-    socket::async_read_write_socket::{SignalingClientMessage, SignalingServerMessage},
+    socket::{
+        async_read_write_socket::{SignalingClientMessage, SignalingServerMessage},
+        frame::{read_frame, write_frame},
+    },
 };
 
 fn read_line() -> String {
@@ -60,20 +60,15 @@ fn print_answer_desc(lang: &Lang, answer_desc: CompressedSdp) {
     lang.println("Waiting for host to connect...");
 }
 
-async fn send(pipe: &mut NamedPipeClient, msg: SignalingServerMessage) -> Result<(), io::Error> {
-    pipe.write_all(&rmp_serde::to_vec(&msg).unwrap()).await
+async fn send(pipe: &mut NamedPipeClient, msg: SignalingServerMessage) -> Result<()> {
+    write_frame(pipe, msg).await
 }
 
-async fn recv(pipe: &mut NamedPipeClient) -> Result<SignalingClientMessage, io::Error> {
-    let mut buf = [0u8; 4 * 1024];
-    let len = pipe.read(&mut buf).await?;
-    Ok(rmp_serde::from_slice(&buf[..len]).unwrap())
+async fn recv(pipe: &mut NamedPipeClient) -> Result<SignalingClientMessage> {
+    read_frame(pipe).await
 }
 
-pub async fn connect_as_offerer(
-    client_pipe: &mut NamedPipeClient,
-    lang: &Lang,
-) -> Result<(), io::Error> {
+pub async fn connect_as_offerer(client_pipe: &mut NamedPipeClient, lang: &Lang) -> Result<()> {
     let SignalingClientMessage::OfferDesc(offer_desc) = recv(client_pipe).await? else {
         panic!("unexpected message");
     };
@@ -87,10 +82,7 @@ pub async fn connect_as_offerer(
     Ok(())
 }
 
-pub async fn connect_as_answerer(
-    client_pipe: &mut NamedPipeClient,
-    lang: &Lang,
-) -> Result<(), io::Error> {
+pub async fn connect_as_answerer(client_pipe: &mut NamedPipeClient, lang: &Lang) -> Result<()> {
     let SignalingClientMessage::OfferDesc(_) = recv(client_pipe).await? else {
         panic!("unexpected message");
     };

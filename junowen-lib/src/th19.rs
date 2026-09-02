@@ -306,10 +306,7 @@ impl Th19 {
                     .unwrap();
 
                 let old = memory_accessor.hook_assembly(addr, size, dummy_func, target as _);
-                assert_eq!(
-                    old.map(|f| f as usize),
-                    old_target.map(|f| f as usize)
-                );
+                assert_eq!(old.map(|f| f as usize), old_target.map(|f| f as usize));
 
                 memory_accessor
                     .virtual_protect_global(dummy_func as _, size + 5 + 6, my_old)
