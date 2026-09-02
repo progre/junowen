@@ -11,9 +11,8 @@ kun kongruaj nomoj de ĉambro.
 La spektada funkcio estas disponebla.'''
 tcp_signaling = '''
 Konektu rekte per TCP, sen uzi konekton servilo.
-Dum atendado por konekto,
-vi povas uzi aliajn funkciojn kiel Homoj kontraŭ CPU.
-Oportune, se vi ne havas interretan konekton.
+Uzas STUN-servilon defaŭlte, do ĝi funkcias
+eĉ post kiam la signaliga servilo ĉesos.
 Unu flanko atendas ĉe la agordita pordo,
 kaj la alia konektas al tiu adreso.'''
 pure_p2p = '''
@@ -23,3 +22,11 @@ shared_room_waiting = '''
 Konfirmi butonon: Nuligi la matĉon
 Nuligi butonon: Reveni al la titola ekrano
                       dum atendado por matĉo'''
+tcp_signaling_waiting = '''
+Konfirmi butonon: Nuligi la matĉon
+Nuligi butonon: Reveni al la titola ekrano
+                      dum atendado por matĉo'''
+tcp_signaling_offline_mode = '''
+Kiam "Offline Mode" estas ON, STUN-servilo ne
+estas uzata. Oportune, se vi ne havas
+interretan konekton, ekzemple per LAN.'''

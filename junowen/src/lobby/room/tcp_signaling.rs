@@ -1,6 +1,7 @@
 use std::ffi::c_void;
 
 use junowen_lib::{Th19, structs::input_devices::InputValue};
+use rust_i18n::t;
 
 use crate::{
     TOKIO_RUNTIME, file::SettingsRepo,
@@ -207,5 +208,13 @@ impl TcpSignaling {
             th19,
             text_renderer,
         );
+    }
+
+    pub fn text(&self, waiting: bool) -> String {
+        if waiting {
+            t!("lobby.tcp_signaling_waiting").into()
+        } else {
+            t!("lobby.tcp_signaling_offline_mode").into()
+        }
     }
 }

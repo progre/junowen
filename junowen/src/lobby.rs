@@ -337,7 +337,7 @@ impl Lobby {
             LobbyScene::Root => self.root.text(),
             LobbyScene::SharedRoom => self.shared_room.text(self.waiting_for_match.is_some()),
             LobbyScene::ReservedRoom => String::new(),
-            LobbyScene::TcpSignaling => String::new(),
+            LobbyScene::TcpSignaling => self.tcp_signaling.text(self.waiting_for_match.is_some()),
             LobbyScene::PureP2pHost => String::new(),
             LobbyScene::PureP2pGuest => String::new(),
             LobbyScene::PureP2pSpectator => String::new(),

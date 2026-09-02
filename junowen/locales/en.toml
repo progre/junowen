@@ -9,9 +9,8 @@ Compete against users with matching room names.
 The spectating feature is available.'''
 tcp_signaling = '''
 Connect directly over TCP, without using a connection server.
-While waiting for a connection,
-you can use other features such as Human vs CPU.
-Convenient when you don't have Internet access.
+Uses a STUN server by default so it also works
+after the signaling server is retired.
 One side waits on the configured port,
 and the other connects to that address.'''
 pure_p2p = '''
@@ -21,3 +20,11 @@ shared_room_waiting = '''
 Confirm button: Cancel the match
 Cancel button: Return to the title screen
                      while waiting for a match'''
+tcp_signaling_waiting = '''
+Confirm button: Cancel the match
+Cancel button: Return to the title screen
+                     while waiting for a match'''
+tcp_signaling_offline_mode = '''
+Offline Mode: ON stops using a STUN server,
+which is convenient when you don't have
+Internet access, such as over a LAN.'''
