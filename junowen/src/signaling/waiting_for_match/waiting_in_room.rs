@@ -126,17 +126,21 @@ impl WaitingForOpponentInSharedRoom {
 
 // NOTE: `WaitingForOpponentInSharedRoom` と同一の型のため、`new` とは別の名前にする
 impl WaitingForOpponentOnLan {
-    pub fn new_lan_host(address: String) -> Self {
+    pub fn new_lan_host(address: String, offline: bool) -> Self {
         Self::internal_new(
-            |_origin, address, abort_rx| LanHostSocket::new(address.to_owned(), abort_rx),
+            move |_origin, address, abort_rx| {
+                LanHostSocket::new(address.to_owned(), offline, abort_rx)
+            },
             |conn, dc, host, _socket| BattleSession::new(conn, dc, host),
             address,
         )
     }
 
-    pub fn new_lan_guest(address: String) -> Self {
+    pub fn new_lan_guest(address: String, offline: bool) -> Self {
         Self::internal_new(
-            |_origin, address, abort_rx| LanGuestSocket::new(address.to_owned(), abort_rx),
+            move |_origin, address, abort_rx| {
+                LanGuestSocket::new(address.to_owned(), offline, abort_rx)
+            },
             |conn, dc, host, _socket| BattleSession::new(conn, dc, host),
             address,
         )

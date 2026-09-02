@@ -4,7 +4,7 @@ use anyhow::{Context, Result, bail};
 use async_trait::async_trait;
 use junowen_lib::connection::signaling::{
     CompressedSdp,
-    socket::{AsyncReadWriteSocket, OfferResponse, SignalingSocket},
+    socket::{AsyncReadWriteSocket, DEFAULT_STUN_SERVER_URL, OfferResponse, SignalingSocket},
 };
 use tokio::{net::TcpStream, sync::watch};
 use tracing::info;
@@ -12,14 +12,16 @@ use tracing::info;
 /// LAN 対戦の接続側。[`super::lan_host_socket::LanHostSocket`] に TCP で接続し、answerer となる。
 pub struct LanGuestSocket {
     address: String,
+    offline: bool,
     inner: Option<AsyncReadWriteSocket<TcpStream>>,
     abort_rx: watch::Receiver<bool>,
 }
 
 impl LanGuestSocket {
-    pub fn new(address: String, abort_rx: watch::Receiver<bool>) -> Self {
+    pub fn new(address: String, offline: bool, abort_rx: watch::Receiver<bool>) -> Self {
         Self {
             address,
+            offline,
             inner: None,
             abort_rx,
         }
@@ -45,8 +47,12 @@ impl SignalingSocket for LanGuestSocket {
         Duration::from_secs(20 * 60)
     }
 
-    fn ice_server_urls() -> Vec<String> {
-        vec![]
+    fn ice_server_urls(&self) -> Vec<String> {
+        if self.offline {
+            vec![]
+        } else {
+            vec![DEFAULT_STUN_SERVER_URL.to_owned()]
+        }
     }
 
     async fn offer(&mut self, desc: CompressedSdp) -> Result<OfferResponse> {

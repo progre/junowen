@@ -22,6 +22,8 @@ pub enum OfferResponse {
     Answer(CompressedSdp),
 }
 
+pub const DEFAULT_STUN_SERVER_URL: &str = "stun:stun.l.google.com:19302";
+
 #[async_trait]
 pub trait SignalingSocket {
     fn timeout() -> Duration;
@@ -30,12 +32,12 @@ pub trait SignalingSocket {
 
     /// 空を返すとホスト候補のみで ICE を確立する。
     /// LAN 内など STUN に到達できない経路では、応答待ちを避けるために空にする。
-    fn ice_server_urls() -> Vec<String> {
-        vec!["stun:stun.l.google.com:19302".to_owned()]
+    fn ice_server_urls(&self) -> Vec<String> {
+        vec![DEFAULT_STUN_SERVER_URL.to_owned()]
     }
 
     async fn receive_signaling(&mut self) -> Result<(PeerConnection, DataChannel, bool)> {
-        let mut conn = PeerConnection::new(Self::timeout(), Self::ice_server_urls()).await?;
+        let mut conn = PeerConnection::new(Self::timeout(), self.ice_server_urls()).await?;
         let offer_desc = conn
             .start_as_offerer()
             .await
@@ -49,8 +51,7 @@ pub trait SignalingSocket {
                 (conn, true)
             }
             OfferResponse::Offer(offer_desc) => {
-                let mut conn =
-                    PeerConnection::new(Self::timeout(), Self::ice_server_urls()).await?;
+                let mut conn = PeerConnection::new(Self::timeout(), self.ice_server_urls()).await?;
                 let answer_desc = conn
                     .start_as_answerer(offer_desc)
                     .await

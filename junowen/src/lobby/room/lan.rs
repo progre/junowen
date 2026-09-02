@@ -11,6 +11,9 @@ use super::{
     on_render_texts,
 };
 
+const OFFLINE_LABEL: &str = "Offline Mode: ON";
+const ONLINE_LABEL: &str = "Offline Mode: OFF";
+
 fn make_menu() -> CommonMenu {
     let leave_menu = || Menu::new("LAN", Some(1), vec![MenuItem::plain("Leave", 1, false)], 0);
     let menu = Menu::new(
@@ -20,6 +23,7 @@ fn make_menu() -> CommonMenu {
             MenuItem::sub_menu("Connect as a Host", Some(0), leave_menu()),
             MenuItem::sub_menu("Connect as a Guest", Some(3), leave_menu()),
             MenuItem::text_input("Change Address", 11, 12, "Address"),
+            MenuItem::plain(OFFLINE_LABEL, 20, true),
         ],
         0,
     );
@@ -30,6 +34,7 @@ pub struct Lan {
     menu: CommonMenu,
     enter: bool,
     address: Option<String>,
+    offline: Option<bool>,
 }
 
 impl Lan {
@@ -38,11 +43,24 @@ impl Lan {
             menu: make_menu(),
             enter: false,
             address: None,
+            offline: None,
         }
     }
 
     fn address(&self) -> &str {
         self.address.as_ref().unwrap()
+    }
+
+    fn offline(&self) -> bool {
+        self.offline.unwrap()
+    }
+
+    /// STUN の到達性はネットワークによって変わるため、LAN 対戦の待ち時間を避けるかどうかを
+    /// 手動で切り替えられるようにする(既定はオフライン=STUN 無効)
+    fn set_offline(&mut self, offline: bool) {
+        self.offline = Some(offline);
+        let label = if offline { OFFLINE_LABEL } else { ONLINE_LABEL };
+        self.menu.menu_mut().items_mut()[3].set_label(label);
     }
 
     pub fn on_input_menu(
@@ -55,6 +73,10 @@ impl Lan {
     ) -> Option<LobbyScene> {
         if self.address.is_none() {
             self.address = Some(TOKIO_RUNTIME.block_on(settings_repo.lan_address()));
+        }
+        if self.offline.is_none() {
+            let offline = TOKIO_RUNTIME.block_on(settings_repo.lan_offline());
+            self.set_offline(offline);
         }
         if waiting.is_none() && self.enter {
             self.enter = false;
@@ -77,6 +99,7 @@ impl Lan {
                     self.enter = true;
                     *waiting = Some(WaitingForOpponentOnLan::new_lan_host(
                         self.address().to_owned(),
+                        self.offline(),
                     ));
                     None
                 }
@@ -91,6 +114,7 @@ impl Lan {
                     self.enter = true;
                     *waiting = Some(WaitingForOpponentOnLan::new_lan_guest(
                         self.address().to_owned(),
+                        self.offline(),
                     ));
                     None
                 }
@@ -108,6 +132,12 @@ impl Lan {
                     let new_address = action.value().unwrap().to_owned();
                     self.address = Some(new_address.clone());
                     TOKIO_RUNTIME.block_on(settings_repo.set_lan_address(new_address));
+                    None
+                }
+                20 => {
+                    let offline = !self.offline();
+                    self.set_offline(offline);
+                    TOKIO_RUNTIME.block_on(settings_repo.set_lan_offline(offline));
                     None
                 }
                 _ => unreachable!(),

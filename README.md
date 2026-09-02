@@ -46,7 +46,8 @@ You can have other players spectate your matches.
 
 This method does not use a connection server.  
 Connection information is exchanged directly over TCP within a LAN.  
-A STUN server is not used either, so it works without Internet access.
+By default, a STUN server is not used either ("Offline Mode: ON"),
+so it works without Internet access.
 
 #### Using LAN competition
 
@@ -55,6 +56,9 @@ A STUN server is not used either, so it works without Internet access.
    such as `192.168.0.2:19000`.
     - The waiting side uses only the port number,
       and listens on all addresses.
+    - If both sides have Internet access, select "Offline Mode: ON" to
+      turn it "OFF". This uses a STUN server, so the game can be played
+      even after the signaling server is retired.
 3. Select "Connect as a Host" on the waiting side,
    then "Connect as a Guest" on the other side.
 4. If all goes well, you will be redirected to the difficulty selection

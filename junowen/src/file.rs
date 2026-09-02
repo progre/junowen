@@ -46,10 +46,13 @@ pub enum Features {
 
 const FEATURES: &str = "features";
 const LAN_ADDRESS: &str = "lan_address";
+const LAN_OFFLINE: &str = "lan_offline";
 const SHARED_ROOM_NAME: &str = "shared_room_name";
 const RESERVED_ROOM_NAME: &str = "reserved_room_name";
 
 const DEFAULT_LAN_ADDRESS: &str = "127.0.0.1:19000";
+/// STUN サーバーが到達できない環境でも待ち時間なく接続できるよう、既定はオフライン(STUN 無効)とする
+const DEFAULT_LAN_OFFLINE: bool = true;
 
 #[derive(new)]
 pub struct SettingsRepo {
@@ -86,6 +89,23 @@ impl SettingsRepo {
         }
     }
 
+    async fn read_bool(&self, key: &str) -> Option<bool> {
+        self.load().await.get(key).and_then(|x| x.as_bool())
+    }
+
+    async fn write_bool(&self, key: &str, value: bool) {
+        let mut doc = self.load().await;
+        if let Some(item) = doc.as_table_mut().get_mut(key) {
+            *item = Item::Value(Value::Boolean(Formatted::new(value)));
+        } else {
+            let _ = doc.insert(key, Item::Value(Value::Boolean(Formatted::new(value))));
+        }
+        doc.sort_values();
+        if let Err(err) = tokio::fs::write(&self.path, doc.to_string()).await {
+            error!("{}", err);
+        }
+    }
+
     pub async fn features(&self) -> Vec<Features> {
         self.load()
             .await
@@ -112,6 +132,19 @@ impl SettingsRepo {
     }
     pub async fn set_lan_address(&self, value: String) {
         self.write_string(LAN_ADDRESS, value).await;
+    }
+
+    pub async fn lan_offline(&self) -> bool {
+        match self.read_bool(LAN_OFFLINE).await {
+            Some(value) => value,
+            None => {
+                self.set_lan_offline(DEFAULT_LAN_OFFLINE).await;
+                DEFAULT_LAN_OFFLINE
+            }
+        }
+    }
+    pub async fn set_lan_offline(&self, value: bool) {
+        self.write_bool(LAN_OFFLINE, value).await;
     }
 
     pub async fn reserved_room_name(&self, th19: &Th19) -> String {
