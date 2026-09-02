@@ -213,8 +213,10 @@ impl TcpSignaling {
     pub fn text(&self, waiting: bool) -> String {
         if waiting {
             t!("lobby.tcp_signaling_waiting").into()
-        } else {
+        } else if self.menu.menu().cursor() == 3 {
             t!("lobby.tcp_signaling_offline_mode").into()
+        } else {
+            String::new()
         }
     }
 }
