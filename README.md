@@ -46,10 +46,14 @@ You can have other players spectate your matches.
 
 This method does not use a connection server.  
 Connection information is exchanged directly over TCP.  
+While waiting for a connection, other functions can be used.  
 A STUN server is used by default, so this also works after the
 signaling server is retired. Turning "Offline Mode" ON disables the
 STUN server, which is convenient when you don't have Internet access
 (e.g. over a LAN).
+
+Pressing "Leave" on the waiting screen interrupts, and pressing the
+cancel button allows you to use other functions.
 
 #### Using TCP Signaling competition
 

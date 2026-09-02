@@ -11,6 +11,8 @@ kun kongruaj nomoj de ĉambro.
 La spektada funkcio estas disponebla.'''
 tcp_signaling = '''
 Konektu rekte per TCP, sen uzi konekton servilo.
+Dum atendado por konekto,
+vi povas uzi aliajn funkciojn kiel Homoj kontraŭ CPU.
 Oportune, se vi ne havas interretan konekton.
 Unu flanko atendas ĉe la agordita pordo,
 kaj la alia konektas al tiu adreso.'''

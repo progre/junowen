@@ -12,24 +12,24 @@ use super::{
     on_render_texts,
 };
 
+const HOST_LABEL: &str = "Connect as a Host";
+const GUEST_LABEL: &str = "Connect as a Guest";
+const LEAVE_LABEL: &str = "Leave";
 const OFFLINE_LABEL: &str = "Offline Mode: ON";
 const ONLINE_LABEL: &str = "Offline Mode: OFF";
 
+enum Role {
+    Host,
+    Guest,
+}
+
 fn make_menu() -> CommonMenu {
-    let leave_menu = || {
-        Menu::new(
-            "TCP Signaling",
-            Some(1),
-            vec![MenuItem::plain("Leave", 1, false)],
-            0,
-        )
-    };
     let menu = Menu::new(
         "TCP Signaling",
         None,
         vec![
-            MenuItem::sub_menu("Connect as a Host", Some(0), leave_menu()),
-            MenuItem::sub_menu("Connect as a Guest", Some(3), leave_menu()),
+            MenuItem::plain(HOST_LABEL, 0, true),
+            MenuItem::plain(GUEST_LABEL, 3, true),
             MenuItem::text_input("Change Address", 11, 12, "Address"),
             MenuItem::plain(OFFLINE_LABEL, 20, true),
         ],
@@ -40,7 +40,7 @@ fn make_menu() -> CommonMenu {
 
 pub struct TcpSignaling {
     menu: CommonMenu,
-    enter: bool,
+    role: Option<Role>,
     address: Option<String>,
     offline: Option<bool>,
 }
@@ -49,7 +49,7 @@ impl TcpSignaling {
     pub fn new() -> Self {
         Self {
             menu: make_menu(),
-            enter: false,
+            role: None,
             address: None,
             offline: None,
         }
@@ -71,6 +71,46 @@ impl TcpSignaling {
         self.menu.menu_mut().items_mut()[3].set_label(label);
     }
 
+    /// 他の接続方式(Shared Room)と同様に、接続待ち中も他の機能を使えるように
+    /// サブメニューへは潜らずフラットなメニュー構成にし、キャンセルでは待機を破棄しない
+    fn change_menu_to_idle(&mut self) {
+        self.role = None;
+        let item = &mut self.menu.menu_mut().items_mut()[0];
+        item.set_label(HOST_LABEL);
+        item.set_enabled(true);
+        let item = &mut self.menu.menu_mut().items_mut()[1];
+        item.set_label(GUEST_LABEL);
+        item.set_enabled(true);
+        let item = &mut self.menu.menu_mut().items_mut()[2];
+        item.set_enabled(true);
+        let item = &mut self.menu.menu_mut().items_mut()[3];
+        item.set_enabled(true);
+    }
+
+    fn change_menu_to_host(&mut self) {
+        self.role = Some(Role::Host);
+        let item = &mut self.menu.menu_mut().items_mut()[0];
+        item.set_label(LEAVE_LABEL);
+        let item = &mut self.menu.menu_mut().items_mut()[1];
+        item.set_enabled(false);
+        let item = &mut self.menu.menu_mut().items_mut()[2];
+        item.set_enabled(false);
+        let item = &mut self.menu.menu_mut().items_mut()[3];
+        item.set_enabled(false);
+    }
+
+    fn change_menu_to_guest(&mut self) {
+        self.role = Some(Role::Guest);
+        let item = &mut self.menu.menu_mut().items_mut()[1];
+        item.set_label(LEAVE_LABEL);
+        let item = &mut self.menu.menu_mut().items_mut()[0];
+        item.set_enabled(false);
+        let item = &mut self.menu.menu_mut().items_mut()[2];
+        item.set_enabled(false);
+        let item = &mut self.menu.menu_mut().items_mut()[3];
+        item.set_enabled(false);
+    }
+
     pub fn on_input_menu(
         &mut self,
         settings_repo: &SettingsRepo,
@@ -86,9 +126,8 @@ impl TcpSignaling {
             let offline = TOKIO_RUNTIME.block_on(settings_repo.tcp_signaling_offline());
             self.set_offline(offline);
         }
-        if waiting.is_none() && self.enter {
-            self.enter = false;
-            assert!(self.menu.menu_mut().bury());
+        if waiting.is_none() && self.role.is_some() {
+            self.change_menu_to_idle();
         }
         if let Some(waiting) = waiting {
             waiting.recv();
@@ -96,34 +135,35 @@ impl TcpSignaling {
 
         match self.menu.on_input_menu(current_input, prev_input, th19) {
             OnMenuInputResult::None => None,
-            OnMenuInputResult::Cancel => {
-                self.enter = false;
-                *waiting = None;
-                Some(LobbyScene::Root)
-            }
+            OnMenuInputResult::Cancel => Some(LobbyScene::Root),
             OnMenuInputResult::SubScene(_) => unreachable!(),
             OnMenuInputResult::Action(action) => match action.id() {
                 0 => {
-                    self.enter = true;
-                    *waiting = Some(WaitingForOpponentOverTcpSignaling::new_tcp_signaling_host(
-                        self.address().to_owned(),
-                        self.offline(),
-                    ));
-                    None
-                }
-                1 => {
-                    self.enter = false;
-                    *waiting = None;
-                    th19.play_sound(th19.sound_manager(), 0x09, 0);
-                    self.menu.controller_mut().force_cancel();
+                    if self.role.is_none() {
+                        *waiting =
+                            Some(WaitingForOpponentOverTcpSignaling::new_tcp_signaling_host(
+                                self.address().to_owned(),
+                                self.offline(),
+                            ));
+                        self.change_menu_to_host();
+                    } else {
+                        *waiting = None;
+                        self.change_menu_to_idle();
+                    }
                     None
                 }
                 3 => {
-                    self.enter = true;
-                    *waiting = Some(WaitingForOpponentOverTcpSignaling::new_tcp_signaling_guest(
-                        self.address().to_owned(),
-                        self.offline(),
-                    ));
+                    if self.role.is_none() {
+                        *waiting =
+                            Some(WaitingForOpponentOverTcpSignaling::new_tcp_signaling_guest(
+                                self.address().to_owned(),
+                                self.offline(),
+                            ));
+                        self.change_menu_to_guest();
+                    } else {
+                        *waiting = None;
+                        self.change_menu_to_idle();
+                    }
                     None
                 }
                 11 => {
@@ -155,16 +195,17 @@ impl TcpSignaling {
 
     pub fn on_render_texts(
         &self,
-        mut waiting: Option<&WaitingForOpponentOverTcpSignaling>,
+        waiting: Option<&WaitingForOpponentOverTcpSignaling>,
         th19: &Th19,
         text_renderer: &c_void,
     ) {
-        let mut address = Some(self.address());
-        if !self.menu.menu().decided() {
-            waiting = None;
-        } else if waiting.is_none() {
-            address = None;
-        }
-        on_render_texts(&self.menu, waiting, "Address", address, th19, text_renderer);
+        on_render_texts(
+            &self.menu,
+            waiting,
+            "Address",
+            Some(self.address()),
+            th19,
+            text_renderer,
+        );
     }
 }

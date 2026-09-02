@@ -9,6 +9,8 @@ Compete against users with matching room names.
 The spectating feature is available.'''
 tcp_signaling = '''
 Connect directly over TCP, without using a connection server.
+While waiting for a connection,
+you can use other features such as Human vs CPU.
 Convenient when you don't have Internet access.
 One side waits on the configured port,
 and the other connects to that address.'''
