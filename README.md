@@ -52,7 +52,7 @@ A STUN server is not used either, so it works without Internet access.
 
 1. Select "Ju.N.Owen" -> "LAN" on both sides.
 2. Select "Change Address" and enter the address of the waiting side,
-   such as `192.168.0.2:31337`.
+   such as `192.168.0.2:19000`.
     - The waiting side uses only the port number,
       and listens on all addresses.
 3. Select "Connect as a Host" on the waiting side,

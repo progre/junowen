@@ -49,7 +49,7 @@ const LAN_ADDRESS: &str = "lan_address";
 const SHARED_ROOM_NAME: &str = "shared_room_name";
 const RESERVED_ROOM_NAME: &str = "reserved_room_name";
 
-const DEFAULT_LAN_ADDRESS: &str = "127.0.0.1:31337";
+const DEFAULT_LAN_ADDRESS: &str = "127.0.0.1:19000";
 
 #[derive(new)]
 pub struct SettingsRepo {
