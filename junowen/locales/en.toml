@@ -9,8 +9,6 @@ Compete against users with matching room names.
 The spectating feature is available.'''
 tcp_signaling = '''
 Connect directly over TCP, without using a connection server.
-Uses a STUN server by default so it also works
-after the signaling server is retired.
 One side waits on the configured port,
 and the other connects to that address.'''
 pure_p2p = '''
@@ -25,6 +23,6 @@ Confirm button: Cancel the match
 Cancel button: Return to the title screen
                      while waiting for a match'''
 tcp_signaling_offline_mode = '''
-Turning this ON skips the STUN server,
-which is convenient when you don't have
-Internet access, such as over a LAN.'''
+Turning this ON skips connecting to the STUN server,
+which can make connecting faster
+in offline environments.'''
