@@ -8,7 +8,7 @@ mod signaling;
 mod state;
 mod tracing_helper;
 
-rust_i18n::i18n!("locales");
+rust_i18n::i18n!("locales", fallback = "en");
 
 use std::{cell::OnceCell, mem::take, path::Path, ptr::null_mut, slice, sync::LazyLock};
 
@@ -17,6 +17,7 @@ use junowen_lib::{
     Th19, Th19EventDispatcher,
     hook_utils::{WELL_KNOWN_VERSION_HASHES, calc_th19_hash, show_warn_dialog},
 };
+use sys_locale::get_locale;
 use windows::Win32::Graphics::Direct3D9::IDirect3D9;
 use windows::Win32::{
     Foundation::{HINSTANCE, HMODULE},
@@ -56,6 +57,12 @@ async fn init(dll_path: &Path, direct_3d: Option<IDirect3D9>) -> Option<IDirect3
     let (ini_file_path, module_dir, log_file_name) =
         to_ini_file_path_log_dir_path_log_file_name(&dll_stem);
     tracing_helper::init_tracing(&module_dir, &log_file_name, false);
+
+    let os_locale = get_locale();
+    tracing::info!(?os_locale, "resolve locale");
+    if let Some(locale) = os_locale {
+        rust_i18n::set_locale(&locale);
+    }
 
     let th19_ptr = &raw mut TH19;
     let th19 = Th19::new_hooked_process("th19.exe").unwrap();

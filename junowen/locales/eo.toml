@@ -11,8 +11,6 @@ kun kongruaj nomoj de ĉambro.
 La spektada funkcio estas disponebla.'''
 tcp_signaling = '''
 Konektu rekte per TCP, sen uzi konekton servilo.
-Uzas STUN-servilon defaŭlte, do ĝi funkcias
-eĉ post kiam la signaliga servilo ĉesos.
 Unu flanko atendas ĉe la agordita pordo,
 kaj la alia konektas al tiu adreso.'''
 pure_p2p = '''
@@ -27,6 +25,6 @@ Konfirmi butonon: Nuligi la matĉon
 Nuligi butonon: Reveni al la titola ekrano
                       dum atendado por matĉo'''
 tcp_signaling_offline_mode = '''
-Kiam "Offline Mode" estas ON, STUN-servilo ne
-estas uzata. Oportune, se vi ne havas
-interretan konekton, ekzemple per LAN.'''
+Ŝaltite al ON, la konekto al la STUN-servilo
+estas preterlasita. Tio povas plirapidigi
+konektiĝon en senreta medio.'''
