@@ -28,3 +28,18 @@ tcp_signaling_offline_mode = '''
 Ŝaltite al ON, la konekto al la STUN-servilo
 estas preterlasita. Tio povas plirapidigi
 konektiĝon en senreta medio.'''
+
+[pure_p2p]
+copied_to_clipboard = 'Ĝi estis kopiita al la tondujo.'
+guest_opponent_code = 'Signala kodo de la gastiganto:'
+guest_share = 'Sendu vian signalan kodon al la gastiganto.'
+guest_waiting = 'Atendante la konekton de la gastiganto...'
+host_opponent_code = 'Signala kodo de la gasto:'
+host_share = 'Sendu vian signalan kodon al la gasto.'
+host_waiting = 'Atendante la konekton de la gasto...'
+preparing = 'Preparante...'
+spectator_opponent_code = 'Signala kodo de la ludanto:'
+spectator_share = 'Sendu vian signalan kodon al la ludanto.'
+spectator_waiting = 'Atendante la konekton de la ludanto...'
+your_code = 'Via signala kodo:'
+your_code_already_created = 'Via signala kodo jam estas kreita:'
