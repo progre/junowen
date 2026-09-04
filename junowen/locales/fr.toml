@@ -1,0 +1,43 @@
+[lobby]
+shared_room = '''
+Affrontez les utilisateurs ayant un nom de salle identique.
+En attendant une connexion,
+vous pouvez utiliser d'autres fonctions comme Humain contre CPU.
+Utilisez cette option pour l'expérience standard.'''
+reserved_room = '''
+Affrontez les utilisateurs ayant un nom de salle identique.
+La fonction spectateur est disponible.'''
+tcp_signaling = '''
+Connectez-vous directement en TCP, sans passer par un serveur de connexion.
+Un côté attend sur le port configuré,
+et l'autre se connecte à cette adresse.'''
+pure_p2p = '''
+Connectez-vous via un chat externe,
+sans passer par un serveur de connexion.'''
+shared_room_waiting = '''
+Bouton de confirmation : Annuler le match
+Bouton d'annulation : Retourner à l'écran titre
+                     en attendant un match'''
+tcp_signaling_waiting = '''
+Bouton de confirmation : Annuler le match
+Bouton d'annulation : Retourner à l'écran titre
+                     en attendant un match'''
+tcp_signaling_offline_mode = '''
+Activer cette option ignore la connexion au serveur STUN,
+ce qui peut accélérer la connexion
+dans les environnements hors ligne.'''
+
+[pure_p2p]
+copied_to_clipboard = 'Copié dans le presse-papiers.'
+guest_opponent_code = "Code de signalisation de l'hôte :"
+guest_share = "Partagez votre code de signalisation avec l'hôte."
+guest_waiting = "En attente de connexion de l'hôte..."
+host_opponent_code = "Code de signalisation de l'invité :"
+host_share = "Partagez votre code de signalisation avec l'invité."
+host_waiting = "En attente de connexion de l'invité..."
+preparing = 'Préparation...'
+spectator_opponent_code = 'Code de signalisation du joueur :'
+spectator_share = 'Partagez votre code de signalisation avec le joueur.'
+spectator_waiting = 'En attente de connexion du joueur...'
+your_code = 'Votre code de signalisation :'
+your_code_already_created = 'Votre code de signalisation est déjà créé :'

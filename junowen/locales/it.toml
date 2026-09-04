@@ -1,0 +1,43 @@
+[lobby]
+shared_room = '''
+Sfida gli utenti con lo stesso nome di stanza.
+Mentre attendi una connessione,
+puoi usare altre funzioni come Umano contro CPU.
+Usa questa opzione per l'esperienza standard.'''
+reserved_room = '''
+Sfida gli utenti con lo stesso nome di stanza.
+La funzione spettatore è disponibile.'''
+tcp_signaling = '''
+Connettiti direttamente via TCP, senza usare un server di connessione.
+Un lato attende sulla porta configurata,
+e l'altro si connette a quell'indirizzo.'''
+pure_p2p = '''
+Connettiti tramite chat esterna,
+senza usare un server di connessione.'''
+shared_room_waiting = '''
+Pulsante di conferma: Annulla la partita
+Pulsante di annullamento: Torna alla schermata del titolo
+                     in attesa di una partita'''
+tcp_signaling_waiting = '''
+Pulsante di conferma: Annulla la partita
+Pulsante di annullamento: Torna alla schermata del titolo
+                     in attesa di una partita'''
+tcp_signaling_offline_mode = '''
+Attivando questa opzione si salta la connessione al server STUN,
+il che può rendere la connessione più veloce
+in ambienti offline.'''
+
+[pure_p2p]
+copied_to_clipboard = 'Copiato negli appunti.'
+guest_opponent_code = "Codice di segnalazione dell'host:"
+guest_share = "Condividi il tuo codice di segnalazione con l'host."
+guest_waiting = "In attesa che l'host si connetta..."
+host_opponent_code = "Codice di segnalazione dell'ospite:"
+host_share = "Condividi il tuo codice di segnalazione con l'ospite."
+host_waiting = "In attesa che l'ospite si connetta..."
+preparing = 'Preparazione...'
+spectator_opponent_code = 'Codice di segnalazione del giocatore:'
+spectator_share = 'Condividi il tuo codice di segnalazione con il giocatore.'
+spectator_waiting = 'In attesa che il giocatore si connetta...'
+your_code = 'Il tuo codice di segnalazione:'
+your_code_already_created = 'Il tuo codice di segnalazione è già stato creato:'

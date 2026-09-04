@@ -1,0 +1,43 @@
+[lobby]
+shared_room = '''
+與房間名稱一致的使用者對戰。
+在等待連線期間，
+您也可以使用人機對戰等其他功能。
+一般情況下請使用此選項。'''
+reserved_room = '''
+與房間名稱一致的使用者對戰。
+可以使用觀戰功能。'''
+tcp_signaling = '''
+不透過連線伺服器，直接以 TCP 連線。
+一方在設定好的連接埠等待，
+另一方連線至該位址。'''
+pure_p2p = '''
+不透過連線伺服器，
+透過外部聊天工具與對手連線。'''
+shared_room_waiting = '''
+確定鍵：取消對戰
+取消鍵：在等待對戰期間
+                     返回標題畫面'''
+tcp_signaling_waiting = '''
+確定鍵：取消對戰
+取消鍵：在等待對戰期間
+                     返回標題畫面'''
+tcp_signaling_offline_mode = '''
+開啟後將略過與 STUN 伺服器的連線，
+在離線環境下
+可加快連線速度。'''
+
+[pure_p2p]
+copied_to_clipboard = '已複製到剪貼簿。'
+guest_opponent_code = '主持人的信令碼：'
+guest_share = '請將您的信令碼傳送給主持人。'
+guest_waiting = '正在等待主持人連線…'
+host_opponent_code = '來賓的信令碼：'
+host_share = '請將您的信令碼傳送給來賓。'
+host_waiting = '正在等待來賓連線…'
+preparing = '準備中…'
+spectator_opponent_code = '玩家的信令碼：'
+spectator_share = '請將您的信令碼傳送給玩家。'
+spectator_waiting = '正在等待玩家連線…'
+your_code = '您的信令碼：'
+your_code_already_created = '您的信令碼已建立：'

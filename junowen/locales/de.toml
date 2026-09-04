@@ -1,0 +1,43 @@
+[lobby]
+shared_room = '''
+Tritt gegen Nutzer mit übereinstimmendem Raumnamen an.
+Während du auf eine Verbindung wartest,
+kannst du andere Funktionen wie Mensch gegen CPU nutzen.
+Verwende diese Option für das Standarderlebnis.'''
+reserved_room = '''
+Tritt gegen Nutzer mit übereinstimmendem Raumnamen an.
+Die Zuschauerfunktion ist verfügbar.'''
+tcp_signaling = '''
+Verbinde dich direkt über TCP, ohne einen Verbindungsserver zu nutzen.
+Eine Seite wartet auf dem konfigurierten Port,
+die andere verbindet sich mit dieser Adresse.'''
+pure_p2p = '''
+Verbinde dich über einen externen Chat,
+ohne einen Verbindungsserver zu nutzen.'''
+shared_room_waiting = '''
+Bestätigen-Taste: Match abbrechen
+Abbrechen-Taste: Zum Titelbildschirm zurückkehren,
+                     während auf ein Match gewartet wird'''
+tcp_signaling_waiting = '''
+Bestätigen-Taste: Match abbrechen
+Abbrechen-Taste: Zum Titelbildschirm zurückkehren,
+                     während auf ein Match gewartet wird'''
+tcp_signaling_offline_mode = '''
+Wird dies aktiviert, wird die Verbindung zum STUN-Server übersprungen,
+was die Verbindung in Offline-Umgebungen
+beschleunigen kann.'''
+
+[pure_p2p]
+copied_to_clipboard = 'In die Zwischenablage kopiert.'
+guest_opponent_code = 'Signalisierungscode des Hosts:'
+guest_share = 'Teile deinen Signalisierungscode mit dem Host.'
+guest_waiting = 'Warte auf Verbindung des Hosts...'
+host_opponent_code = 'Signalisierungscode des Gasts:'
+host_share = 'Teile deinen Signalisierungscode mit dem Gast.'
+host_waiting = 'Warte auf Verbindung des Gasts...'
+preparing = 'Wird vorbereitet...'
+spectator_opponent_code = 'Signalisierungscode des Spielers:'
+spectator_share = 'Teile deinen Signalisierungscode mit dem Spieler.'
+spectator_waiting = 'Warte auf Verbindung des Spielers...'
+your_code = 'Dein Signalisierungscode:'
+your_code_already_created = 'Dein Signalisierungscode wurde bereits erstellt:'
