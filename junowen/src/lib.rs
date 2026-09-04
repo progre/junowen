@@ -40,6 +40,18 @@ static mut MODULE: HMODULE = HMODULE(null_mut());
 static mut TH19: OnceCell<Th19> = OnceCell::new();
 static mut JUNOWEN: OnceCell<Junowen> = OnceCell::new();
 
+/// 中国語ロケールを locales/ に存在する zh-CN (簡体字) / zh-TW (繁体字) のいずれかへ丸める。
+/// 香港・マカオは繁体字圏のため zh-TW を割り当て、それ以外 (シンガポール等) は zh-CN を割り当てる。
+fn normalize_locale(locale: &str) -> String {
+    if !locale.eq_ignore_ascii_case("zh") && !locale.to_ascii_lowercase().starts_with("zh-") {
+        return locale.to_owned();
+    }
+    match locale.to_ascii_lowercase().as_str() {
+        "zh-tw" | "zh-hk" | "zh-mo" => "zh-TW".to_owned(),
+        _ => "zh-CN".to_owned(),
+    }
+}
+
 fn check_version(hash: &[u8]) -> bool {
     WELL_KNOWN_VERSION_HASHES
         .all_v110c()
@@ -61,7 +73,7 @@ async fn init(dll_path: &Path, direct_3d: Option<IDirect3D9>) -> Option<IDirect3
     let os_locale = get_locale();
     tracing::info!(?os_locale, "resolve locale");
     if let Some(locale) = os_locale {
-        rust_i18n::set_locale(&locale);
+        rust_i18n::set_locale(&normalize_locale(&locale));
     }
 
     let th19_ptr = &raw mut TH19;
@@ -136,4 +148,22 @@ pub unsafe extern "C" fn Initialize(direct_3d: *mut IDirect3D9) -> bool {
     let direct_3d = launch_init(&dll_path, direct_3d).unwrap();
     *direct_3d_ref = Some(direct_3d);
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_locale;
+
+    #[test]
+    fn test_normalize_locale() {
+        assert_eq!(normalize_locale("zh-CN"), "zh-CN");
+        assert_eq!(normalize_locale("zh-SG"), "zh-CN");
+        assert_eq!(normalize_locale("zh-MY"), "zh-CN");
+        assert_eq!(normalize_locale("zh"), "zh-CN");
+        assert_eq!(normalize_locale("zh-TW"), "zh-TW");
+        assert_eq!(normalize_locale("zh-HK"), "zh-TW");
+        assert_eq!(normalize_locale("zh-MO"), "zh-TW");
+        assert_eq!(normalize_locale("en-US"), "en-US");
+        assert_eq!(normalize_locale("ja-JP"), "ja-JP");
+    }
 }

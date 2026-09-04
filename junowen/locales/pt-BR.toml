@@ -1,0 +1,43 @@
+[lobby]
+shared_room = '''
+Enfrente usuários com o mesmo nome de sala.
+Enquanto espera por uma conexão,
+você pode usar outras funções como Humano contra CPU.
+Use esta opção para a experiência padrão.'''
+reserved_room = '''
+Enfrente usuários com o mesmo nome de sala.
+A função de espectador está disponível.'''
+tcp_signaling = '''
+Conecte-se diretamente via TCP, sem usar um servidor de conexão.
+Um lado aguarda na porta configurada,
+e o outro se conecta a esse endereço.'''
+pure_p2p = '''
+Conecte-se por meio de um chat externo,
+sem usar um servidor de conexão.'''
+shared_room_waiting = '''
+Botão de confirmar: Cancelar a partida
+Botão de cancelar: Voltar à tela de título
+                     enquanto aguarda uma partida'''
+tcp_signaling_waiting = '''
+Botão de confirmar: Cancelar a partida
+Botão de cancelar: Voltar à tela de título
+                     enquanto aguarda uma partida'''
+tcp_signaling_offline_mode = '''
+Ativar esta opção ignora a conexão com o servidor STUN,
+o que pode tornar a conexão mais rápida
+em ambientes offline.'''
+
+[pure_p2p]
+copied_to_clipboard = 'Copiado para a área de transferência.'
+guest_opponent_code = 'Código de sinalização do anfitrião:'
+guest_share = 'Compartilhe seu código de sinalização com o anfitrião.'
+guest_waiting = 'Aguardando a conexão do anfitrião...'
+host_opponent_code = 'Código de sinalização do convidado:'
+host_share = 'Compartilhe seu código de sinalização com o convidado.'
+host_waiting = 'Aguardando a conexão do convidado...'
+preparing = 'Preparando...'
+spectator_opponent_code = 'Código de sinalização do jogador:'
+spectator_share = 'Compartilhe seu código de sinalização com o jogador.'
+spectator_waiting = 'Aguardando a conexão do jogador...'
+your_code = 'Seu código de sinalização:'
+your_code_already_created = 'Seu código de sinalização já foi criado:'
