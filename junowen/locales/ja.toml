@@ -22,3 +22,18 @@ tcp_signaling_waiting = '''
 tcp_signaling_offline_mode = '''
 ON にすると STUN サーバーへの接続を省略します。
 オフライン環境での疎通が高速になることがあります。'''
+
+[pure_p2p]
+copied_to_clipboard = 'クリップボードにコピーしました。'
+guest_opponent_code = 'ホストの接続コード:'
+guest_share = 'あなたの接続コードをホストに送信してください。'
+guest_waiting = 'ホストの接続を待っています…'
+host_opponent_code = 'ゲストの接続コード:'
+host_share = 'あなたの接続コードをゲストに送信してください。'
+host_waiting = 'ゲストの接続を待っています…'
+preparing = '準備中…'
+spectator_opponent_code = 'プレイヤーの接続コード:'
+spectator_share = 'あなたの接続コードをプレイヤーに送信してください。'
+spectator_waiting = 'プレイヤーの接続を待っています…'
+your_code = 'あなたの接続コード:'
+your_code_already_created = 'あなたの接続コードは作成済みです:'
