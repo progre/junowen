@@ -4,6 +4,7 @@ mod overlay;
 mod pure_p2p_guest;
 mod pure_p2p_offerer;
 mod room;
+mod text_layout;
 mod title_menu_modifier;
 
 use std::ffi::c_void;
@@ -26,12 +27,13 @@ use crate::{
 
 use self::{
     common_menu::{CommonMenu, LobbyScene, Menu, MenuItem, OnMenuInputResult},
+    helper::overlay_description,
     pure_p2p_guest::PureP2pGuest,
     pure_p2p_offerer::{PureP2pOfferer, pure_p2p_host, pure_p2p_spectator},
     room::{reserved::ReservedRoom, shared::SharedRoom, tcp_signaling::TcpSignaling},
 };
 
-pub use overlay::overlay;
+pub use overlay::{OverlayText, overlay};
 pub use title_menu_modifier::TitleMenuModifier;
 
 pub struct Root {
@@ -332,15 +334,28 @@ impl Lobby {
         }
     }
 
-    pub fn text(&self) -> String {
+    pub fn overlay_texts(&self) -> Vec<OverlayText> {
+        let waiting = self.waiting_for_match.is_some();
         match self.scene {
-            LobbyScene::Root => self.root.text(),
-            LobbyScene::SharedRoom => self.shared_room.text(self.waiting_for_match.is_some()),
-            LobbyScene::ReservedRoom => String::new(),
-            LobbyScene::TcpSignaling => self.tcp_signaling.text(self.waiting_for_match.is_some()),
-            LobbyScene::PureP2pHost => String::new(),
-            LobbyScene::PureP2pGuest => String::new(),
-            LobbyScene::PureP2pSpectator => String::new(),
+            LobbyScene::Root => overlay_description(self.root.text()),
+            LobbyScene::SharedRoom => overlay_description(self.shared_room.text(waiting)),
+            LobbyScene::ReservedRoom => vec![],
+            LobbyScene::TcpSignaling => overlay_description(self.tcp_signaling.text(waiting)),
+            LobbyScene::PureP2pHost => self
+                .pure_p2p_host
+                .as_ref()
+                .map(|scene| scene.overlay_texts())
+                .unwrap_or_default(),
+            LobbyScene::PureP2pGuest => self
+                .pure_p2p_guest
+                .as_ref()
+                .map(|scene| scene.overlay_texts())
+                .unwrap_or_default(),
+            LobbyScene::PureP2pSpectator => self
+                .pure_p2p_spectator
+                .as_ref()
+                .map(|scene| scene.overlay_texts())
+                .unwrap_or_default(),
         }
     }
 }
