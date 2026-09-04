@@ -1,11 +1,10 @@
 use std::ffi::c_void;
 
-use clipboard_win::{get_clipboard_string, set_clipboard_string};
+use clipboard_win::set_clipboard_string;
 use junowen_lib::{
     Th19,
     connection::signaling::{
-        SignalingCodeType, parse_signaling_code,
-        socket::async_read_write_socket::SignalingServerMessage,
+        SignalingCodeType, socket::async_read_write_socket::SignalingServerMessage,
     },
     structs::input_devices::InputValue,
 };
@@ -19,6 +18,7 @@ use super::{
     common_menu::{CommonMenu, LobbyScene, Menu, MenuItem, OnMenuInputResult},
     helper::signaling_code_line_count,
     overlay::OverlayText,
+    signaling_code::paste_signaling_code,
     text_layout::TextLayout,
 };
 
@@ -101,16 +101,7 @@ impl PureP2pGuest {
             OnMenuInputResult::Action(action) => {
                 match action.id() {
                     0 => {
-                        let Ok(ok) = get_clipboard_string() else {
-                            th19.play_sound(th19.sound_manager(), 0x10, 0);
-                            return None;
-                        };
-                        let Ok((SignalingCodeType::BattleOffer, offer)) = parse_signaling_code(&ok)
-                        else {
-                            th19.play_sound(th19.sound_manager(), 0x10, 0);
-                            return None;
-                        };
-                        th19.play_sound(th19.sound_manager(), 0x07, 0);
+                        let offer = paste_signaling_code(th19, SignalingCodeType::BattleOffer)?;
                         self.offer = Some(SignalingCodeType::BattleOffer.to_string(&offer));
                         self.signaling
                             .msg_tx_mut()

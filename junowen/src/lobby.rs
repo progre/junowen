@@ -3,117 +3,36 @@ mod helper;
 mod overlay;
 mod pure_p2p_guest;
 mod pure_p2p_offerer;
+mod pure_p2p_scenes;
 mod room;
+mod root;
+mod signaling_code;
 mod text_layout;
 mod title_menu_modifier;
 
 use std::ffi::c_void;
 
 use getset::{Getters, MutGetters};
-use junowen_lib::{
-    Th19,
-    structs::input_devices::{InputFlags, InputValue},
-};
-use rust_i18n::t;
+use junowen_lib::{Th19, structs::input_devices::InputValue};
 
 use crate::{
     file::SettingsRepo,
-    session::{battle::BattleSession, spectator::SpectatorSession},
     signaling::waiting_for_match::{
         WaitingForMatch, WaitingForOpponent, WaitingForOpponentInReservedRoom,
-        WaitingForPureP2pOpponent, WaitingForPureP2pSpectatorHost, WaitingForSpectatorHost,
+        WaitingForSpectatorHost,
     },
 };
 
 use self::{
-    common_menu::{CommonMenu, LobbyScene, Menu, MenuItem, OnMenuInputResult},
+    common_menu::LobbyScene,
     helper::overlay_description,
-    pure_p2p_guest::PureP2pGuest,
-    pure_p2p_offerer::{PureP2pOfferer, pure_p2p_host, pure_p2p_spectator},
+    pure_p2p_scenes::PureP2pScenes,
     room::{reserved::ReservedRoom, shared::SharedRoom, tcp_signaling::TcpSignaling},
+    root::Root,
 };
 
 pub use overlay::{OverlayText, overlay};
 pub use title_menu_modifier::TitleMenuModifier;
-
-pub struct Root {
-    common_menu: CommonMenu,
-}
-
-impl Root {
-    pub fn new() -> Self {
-        let menu = Menu::new(
-            "Ju.N.Owen",
-            None,
-            vec![
-                MenuItem::sub_scene("Shared Room", LobbyScene::SharedRoom),
-                MenuItem::sub_scene("Reserved Room", LobbyScene::ReservedRoom),
-                MenuItem::sub_scene("TCP Signaling", LobbyScene::TcpSignaling),
-                MenuItem::sub_menu(
-                    "Pure P2P",
-                    None,
-                    Menu::new(
-                        "Pure P2P",
-                        None,
-                        vec![
-                            MenuItem::sub_scene("Connect as a Host", LobbyScene::PureP2pHost),
-                            MenuItem::sub_scene("Connect as a Guest", LobbyScene::PureP2pGuest),
-                            MenuItem::sub_scene(
-                                "Connect as a Spectator",
-                                LobbyScene::PureP2pSpectator,
-                            ),
-                        ],
-                        0,
-                    ),
-                ),
-            ],
-            0,
-        );
-        Self {
-            common_menu: CommonMenu::new(true, 240, menu),
-        }
-    }
-
-    pub fn on_input_menu(
-        &mut self,
-        current_input: InputValue,
-        prev_input: InputValue,
-        th19: &mut Th19,
-    ) -> Option<LobbyScene> {
-        match self
-            .common_menu
-            .on_input_menu(current_input, prev_input, th19)
-        {
-            OnMenuInputResult::None => None,
-            OnMenuInputResult::Cancel => {
-                th19.menu_input_mut().set_current(InputFlags::PAUSE.into());
-                Some(LobbyScene::Root)
-            }
-            OnMenuInputResult::SubScene(scene) => Some(scene),
-            OnMenuInputResult::Action(..) => unreachable!(),
-        }
-    }
-
-    pub fn on_render_texts(&self, th19: &Th19, text_renderer: &c_void) {
-        self.common_menu.on_render_texts(th19, text_renderer);
-    }
-
-    fn text(&self) -> String {
-        match self.common_menu.menu().cursor() {
-            0 => t!("lobby.shared_room").into(),
-            1 => t!("lobby.reserved_room").into(),
-            2 => t!("lobby.tcp_signaling").into(),
-            3 => {
-                if self.common_menu.menu().decided() {
-                    "".into()
-                } else {
-                    t!("lobby.pure_p2p").into()
-                }
-            }
-            _ => unreachable!(),
-        }
-    }
-}
 
 #[derive(MutGetters, Getters)]
 pub struct Lobby {
@@ -124,9 +43,7 @@ pub struct Lobby {
     shared_room: SharedRoom,
     reserved_room: ReservedRoom,
     tcp_signaling: TcpSignaling,
-    pure_p2p_host: Option<PureP2pOfferer<BattleSession>>,
-    pure_p2p_guest: Option<PureP2pGuest>,
-    pure_p2p_spectator: Option<PureP2pOfferer<SpectatorSession>>,
+    pure_p2p: PureP2pScenes,
     prev_input: InputValue,
     #[getset(get = "pub", get_mut = "pub")]
     waiting_for_match: Option<WaitingForMatch>,
@@ -143,9 +60,7 @@ impl Lobby {
             shared_room: SharedRoom::new(),
             reserved_room: ReservedRoom::new(),
             tcp_signaling: TcpSignaling::new(),
-            pure_p2p_host: None,
-            pure_p2p_guest: None,
-            pure_p2p_spectator: None,
+            pure_p2p: PureP2pScenes::default(),
             prev_input: InputValue::full(),
         }
     }
@@ -208,66 +123,15 @@ impl Lobby {
                     .map(WaitingForMatch::Opponent);
                 ret
             }
-            LobbyScene::PureP2pHost => {
-                if self.pure_p2p_host.is_none() {
-                    self.waiting_for_match = None;
-                    self.pure_p2p_host = Some(pure_p2p_host());
-                    self.pure_p2p_guest = None;
-                    self.pure_p2p_spectator = None;
-                }
-                let mut session_rx = None;
-                let ret = self.pure_p2p_host.as_mut().unwrap().on_input_menu(
-                    current_input,
-                    self.prev_input,
-                    th19,
-                    &mut session_rx,
-                );
-                if let Some(session_rx) = session_rx {
-                    self.waiting_for_match =
-                        Some(WaitingForPureP2pOpponent::new(session_rx).into());
-                }
-                ret
-            }
-            LobbyScene::PureP2pGuest => {
-                if self.pure_p2p_guest.is_none() {
-                    self.waiting_for_match = None;
-                    self.pure_p2p_guest = Some(PureP2pGuest::new());
-                    self.pure_p2p_host = None;
-                    self.pure_p2p_spectator = None;
-                }
-                let mut session_rx = None;
-                let ret = self.pure_p2p_guest.as_mut().unwrap().on_input_menu(
-                    current_input,
-                    self.prev_input,
-                    th19,
-                    &mut session_rx,
-                );
-                if let Some(session_rx) = session_rx {
-                    self.waiting_for_match =
-                        Some(WaitingForPureP2pOpponent::new(session_rx).into());
-                }
-                ret
-            }
-            LobbyScene::PureP2pSpectator => {
-                if self.pure_p2p_spectator.is_none() {
-                    self.waiting_for_match = None;
-                    self.pure_p2p_spectator = Some(pure_p2p_spectator());
-                    self.pure_p2p_host = None;
-                    self.pure_p2p_guest = None;
-                }
-                let mut session_rx = None;
-                let ret = self.pure_p2p_spectator.as_mut().unwrap().on_input_menu(
-                    current_input,
-                    self.prev_input,
-                    th19,
-                    &mut session_rx,
-                );
-                if let Some(session_rx) = session_rx {
-                    self.waiting_for_match =
-                        Some(WaitingForPureP2pSpectatorHost::new(session_rx).into());
-                }
-                ret
-            }
+            scene @ (LobbyScene::PureP2pHost
+            | LobbyScene::PureP2pGuest
+            | LobbyScene::PureP2pSpectator) => self.pure_p2p.on_input_menu(
+                scene,
+                current_input,
+                self.prev_input,
+                th19,
+                &mut self.waiting_for_match,
+            ),
         } {
             self.scene = scene;
             self.prev_input = InputValue::full();
@@ -316,21 +180,11 @@ impl Lobby {
                 self.tcp_signaling
                     .on_render_texts(waiting, th19, text_renderer);
             }
-            LobbyScene::PureP2pHost => self
-                .pure_p2p_host
-                .as_ref()
-                .unwrap()
-                .on_render_texts(th19, text_renderer),
-            LobbyScene::PureP2pGuest => self
-                .pure_p2p_guest
-                .as_ref()
-                .unwrap()
-                .on_render_texts(th19, text_renderer),
-            LobbyScene::PureP2pSpectator => self
-                .pure_p2p_spectator
-                .as_ref()
-                .unwrap()
-                .on_render_texts(th19, text_renderer),
+            scene @ (LobbyScene::PureP2pHost
+            | LobbyScene::PureP2pGuest
+            | LobbyScene::PureP2pSpectator) => {
+                self.pure_p2p.on_render_texts(scene, th19, text_renderer)
+            }
         }
     }
 
@@ -341,21 +195,9 @@ impl Lobby {
             LobbyScene::SharedRoom => overlay_description(self.shared_room.text(waiting)),
             LobbyScene::ReservedRoom => vec![],
             LobbyScene::TcpSignaling => overlay_description(self.tcp_signaling.text(waiting)),
-            LobbyScene::PureP2pHost => self
-                .pure_p2p_host
-                .as_ref()
-                .map(|scene| scene.overlay_texts())
-                .unwrap_or_default(),
-            LobbyScene::PureP2pGuest => self
-                .pure_p2p_guest
-                .as_ref()
-                .map(|scene| scene.overlay_texts())
-                .unwrap_or_default(),
-            LobbyScene::PureP2pSpectator => self
-                .pure_p2p_spectator
-                .as_ref()
-                .map(|scene| scene.overlay_texts())
-                .unwrap_or_default(),
+            scene @ (LobbyScene::PureP2pHost
+            | LobbyScene::PureP2pGuest
+            | LobbyScene::PureP2pSpectator) => self.pure_p2p.overlay_texts(scene),
         }
     }
 }
