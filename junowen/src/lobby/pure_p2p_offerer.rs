@@ -1,33 +1,41 @@
+mod menu;
+mod role;
+
 use std::ffi::c_void;
 
-use clipboard_win::{get_clipboard_string, set_clipboard_string};
+use clipboard_win::set_clipboard_string;
 use junowen_lib::{
     Th19,
     connection::{
         DataChannel, PeerConnection,
-        signaling::{
-            SignalingCodeType, parse_signaling_code,
-            socket::async_read_write_socket::SignalingServerMessage,
-        },
+        signaling::{SignalingCodeType, socket::async_read_write_socket::SignalingServerMessage},
     },
     structs::input_devices::InputValue,
 };
+use rust_i18n::t;
 use tokio::sync::mpsc;
 use tracing::trace;
 
-use crate::session::{battle::BattleSession, spectator::SpectatorSession};
-
 use super::{
     super::signaling::Signaling,
-    common_menu::{CommonMenu, LobbyScene, Menu, MenuItem, OnMenuInputResult},
-    helper::{render_small_text_line, render_text_line},
+    common_menu::{CommonMenu, LobbyScene, OnMenuInputResult},
+    helper::signaling_code_line_count,
+    overlay::OverlayText,
+    signaling_code::paste_signaling_code,
+    text_layout::TextLayout,
 };
+
+use self::menu::{
+    COPY_ACTION_ID, PASTE_ACTION_ID, REGENERATE_ACTION_ID, make_empty_menu, make_menu,
+};
+
+pub use self::role::{Messages, pure_p2p_host, pure_p2p_spectator};
 
 pub struct PureP2pOfferer<T> {
     offer_type: SignalingCodeType,
     answer_type: SignalingCodeType,
     create_session: fn(PeerConnection, DataChannel) -> T,
-    messages: [&'static str; 3],
+    messages: Messages,
     common_menu: CommonMenu,
     signaling: Signaling,
     session_rx: Option<mpsc::Receiver<T>>,
@@ -45,7 +53,7 @@ where
         answer_type: SignalingCodeType,
         create_session: fn(PeerConnection, DataChannel) -> T,
         label: &'static str,
-        messages: [&'static str; 3],
+        messages: Messages,
     ) -> Self {
         let (session_tx, session_rx) = mpsc::channel(1);
         Self {
@@ -53,20 +61,7 @@ where
             answer_type,
             create_session,
             messages,
-            common_menu: CommonMenu::new(
-                false,
-                720,
-                Menu::new(
-                    label,
-                    None,
-                    vec![
-                        MenuItem::plain("Regenerate", 0, true),
-                        MenuItem::plain("Copy your code", 1, true),
-                        MenuItem::plain("Paste guest's code", 2, false),
-                    ],
-                    2,
-                ),
-            ),
+            common_menu: make_menu(label),
             signaling: Signaling::new(session_tx, create_session),
             session_rx: Some(session_rx),
             answer: None,
@@ -106,10 +101,10 @@ where
             }
             OnMenuInputResult::SubScene(_) => unreachable!(),
             OnMenuInputResult::Action(action) => {
-                if action.id() == 0 {
+                if action.id() == REGENERATE_ACTION_ID {
                     self.reset();
                 }
-                if action.id() == 1 {
+                if action.id() == COPY_ACTION_ID {
                     set_clipboard_string(
                         &self
                             .offer_type
@@ -118,20 +113,8 @@ where
                     .unwrap();
                     self.copy_state = if self.copy_state <= 1 { 1 } else { 3 };
                 }
-                if action.id() == 2 {
-                    let Ok(ok) = get_clipboard_string() else {
-                        th19.play_sound(th19.sound_manager(), 0x10, 0);
-                        return None;
-                    };
-                    let Ok((answer_type, answer)) = parse_signaling_code(&ok) else {
-                        th19.play_sound(th19.sound_manager(), 0x10, 0);
-                        return None;
-                    };
-                    if answer_type != self.answer_type {
-                        th19.play_sound(th19.sound_manager(), 0x10, 0);
-                        return None;
-                    }
-                    th19.play_sound(th19.sound_manager(), 0x07, 0);
+                if action.id() == PASTE_ACTION_ID {
+                    let answer = paste_signaling_code(th19, self.answer_type)?;
                     self.answer = Some(self.answer_type.to_string(&answer));
                     self.signaling
                         .msg_tx_mut()
@@ -140,64 +123,61 @@ where
                         .send(SignalingServerMessage::SetAnswerDesc(answer))
                         .unwrap();
                     *session_rx = self.session_rx.take();
-                    self.common_menu = CommonMenu::new(
-                        false,
-                        720,
-                        Menu::new(self.common_menu.root_title(), None, vec![], 0),
-                    )
+                    self.common_menu = make_empty_menu(self.common_menu.root_title());
                 }
                 None
             }
         }
     }
 
-    pub fn on_render_texts(&self, th19: &Th19, text_renderer: &c_void) {
-        self.common_menu.on_render_texts(th19, text_renderer);
-
+    fn layout(&self) -> TextLayout {
+        let mut layout = TextLayout::default();
         let mut line = 0;
         'a: {
             let Some(offer) = &self.signaling.offer() else {
-                render_text_line(th19, text_renderer, 0, b"Preparing...");
+                layout.push_text(line, t!("pure_p2p.preparing"));
                 break 'a;
             };
-            let text = if [2, 3].contains(&self.copy_state) {
-                "Your signaling code is already created:"
+            let key = if [2, 3].contains(&self.copy_state) {
+                "pure_p2p.your_code_already_created"
             } else {
-                "Your signaling code:"
+                "pure_p2p.your_code"
             };
-            render_text_line(th19, text_renderer, line, text.as_bytes());
+            layout.push_text(line, t!(key));
             line += 2;
             let offer = self.offer_type.to_string(offer);
-            let chunks = offer.as_bytes().chunks(100);
-            let offer_len = (chunks.len() as f64 / 2.0).ceil() as u32;
-            chunks.enumerate().for_each(|(i, chunk)| {
-                render_small_text_line(th19, text_renderer, line * 2 + i as u32, chunk);
-            });
-            line += offer_len + 1;
+            let offer_line_count = signaling_code_line_count(&offer);
+            layout.push_code(line, offer);
+            line += offer_line_count + 1;
             if [1, 3].contains(&self.copy_state) {
-                render_text_line(th19, text_renderer, line, b"It was copied to Clipboard.");
-                let text = self.messages[0].as_bytes();
-                render_text_line(th19, text_renderer, line + 1, text);
+                layout.push_text(line, t!("pure_p2p.copied_to_clipboard"));
+                layout.push_text(line + 1, t!(self.messages.share));
             }
             line += 3;
-            render_text_line(th19, text_renderer, line, self.messages[1].as_bytes());
+            layout.push_text(line, t!(self.messages.opponent_code));
             let Some(answer) = &self.answer else {
                 break 'a;
             };
-            let chunks = answer.as_bytes().chunks(100);
-            let answer_len = (chunks.len() as f64 / 2.0).ceil() as u32;
+            let answer_line_count = signaling_code_line_count(answer);
             line += 2;
-            chunks.enumerate().for_each(|(i, chunk)| {
-                render_small_text_line(th19, text_renderer, line * 2 + i as u32, chunk);
-            });
-            line += answer_len + 1;
-            let text = self.messages[2].as_bytes();
-            render_text_line(th19, text_renderer, line, text);
+            layout.push_code(line, answer.to_owned());
+            line += answer_line_count + 1;
+            layout.push_text(line, t!(self.messages.waiting));
         }
         if let Some(err) = self.signaling.error() {
             line += 1;
-            render_text_line(th19, text_renderer, line, err.to_string().as_bytes());
+            layout.push_text(line, err.to_string());
         }
+        layout
+    }
+
+    pub fn on_render_texts(&self, th19: &Th19, text_renderer: &c_void) {
+        self.common_menu.on_render_texts(th19, text_renderer);
+        self.layout().render_codes(th19, text_renderer);
+    }
+
+    pub fn overlay_texts(&self) -> Vec<OverlayText> {
+        self.layout().into_overlay_texts()
     }
 
     fn reset(&mut self) {
@@ -209,32 +189,4 @@ where
             self.messages,
         );
     }
-}
-
-pub fn pure_p2p_host() -> PureP2pOfferer<BattleSession> {
-    PureP2pOfferer::new(
-        SignalingCodeType::BattleOffer,
-        SignalingCodeType::BattleAnswer,
-        |pc, dc| BattleSession::new(pc, dc, true),
-        "Connect as a Host",
-        [
-            "Share your signaling code with guest.",
-            "Guest's signaling code:",
-            "Waiting for guest to connect...",
-        ],
-    )
-}
-
-pub fn pure_p2p_spectator() -> PureP2pOfferer<SpectatorSession> {
-    PureP2pOfferer::new(
-        SignalingCodeType::SpectatorOffer,
-        SignalingCodeType::SpectatorAnswer,
-        SpectatorSession::new,
-        "Connect as a Spectator",
-        [
-            "Share your signaling code with player.",
-            "Player's signaling code:",
-            "Waiting for player to connect...",
-        ],
-    )
 }

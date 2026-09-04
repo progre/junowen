@@ -26,3 +26,18 @@ tcp_signaling_offline_mode = '''
 Turning this ON skips connecting to the STUN server,
 which can make connecting faster
 in offline environments.'''
+
+[pure_p2p]
+copied_to_clipboard = 'It was copied to Clipboard.'
+guest_opponent_code = "Host's signaling code:"
+guest_share = 'Share your signaling code with host.'
+guest_waiting = 'Waiting for host to connect...'
+host_opponent_code = "Guest's signaling code:"
+host_share = 'Share your signaling code with guest.'
+host_waiting = 'Waiting for guest to connect...'
+preparing = 'Preparing...'
+spectator_opponent_code = "Player's signaling code:"
+spectator_share = 'Share your signaling code with player.'
+spectator_waiting = 'Waiting for player to connect...'
+your_code = 'Your signaling code:'
+your_code_already_created = 'Your signaling code is already created:'

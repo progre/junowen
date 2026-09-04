@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use junowen_lib::structs::others::WindowInner;
 use windows::Win32::{
     Foundation::{COLORREF, FALSE, RECT, SIZE},
@@ -13,6 +15,9 @@ use windows::Win32::{
 use windows_core::{HSTRING, w};
 
 use super::Lobby;
+
+/// 縁取りの太さと文字サイズの比
+const OUTLINE_RATIO: f64 = 1.0 / 29.0;
 
 fn create_font(font_size: u32, scale: f64) -> HGDIOBJ {
     unsafe {
@@ -41,7 +46,7 @@ fn create_font(font_size: u32, scale: f64) -> HGDIOBJ {
 fn render_text_to_screen(
     hdc: HDC,
     surface_desc: D3DSURFACE_DESC,
-    font_n: HGDIOBJ,
+    font: &Font,
     window_inner: &WindowInner,
     left: i32,
     top: i32,
@@ -62,7 +67,7 @@ fn render_text_to_screen(
     let mut size = SIZE::default();
     let mut text = h_string.to_vec();
 
-    let weight = (2.0 * scale) as i32;
+    let weight = (font.size as f64 * OUTLINE_RATIO * scale).max(1.0) as i32;
     let pos = [
         (-weight, -weight),
         (0, -weight),
@@ -74,7 +79,7 @@ fn render_text_to_screen(
         (weight, weight),
     ];
 
-    unsafe { SelectObject(hdc, font_n) };
+    unsafe { SelectObject(hdc, font.obj) };
     unsafe { SetTextColor(hdc, COLORREF(0x000000)) };
     unsafe { GetTextExtentPoint32W(hdc, &h_string, &mut size) }.unwrap();
     for (x, y) in pos {
@@ -87,7 +92,7 @@ fn render_text_to_screen(
         unsafe { DrawTextW(hdc, &mut text, &mut rect, DT_LEFT) };
     }
 
-    unsafe { SelectObject(hdc, font_n) };
+    unsafe { SelectObject(hdc, font.obj) };
     unsafe { SetTextColor(hdc, COLORREF(0xffffff)) };
     unsafe { GetTextExtentPoint32W(hdc, &h_string, &mut size) }.unwrap();
     let mut rect = RECT {
@@ -99,9 +104,12 @@ fn render_text_to_screen(
     unsafe { DrawTextW(hdc, &mut text, &mut rect, DT_LEFT) };
 }
 
-pub struct CustomRenderText {
+/// ゲーム内フォントでは英数字しか描画できないため、多言語のテキストは
+/// GDI で画面に重ねて描画する。座標はゲーム内と同じ 1280x960 換算。
+pub struct OverlayText {
     pub left: i32,
     pub top: i32,
+    pub font_size: u32,
     pub string: String,
 }
 
@@ -128,15 +136,10 @@ impl Drop for Font {
 }
 
 pub fn overlay(device: &IDirect3DDevice9, lobby: &Lobby, window_inner: &WindowInner) {
-    let string = lobby.text();
-    if string.is_empty() {
+    let texts = lobby.overlay_texts();
+    if texts.is_empty() {
         return;
     }
-    let text = CustomRenderText {
-        left: 96,
-        top: 640,
-        string,
-    };
 
     let surface = unsafe { device.GetRenderTarget(0) }.unwrap();
 
@@ -147,18 +150,26 @@ pub fn overlay(device: &IDirect3DDevice9, lobby: &Lobby, window_inner: &WindowIn
     unsafe { surface.GetDesc(&mut desc) }.unwrap();
 
     let scale = window_inner.height() as f64 / 960.0;
-    let font = Font::new(58, scale);
+    let mut fonts: HashMap<u32, Font> = HashMap::new();
+    for text in &texts {
+        fonts
+            .entry(text.font_size)
+            .or_insert_with(|| Font::new(text.font_size, scale));
+    }
 
-    for (i, string) in text.string.split('\n').enumerate() {
-        render_text_to_screen(
-            hdc,
-            desc,
-            font.obj,
-            window_inner,
-            text.left,
-            text.top + font.size as i32 * i as i32,
-            string,
-        );
+    for text in &texts {
+        let font = &fonts[&text.font_size];
+        for (i, string) in text.string.split('\n').enumerate() {
+            render_text_to_screen(
+                hdc,
+                desc,
+                font,
+                window_inner,
+                text.left,
+                text.top + font.size as i32 * i as i32,
+                string,
+            );
+        }
     }
 
     unsafe { surface.ReleaseDC(hdc) }.unwrap();

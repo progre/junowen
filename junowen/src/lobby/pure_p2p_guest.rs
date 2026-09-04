@@ -1,14 +1,14 @@
 use std::ffi::c_void;
 
-use clipboard_win::{get_clipboard_string, set_clipboard_string};
+use clipboard_win::set_clipboard_string;
 use junowen_lib::{
     Th19,
     connection::signaling::{
-        SignalingCodeType, parse_signaling_code,
-        socket::async_read_write_socket::SignalingServerMessage,
+        SignalingCodeType, socket::async_read_write_socket::SignalingServerMessage,
     },
     structs::input_devices::InputValue,
 };
+use rust_i18n::t;
 use tokio::sync::mpsc;
 
 use crate::session::battle::BattleSession;
@@ -16,7 +16,10 @@ use crate::session::battle::BattleSession;
 use super::{
     super::signaling::Signaling,
     common_menu::{CommonMenu, LobbyScene, Menu, MenuItem, OnMenuInputResult},
-    helper::{render_small_text_line, render_text_line},
+    helper::signaling_code_line_count,
+    overlay::OverlayText,
+    signaling_code::paste_signaling_code,
+    text_layout::TextLayout,
 };
 
 pub struct PureP2pGuest {
@@ -98,16 +101,7 @@ impl PureP2pGuest {
             OnMenuInputResult::Action(action) => {
                 match action.id() {
                     0 => {
-                        let Ok(ok) = get_clipboard_string() else {
-                            th19.play_sound(th19.sound_manager(), 0x10, 0);
-                            return None;
-                        };
-                        let Ok((SignalingCodeType::BattleOffer, offer)) = parse_signaling_code(&ok)
-                        else {
-                            th19.play_sound(th19.sound_manager(), 0x10, 0);
-                            return None;
-                        };
-                        th19.play_sound(th19.sound_manager(), 0x07, 0);
+                        let offer = paste_signaling_code(th19, SignalingCodeType::BattleOffer)?;
                         self.offer = Some(SignalingCodeType::BattleOffer.to_string(&offer));
                         self.signaling
                             .msg_tx_mut()
@@ -137,48 +131,46 @@ impl PureP2pGuest {
         }
     }
 
-    pub fn on_render_texts(&self, th19: &Th19, text_renderer: &c_void) {
-        self.common_menu.on_render_texts(th19, text_renderer);
-
+    fn layout(&self) -> TextLayout {
+        let mut layout = TextLayout::default();
         let mut line = 0;
         'a: {
-            render_text_line(th19, text_renderer, line, b"Host's signaling code:");
+            layout.push_text(line, t!("pure_p2p.guest_opponent_code"));
             line += 2;
             let Some(offer) = self.offer.as_ref() else {
                 break 'a;
             };
-            let chunks = offer.as_bytes().chunks(100);
-            let offer_len = (chunks.len() as f64 / 2.0).ceil() as u32;
-            chunks.enumerate().for_each(|(i, chunk)| {
-                render_small_text_line(th19, text_renderer, line * 2 + i as u32, chunk);
-            });
-            line += offer_len + 1;
-            render_text_line(th19, text_renderer, line, b"Your signaling code:");
+            let offer_line_count = signaling_code_line_count(offer);
+            layout.push_code(line, offer.to_owned());
+            line += offer_line_count + 1;
+            layout.push_text(line, t!("pure_p2p.your_code"));
             let Some(answer) = &self.signaling.answer() else {
                 break 'a;
             };
             let answer = SignalingCodeType::BattleAnswer.to_string(answer);
-            let chunks = answer.as_bytes().chunks(100);
-            let answer_len = (chunks.len() as f64 / 2.0).ceil() as u32;
+            let answer_line_count = signaling_code_line_count(&answer);
             line += 2;
-            chunks.enumerate().for_each(|(i, chunk)| {
-                render_small_text_line(th19, text_renderer, line * 2 + i as u32, chunk);
-            });
-            line += answer_len + 1;
-            render_text_line(th19, text_renderer, line, b"It was copied to Clipboard.");
-            render_text_line(
-                th19,
-                text_renderer,
-                line + 1,
-                b"Share your signaling code with host.",
-            );
+            layout.push_code(line, answer);
+            line += answer_line_count + 1;
+            layout.push_text(line, t!("pure_p2p.copied_to_clipboard"));
+            layout.push_text(line + 1, t!("pure_p2p.guest_share"));
             line += 3;
-            render_text_line(th19, text_renderer, line, b"Waiting for host to connect...");
+            layout.push_text(line, t!("pure_p2p.guest_waiting"));
         }
         if let Some(err) = self.signaling.error() {
             line += 2;
-            render_text_line(th19, text_renderer, line, err.to_string().as_bytes());
+            layout.push_text(line, err.to_string());
         }
+        layout
+    }
+
+    pub fn on_render_texts(&self, th19: &Th19, text_renderer: &c_void) {
+        self.common_menu.on_render_texts(th19, text_renderer);
+        self.layout().render_codes(th19, text_renderer);
+    }
+
+    pub fn overlay_texts(&self) -> Vec<OverlayText> {
+        self.layout().into_overlay_texts()
     }
 
     fn reset(&mut self) {
