@@ -8,7 +8,7 @@ use junowen_lib::{
         SignalingCodeType, parse_signaling_code,
         socket::async_read_write_socket::SignalingServerMessage,
     },
-    structs::app::{MainMenu, ScreenId},
+    structs::app::MainMenu,
 };
 use tokio::sync::mpsc::{self, error::TryRecvError};
 use tracing::info;
@@ -91,13 +91,9 @@ impl WaitingForPureP2pSpectator {
         main_menu: Option<&MainMenu>,
         th19: &Th19,
     ) -> Result<()> {
-        let selection = th19.selection();
-        self.set_ready(
-            main_menu.is_some()
-                && main_menu.unwrap().screen_id() == ScreenId::DifficultySelect
-                && selection.p1().card == 0
-                && selection.p2().card == 0,
-        );
+        // 観戦者はいつでも受け付け、同期可能なタイミングまで待機させる。
+        // 案内表示は対戦画面の邪魔にならないようメニュー画面でのみ行う
+        self.set_ready(main_menu.is_some());
 
         match self {
             Self::Standby { pushed, .. } => {

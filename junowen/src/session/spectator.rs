@@ -1,4 +1,7 @@
-use std::sync::mpsc::RecvError;
+use std::{
+    collections::VecDeque,
+    sync::mpsc::{RecvError, TryRecvError},
+};
 
 use anyhow::Result;
 use derive_new::new;
@@ -47,7 +50,7 @@ pub struct SpectatorInitial {
     initial_state: InitialState,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum SpectatorSessionMessage {
     InitSpectator(SpectatorInitial),
     InitRound(RoundInitial),
@@ -58,6 +61,9 @@ pub enum SpectatorSessionMessage {
 pub struct SpectatorSession {
     _conn: PeerConnection,
     hook_incoming_rx: std::sync::mpsc::Receiver<SpectatorSessionMessage>,
+    /// 受信済みで未処理のメッセージ。途中参加時の遅れを把握するために使う
+    buffer: VecDeque<SpectatorSessionMessage>,
+    disconnected: bool,
     spectator_initial: Option<SpectatorInitial>,
     round_initial: Option<RoundInitial>,
 }
@@ -69,6 +75,8 @@ impl SpectatorSession {
         Self {
             _conn: conn,
             hook_incoming_rx,
+            buffer: VecDeque::new(),
+            disconnected: false,
             spectator_initial: None,
             round_initial: None,
         }
@@ -78,8 +86,45 @@ impl SpectatorSession {
         self.spectator_initial.as_ref()
     }
 
-    pub fn recv_init_spectator(&mut self) -> Result<(), RecvError> {
-        let init = match self.hook_incoming_rx.recv()? {
+    fn fill_buffer(&mut self) {
+        loop {
+            match self.hook_incoming_rx.try_recv() {
+                Ok(msg) => self.buffer.push_back(msg),
+                Err(TryRecvError::Empty) => return,
+                Err(TryRecvError::Disconnected) => {
+                    self.disconnected = true;
+                    return;
+                }
+            }
+        }
+    }
+
+    fn next_message(&mut self) -> Result<SpectatorSessionMessage, RecvError> {
+        if let Some(msg) = self.buffer.pop_front() {
+            return Ok(msg);
+        }
+        self.hook_incoming_rx.recv()
+    }
+
+    /// 受信済みで未処理のメッセージ数
+    pub fn buffered_len(&mut self) -> usize {
+        self.fill_buffer();
+        self.buffer.len()
+    }
+
+    /// ホスト側の準備が整うまで待つ必要があるため、ブロックせずに受信を試みる
+    ///
+    /// 受信できた場合は `true` を返す
+    pub fn try_recv_init_spectator(&mut self) -> Result<bool, RecvError> {
+        self.fill_buffer();
+        let Some(msg) = self.buffer.pop_front() else {
+            return if self.disconnected {
+                Err(RecvError)
+            } else {
+                Ok(false)
+            };
+        };
+        let init = match msg {
             SpectatorSessionMessage::InitSpectator(init) => init,
             msg => {
                 error!("unexpected message: {:?}", msg);
@@ -87,7 +132,7 @@ impl SpectatorSession {
             }
         };
         self.spectator_initial = Some(init);
-        Ok(())
+        Ok(true)
     }
 
     pub fn dequeue_init_round(&mut self) -> Result<RoundInitial, RecvError> {
@@ -95,7 +140,7 @@ impl SpectatorSession {
             return Ok(round_initial);
         }
         loop {
-            match self.hook_incoming_rx.recv()? {
+            match self.next_message()? {
                 SpectatorSessionMessage::InitSpectator(init) => {
                     error!("unexpected init spectator message: {:?}", init);
                     return Err(RecvError);
@@ -110,7 +155,7 @@ impl SpectatorSession {
         if self.round_initial.is_some() {
             return Ok((0, 0));
         }
-        match self.hook_incoming_rx.recv()? {
+        match self.next_message()? {
             SpectatorSessionMessage::InitSpectator(init) => {
                 error!("unexpected init spectator message: {:?}", init);
                 Err(RecvError)

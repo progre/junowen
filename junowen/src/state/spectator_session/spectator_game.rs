@@ -5,6 +5,9 @@ use junowen_lib::{Th19, structs::input_devices::InputValue};
 
 use crate::session::spectator::SpectatorSession;
 
+/// 未処理の入力がこのフレーム数を超えている場合、早送りして追いつく
+const CATCH_UP_THRESHOLD: usize = 30;
+
 pub struct SpectatorGame;
 
 impl SpectatorGame {
@@ -23,6 +26,11 @@ impl SpectatorGame {
                 .p2_input_mut()
                 .set_current(InputValue::empty());
             return Ok(());
+        }
+        // 途中参加した場合は記録済みの入力が溜まっているので、早送りしてホストに追いつく
+        let no_wait = session.buffered_len() > CATCH_UP_THRESHOLD;
+        if th19.no_wait() != no_wait {
+            th19.set_no_wait(no_wait);
         }
         let input_devices = th19.input_devices_mut();
         let (p1, p2) = session.dequeue_inputs()?;

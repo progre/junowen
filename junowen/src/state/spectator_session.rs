@@ -165,6 +165,10 @@ impl SpectatorSession {
 
     pub fn on_render_texts(&self, th19: &Th19, text_renderer: &c_void) {
         let Some(initial) = self.props.spectator_initial() else {
+            if matches!(&self.state, SpectatorSessionState::Select(select) if select.is_waiting_for_host())
+            {
+                in_session::on_render_texts_waiting_for_host(th19, text_renderer);
+            }
             return;
         };
         in_session::on_render_texts_spectator(

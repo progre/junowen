@@ -24,36 +24,41 @@ pub fn on_render_texts(th19: &Th19, text_renderer: &c_void, status: RenderingSta
         render_game_settings(th19, text_renderer, game_settings);
     }
 
-    let (msg2_rear, msg2_front) = if status.spectator_host_state.count_spectators() > 0 {
-        (
-            "               ",
-            Cow::Owned(format!(
-                "Spectator(s): {}",
-                status.spectator_host_state.count_spectators()
-            )),
-        )
+    let spectators = status.spectator_host_state.count_spectators();
+    let pending_spectators = status.spectator_host_state.count_pending_spectators();
+    let (msg2_rear, msg2_front): (Cow<str>, Cow<str>) = if spectators > 0 || pending_spectators > 0
+    {
+        let msg = if pending_spectators > 0 {
+            format!(
+                "Spectator(s): {} (+{} joining)",
+                spectators, pending_spectators
+            )
+        } else {
+            format!("Spectator(s): {}", spectators)
+        };
+        (" ".repeat(msg.len()).into(), msg.into())
     } else {
         match status.spectator_host_state.waiting() {
             WaitingForSpectator::PureP2p(waiting) => match waiting {
                 WaitingForPureP2pSpectator::Standby { ready: false, .. }
                 | WaitingForPureP2pSpectator::SignalingCodeRecved { ready: false, .. }
                 | WaitingForPureP2pSpectator::SignalingCodeSent { ready: false, .. } => {
-                    ("", "".into())
+                    ("".into(), "".into())
                 }
                 WaitingForPureP2pSpectator::Standby { .. } => (
-                    "       __                                    ",
+                    "       __                                    ".into(),
                     "(Press F1 to accept spectator from clipboard)".into(),
                 ),
                 WaitingForPureP2pSpectator::SignalingCodeRecved { .. } => (
-                    "                              ",
+                    "                              ".into(),
                     "(Generating signaling code...)".into(),
                 ),
                 WaitingForPureP2pSpectator::SignalingCodeSent { .. } => (
-                    "                                                      ",
+                    "                                                      ".into(),
                     "(Your signaling code has been copied to the clipboard)".into(),
                 ),
             },
-            WaitingForSpectator::ReservedRoom(_) => ("", "".into()),
+            WaitingForSpectator::ReservedRoom(_) => ("".into(), "".into()),
         }
     };
 

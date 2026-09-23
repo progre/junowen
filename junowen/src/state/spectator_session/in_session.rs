@@ -13,3 +13,7 @@ pub fn on_render_texts_spectator(
     render_names(th19, text_renderer, p1_name, p2_name);
     render_footer(th19, text_renderer, "(Spectating)", "");
 }
+
+pub fn on_render_texts_waiting_for_host(th19: &Th19, text_renderer: &c_void) {
+    render_footer(th19, text_renderer, "(Waiting for host...)", "");
+}
