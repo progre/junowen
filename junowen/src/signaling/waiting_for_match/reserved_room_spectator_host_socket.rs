@@ -43,10 +43,6 @@ impl SignalingServerReservedRoomSpectatorHostSocket {
         }
     }
 
-    pub fn into_key(self) -> String {
-        self.key
-    }
-
     async fn sleep_or_abort_and_delete_room(&mut self, retry_after: u32, key: &str) -> Result<()> {
         let url = &self.resource_url;
         sleep_or_abort_and_delete_room(retry_after, &mut self.abort_rx, &self.client, url, key)

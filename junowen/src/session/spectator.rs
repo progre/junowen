@@ -50,11 +50,22 @@ pub struct SpectatorInitial {
     initial_state: InitialState,
 }
 
+/// 観戦ホストが予約部屋で観戦者を待ち受けるための情報
+#[derive(new, Clone, Debug, Deserialize, Getters, Serialize)]
+pub struct SpectatorRelayRoom {
+    #[get = "pub"]
+    room_name: String,
+    #[get = "pub"]
+    key: String,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum SpectatorSessionMessage {
     InitSpectator(SpectatorInitial),
     InitRound(RoundInitial),
     Inputs(u16, u16),
+    /// 受信した観戦者を観戦ホストに任命し、以降の観戦者の受け付けと中継を委譲する
+    DelegateSpectatorHost(Option<SpectatorRelayRoom>),
 }
 
 #[derive(CopyGetters, Getters, Setters)]
@@ -66,6 +77,7 @@ pub struct SpectatorSession {
     disconnected: bool,
     spectator_initial: Option<SpectatorInitial>,
     round_initial: Option<RoundInitial>,
+    delegation: Option<Option<SpectatorRelayRoom>>,
 }
 
 impl SpectatorSession {
@@ -79,6 +91,7 @@ impl SpectatorSession {
             disconnected: false,
             spectator_initial: None,
             round_initial: None,
+            delegation: None,
         }
     }
 
@@ -86,10 +99,34 @@ impl SpectatorSession {
         self.spectator_initial.as_ref()
     }
 
+    /// 観戦ホストに任命された場合、観戦者を待ち受ける予約部屋の情報を返す
+    pub fn take_delegation(&mut self) -> Option<Option<SpectatorRelayRoom>> {
+        self.delegation.take()
+    }
+
+    /// 観戦ホストへの任命を処理し、それ以外のメッセージを返す
+    fn filter_delegation(
+        &mut self,
+        msg: SpectatorSessionMessage,
+    ) -> Option<SpectatorSessionMessage> {
+        match msg {
+            SpectatorSessionMessage::DelegateSpectatorHost(room) => {
+                info!("delegated spectator host");
+                self.delegation = Some(room);
+                None
+            }
+            msg => Some(msg),
+        }
+    }
+
     fn fill_buffer(&mut self) {
         loop {
             match self.hook_incoming_rx.try_recv() {
-                Ok(msg) => self.buffer.push_back(msg),
+                Ok(msg) => {
+                    if let Some(msg) = self.filter_delegation(msg) {
+                        self.buffer.push_back(msg);
+                    }
+                }
                 Err(TryRecvError::Empty) => return,
                 Err(TryRecvError::Disconnected) => {
                     self.disconnected = true;
@@ -103,7 +140,12 @@ impl SpectatorSession {
         if let Some(msg) = self.buffer.pop_front() {
             return Ok(msg);
         }
-        self.hook_incoming_rx.recv()
+        loop {
+            let msg = self.hook_incoming_rx.recv()?;
+            if let Some(msg) = self.filter_delegation(msg) {
+                return Ok(msg);
+            }
+        }
     }
 
     /// 受信済みで未処理のメッセージ数
@@ -147,6 +189,7 @@ impl SpectatorSession {
                 }
                 SpectatorSessionMessage::InitRound(round_initial) => return Ok(round_initial),
                 SpectatorSessionMessage::Inputs(..) => continue,
+                SpectatorSessionMessage::DelegateSpectatorHost(..) => unreachable!(),
             }
         }
     }
@@ -165,6 +208,7 @@ impl SpectatorSession {
                 Ok((0, 0))
             }
             SpectatorSessionMessage::Inputs(p1, p2) => Ok((p1, p2)),
+            SpectatorSessionMessage::DelegateSpectatorHost(..) => unreachable!(),
         }
     }
 }

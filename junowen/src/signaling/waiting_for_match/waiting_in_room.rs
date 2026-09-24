@@ -6,8 +6,7 @@ use junowen_lib::connection::{DataChannel, PeerConnection, signaling::socket::Si
 use tokio::{
     sync::{
         mpsc::{self},
-        oneshot::{self, error::TryRecvError},
-        watch,
+        oneshot, watch,
     },
     task::JoinHandle,
     time::sleep,
@@ -17,7 +16,9 @@ use tracing::{Instrument, debug, debug_span, info};
 use crate::{
     TOKIO_RUNTIME,
     session::{
-        battle::BattleSession, spectator::SpectatorSession, spectator_host::SpectatorHostSession,
+        battle::BattleSession,
+        spectator::{SpectatorRelayRoom, SpectatorSession},
+        spectator_host::SpectatorHostSession,
     },
     signaling::waiting_for_match::{
         reserved_room_opponent_socket::SignalingServerReservedRoomOpponentSocket,
@@ -25,7 +26,6 @@ use crate::{
         shared_room_opponent_socket::SignalingServerSharedRoomOpponentSocket,
         tcp_signaling_guest_socket::TcpSignalingGuestSocket,
         tcp_signaling_host_socket::TcpSignalingHostSocket,
-        waiting_for_spectator::WaitingForPureP2pSpectator,
     },
 };
 
@@ -50,7 +50,7 @@ pub type WaitingForOpponentInSharedRoom = WaitingInRoom<BattleSession>;
 /// TCP シグナリングでの対戦の待機。`room_name` には接続先アドレスが入る
 pub type WaitingForOpponentOverTcpSignaling = WaitingInRoom<BattleSession>;
 pub type WaitingForOpponentInReservedRoom = WaitingInRoom<(BattleSession, Option<RoomKey>)>;
-pub type WaitingForSpectatorInReservedRoom = WaitingInRoom<(SpectatorHostSession, RoomKey)>;
+pub type WaitingForSpectatorInReservedRoom = WaitingInRoom<SpectatorHostSession>;
 pub type WaitingForSpectatorHostInReservedRoom = WaitingInRoom<SpectatorSession>;
 
 impl<TSession> WaitingInRoom<TSession>
@@ -168,13 +168,8 @@ impl WaitingForOpponentInReservedRoom {
         let Ok((session, key)) = self.session_rx.try_recv() else {
             return Err(self);
         };
-        let waiting = if let Some(key) = key {
-            let waiting = WaitingForSpectatorInReservedRoom::new(self.room_name.clone(), key.0);
-            WaitingForSpectator::ReservedRoom(waiting)
-        } else {
-            WaitingForSpectator::PureP2p(WaitingForPureP2pSpectator::standby())
-        };
-        Ok((session, waiting))
+        let room = key.map(|key| SpectatorRelayRoom::new(self.room_name.clone(), key.0));
+        Ok((session, WaitingForSpectator::new(room)))
     }
 }
 
@@ -186,23 +181,13 @@ impl WaitingForSpectatorInReservedRoom {
                     origin, room_name, key, abort_rx,
                 )
             },
-            |conn, dc, _host, socket| {
-                (
-                    SpectatorHostSession::new(conn, dc),
-                    RoomKey(socket.into_key()),
-                )
-            },
+            |conn, dc, _host, _socket| SpectatorHostSession::new(conn, dc),
             room_name,
         )
     }
 
-    pub fn try_session_and_waiting_for_spectator(
-        &mut self,
-    ) -> Result<(SpectatorHostSession, WaitingForSpectator), TryRecvError> {
-        let (session, key) = self.session_rx.try_recv()?;
-        let waiting = WaitingForSpectatorInReservedRoom::new(self.room_name.clone(), key.0);
-        let waiting = WaitingForSpectator::ReservedRoom(waiting);
-        Ok((session, waiting))
+    pub fn try_recv_session(&mut self) -> Option<SpectatorHostSession> {
+        self.session_rx.try_recv().ok()
     }
 }
 

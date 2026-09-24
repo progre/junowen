@@ -42,34 +42,19 @@ impl WaitingForOpponent {
         match self {
             Self::SharedRoom(waiting) => waiting
                 .try_into_session()
-                .map(|session| {
-                    (
-                        session,
-                        WaitingForSpectator::PureP2p(WaitingForPureP2pSpectator::standby()),
-                    )
-                })
+                .map(|session| (session, WaitingForSpectator::new(None)))
                 .map_err(WaitingForOpponent::SharedRoom),
             Self::ReservedRoom(waiting) => waiting
                 .try_into_session_and_waiting_for_spectator()
                 .map_err(WaitingForOpponent::ReservedRoom),
             Self::TcpSignaling(waiting) => waiting
                 .try_into_session()
-                .map(|session| {
-                    (
-                        session,
-                        WaitingForSpectator::PureP2p(WaitingForPureP2pSpectator::standby()),
-                    )
-                })
+                .map(|session| (session, WaitingForSpectator::new(None)))
                 .map_err(WaitingForOpponent::TcpSignaling),
             Self::PureP2p(mut waiting) => waiting
                 .battle_session_rx
                 .try_recv()
-                .map(|session| {
-                    (
-                        session,
-                        WaitingForSpectator::PureP2p(WaitingForPureP2pSpectator::standby()),
-                    )
-                })
+                .map(|session| (session, WaitingForSpectator::new(None)))
                 .map_err(|_| Self::PureP2p(waiting)),
         }
     }

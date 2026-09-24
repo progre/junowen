@@ -13,7 +13,7 @@ use junowen_lib::{
 use tokio::sync::mpsc::{self, error::TryRecvError};
 use tracing::info;
 
-use crate::session::spectator_host::SpectatorHostSession;
+use crate::session::{spectator::SpectatorRelayRoom, spectator_host::SpectatorHostSession};
 
 use super::{super::Signaling, waiting_in_room::WaitingForSpectatorInReservedRoom};
 
@@ -168,10 +168,35 @@ impl WaitingForPureP2pSpectator {
 
 pub enum WaitingForSpectator {
     PureP2p(WaitingForPureP2pSpectator),
-    ReservedRoom(WaitingForSpectatorInReservedRoom),
+    ReservedRoom {
+        room: SpectatorRelayRoom,
+        waiting: WaitingForSpectatorInReservedRoom,
+    },
 }
 
 impl WaitingForSpectator {
+    /// 予約部屋の情報があれば予約部屋で、無ければ Pure P2P で観戦者を待ち受ける
+    pub fn new(room: Option<SpectatorRelayRoom>) -> Self {
+        match room {
+            Some(room) => {
+                let waiting = WaitingForSpectatorInReservedRoom::new(
+                    room.room_name().clone(),
+                    room.key().clone(),
+                );
+                Self::ReservedRoom { room, waiting }
+            }
+            None => Self::PureP2p(WaitingForPureP2pSpectator::standby()),
+        }
+    }
+
+    pub fn room(&self) -> Option<&SpectatorRelayRoom> {
+        match self {
+            Self::PureP2p(_) => None,
+            Self::ReservedRoom { room, .. } => Some(room),
+        }
+    }
+
+    /// 予約部屋の場合、観戦者を受信した後は再度 `new` で待ち受けを作り直す必要がある
     pub fn try_recv_session(
         &mut self,
         pushed: bool,
@@ -199,13 +224,7 @@ impl WaitingForSpectator {
                     }
                 }
             }
-            Self::ReservedRoom(waiting) => match waiting.try_session_and_waiting_for_spectator() {
-                Ok((session, waiting)) => {
-                    *self = waiting;
-                    Some(session)
-                }
-                Err(_) => None,
-            },
+            Self::ReservedRoom { waiting, .. } => waiting.try_recv_session(),
         }
     }
 }

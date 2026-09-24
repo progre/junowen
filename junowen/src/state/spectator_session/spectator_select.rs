@@ -12,9 +12,13 @@ use junowen_lib::{
 };
 use tracing::trace;
 
-use crate::session::{
-    RoundInitial,
-    spectator::{self, SpectatorSession},
+use crate::{
+    helper::pushed_f1,
+    session::{
+        RoundInitial,
+        spectator::{self, SpectatorSession},
+    },
+    state::battle_session::spectator_host::{SpectatorHostState, SpectatorMatchInfo},
 };
 
 fn set_rand_seeds(th19: &mut Th19, round_initial: &RoundInitial) {
@@ -57,6 +61,7 @@ impl SpectatorSelect {
     pub fn update_th19_on_input_players(
         &mut self,
         session: &mut SpectatorSession,
+        mut relay: Option<&mut SpectatorHostState>,
         main_menu: &MainMenu,
         th19: &mut Th19,
     ) -> Result<(), RecvError> {
@@ -68,6 +73,9 @@ impl SpectatorSelect {
                 // 対戦後にキャラクター選択画面へ戻ってきた
                 let round_initial = session.dequeue_init_round()?;
                 set_rand_seeds(th19, &round_initial);
+                if let Some(relay) = relay.as_deref_mut() {
+                    relay.send_init_round_if_connected(th19);
+                }
                 self.initializing_state = InitializingState::Synced;
             }
         }
@@ -129,6 +137,7 @@ impl SpectatorSelect {
         }
 
         let (p1, p2) = session.dequeue_inputs()?;
+        let f1_pushed = pushed_f1(th19.input_devices());
         let input_devices = th19.input_devices_mut();
         input_devices
             .p1_input_mut()
@@ -137,12 +146,19 @@ impl SpectatorSelect {
             .p2_input_mut()
             .set_current((p2 as u32).try_into().unwrap());
 
+        if let Some(relay) = relay {
+            let match_info =
+                SpectatorMatchInfo::from_spectator_initial(session.spectator_initial().unwrap());
+            relay.update(f1_pushed, Some(main_menu), th19, match_info, p1, p2);
+        }
+
         Ok(())
     }
 
     pub fn update_th19_on_input_menu(
         &mut self,
         session: &mut SpectatorSession,
+        relay: Option<&mut SpectatorHostState>,
         main_menu: &mut MainMenu,
         th19: &mut Th19,
     ) -> Result<(), RecvError> {
@@ -186,6 +202,13 @@ impl SpectatorSelect {
         let input = if p1 != 0 { p1 } else { p2 };
         th19.menu_input_mut()
             .set_current((input as u32).try_into().unwrap());
+
+        if let Some(relay) = relay {
+            let f1_pushed = pushed_f1(th19.input_devices());
+            let match_info =
+                SpectatorMatchInfo::from_spectator_initial(session.spectator_initial().unwrap());
+            relay.update(f1_pushed, Some(main_menu), th19, match_info, p1, p2);
+        }
         Ok(())
     }
 }

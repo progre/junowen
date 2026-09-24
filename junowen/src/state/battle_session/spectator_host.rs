@@ -1,9 +1,9 @@
 use anyhow::Result;
-use getset::Getters;
 use junowen_lib::{
     Th19,
     structs::app::{MainMenu, ScreenId},
     structs::selection::Selection,
+    structs::settings::GameSettings,
 };
 use tracing::info;
 
@@ -17,31 +17,51 @@ use crate::{
     signaling::waiting_for_match::WaitingForSpectator,
 };
 
+/// 観戦者に送る対戦の情報
+pub struct SpectatorMatchInfo<'a> {
+    pub p1_name: &'a str,
+    pub p2_name: &'a str,
+    pub game_settings: &'a GameSettings,
+}
+
+impl<'a> SpectatorMatchInfo<'a> {
+    pub fn from_battle_session(battle_session: &'a BattleSession, th19: &'a Th19) -> Self {
+        let local_player_name = th19.vs_mode().player_name();
+        let remote_player_name = battle_session.remote_player_name().as_str();
+        let (p1_name, p2_name) = if battle_session.host() {
+            (local_player_name, remote_player_name)
+        } else {
+            (remote_player_name, local_player_name)
+        };
+        Self {
+            p1_name,
+            p2_name,
+            game_settings: &battle_session
+                .match_initial()
+                .as_ref()
+                .unwrap()
+                .game_settings,
+        }
+    }
+
+    pub fn from_spectator_initial(spectator_initial: &'a SpectatorInitial) -> Self {
+        Self {
+            p1_name: spectator_initial.p1_name(),
+            p2_name: spectator_initial.p2_name(),
+            game_settings: spectator_initial.game_settings(),
+        }
+    }
+}
+
 fn create_spectator_initial(
     current_screen: ScreenId,
     selection: &Selection,
-    battle_session: &BattleSession,
-    local_player_name: String,
+    match_info: SpectatorMatchInfo,
 ) -> SpectatorInitial {
-    let p1_name = if battle_session.host() {
-        local_player_name.to_owned()
-    } else {
-        battle_session.remote_player_name().clone()
-    };
-    let p2_name = if battle_session.host() {
-        battle_session.remote_player_name().clone()
-    } else {
-        local_player_name.to_owned()
-    };
     SpectatorInitial::new(
-        p1_name,
-        p2_name,
-        battle_session
-            .match_initial()
-            .as_ref()
-            .unwrap()
-            .game_settings
-            .clone(),
+        match_info.p1_name.to_owned(),
+        match_info.p2_name.to_owned(),
+        match_info.game_settings.clone(),
         InitialState::new(
             match current_screen {
                 ScreenId::DifficultySelect => spectator::Screen::DifficultySelect,
@@ -106,10 +126,16 @@ impl SyncPoint {
     }
 }
 
-#[derive(Getters)]
+/// 観戦者の受け付けと入力の送信を行う
+///
+/// 対戦者は最初の観戦者のみを受け付け、その観戦者を観戦ホストに任命して以降の受け付けを委譲する。
+/// 観戦ホストは受け付けた観戦者に入力を中継する。
+/// 観戦ホストが離脱すると、その観戦者もすべて離脱する。
 pub struct SpectatorHostState {
-    #[get = "pub"]
-    waiting: WaitingForSpectator,
+    /// `None` の間は観戦ホストに受け付けを委譲している
+    waiting: Option<WaitingForSpectator>,
+    /// 最初の観戦者を観戦ホストに任命するかどうか
+    delegates: bool,
     sessions: Vec<SpectatorHostSession>,
     sync_point: Option<SyncPoint>,
     /// 同期ポイントがまだ無い間に接続した観戦者
@@ -118,14 +144,29 @@ pub struct SpectatorHostState {
 }
 
 impl SpectatorHostState {
+    /// 対戦者用
     pub fn new(waiting: WaitingForSpectator) -> Self {
+        Self::internal_new(waiting, true)
+    }
+
+    /// 観戦ホスト用
+    pub fn new_relay(waiting: WaitingForSpectator) -> Self {
+        Self::internal_new(waiting, false)
+    }
+
+    fn internal_new(waiting: WaitingForSpectator, delegates: bool) -> Self {
         Self {
-            waiting,
+            waiting: Some(waiting),
+            delegates,
             sessions: Vec::new(),
             sync_point: None,
             pending_sessions: Vec::new(),
             prev_screen_id: None,
         }
+    }
+
+    pub fn waiting(&self) -> Option<&WaitingForSpectator> {
+        self.waiting.as_ref()
     }
 
     pub fn count_spectators(&self) -> usize {
@@ -172,12 +213,42 @@ impl SpectatorHostState {
         self.sessions.push(session);
     }
 
+    fn recv_session(&mut self, pushed: bool, main_menu: Option<&MainMenu>, th19: &Th19) {
+        let Some(waiting) = &mut self.waiting else {
+            if self.sessions.is_empty() && self.pending_sessions.is_empty() {
+                // 観戦ホストが離脱したので受け付けを再開する。
+                // 予約部屋は観戦ホストの離脱時に削除されるため、Pure P2P で待ち受ける
+                info!("spectator host left. resume waiting for spectator");
+                self.waiting = Some(WaitingForSpectator::new(None));
+            }
+            return;
+        };
+        let Some(session) = waiting.try_recv_session(pushed, main_menu, th19) else {
+            return;
+        };
+        let room = waiting.room().cloned();
+        if self.delegates {
+            if let Err(err) = session.send_delegate_spectator_host(room.clone()) {
+                info!("delegate spectator host failed: {:?}", err);
+                if room.is_some() {
+                    self.waiting = Some(WaitingForSpectator::new(room));
+                }
+                return;
+            }
+            info!("delegated spectator host");
+            self.waiting = None;
+        } else if room.is_some() {
+            self.waiting = Some(WaitingForSpectator::new(room));
+        }
+        self.join(session);
+    }
+
     pub fn update(
         &mut self,
         pushed: bool,
         main_menu: Option<&MainMenu>,
         th19: &Th19,
-        battle_session: &BattleSession,
+        match_info: SpectatorMatchInfo,
         p1_input: u16,
         p2_input: u16,
     ) {
@@ -191,8 +262,7 @@ impl SpectatorHostState {
                 spectator_initial: create_spectator_initial(
                     screen_id,
                     th19.selection(),
-                    battle_session,
-                    th19.vs_mode().player_name().to_string(),
+                    match_info,
                 ),
                 round_initial: current_round_initial(th19),
                 messages: Vec::new(),
@@ -202,9 +272,7 @@ impl SpectatorHostState {
             }
         }
 
-        if let Some(session) = self.waiting.try_recv_session(pushed, main_menu, th19) {
-            self.join(session);
-        }
+        self.recv_session(pushed, main_menu, th19);
 
         self.broadcast(SpectatorSessionMessage::Inputs(p1_input, p2_input));
     }

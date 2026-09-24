@@ -14,14 +14,19 @@ use junowen_lib::{
     },
 };
 
-use crate::session::spectator::SpectatorSession as SpectatorSessionProps;
+use crate::{
+    session::spectator::SpectatorSession as SpectatorSessionProps,
+    signaling::waiting_for_match::WaitingForSpectator,
+};
 
-use super::prepare::Prepare;
+use super::{battle_session::spectator_host::SpectatorHostState, prepare::Prepare};
 
 use {spectator_game::SpectatorGame, spectator_select::SpectatorSelect};
 
 pub struct SpectatorSession {
     props: SpectatorSessionProps,
+    /// 観戦ホストに任命された場合に、観戦者の受け付けと入力の中継を行う
+    relay: Option<SpectatorHostState>,
     state: SpectatorSessionState,
 }
 
@@ -37,6 +42,7 @@ impl SpectatorSession {
     pub fn prepare(props: SpectatorSessionProps) -> Self {
         Self {
             props,
+            relay: None,
             state: SpectatorSessionState::Prepare(Prepare::new()),
         }
     }
@@ -56,6 +62,14 @@ impl SpectatorSession {
     }
     pub fn change_to_back_to_select(&mut self) {
         self.state = SpectatorSessionState::BackToSelect;
+    }
+
+    fn start_relay_if_delegated(&mut self) {
+        if let Some(room) = self.props.take_delegation() {
+            self.relay = Some(SpectatorHostState::new_relay(WaitingForSpectator::new(
+                room,
+            )));
+        }
     }
 
     pub fn update_state(&mut self, th19: &Th19) -> Option<Option<&'static MainMenu>> {
@@ -124,23 +138,30 @@ impl SpectatorSession {
         menu: Option<&MainMenu>,
         th19: &mut Th19,
     ) -> Result<(), RecvError> {
+        self.start_relay_if_delegated();
         match &mut self.state {
             SpectatorSessionState::Prepare(prepare) => prepare.update_th19_on_input_players(th19),
-            SpectatorSessionState::Select(select) => {
-                select.update_th19_on_input_players(&mut self.props, menu.unwrap(), th19)?
-            }
+            SpectatorSessionState::Select(select) => select.update_th19_on_input_players(
+                &mut self.props,
+                self.relay.as_mut(),
+                menu.unwrap(),
+                th19,
+            )?,
             SpectatorSessionState::GameLoading { .. } => {
                 if th19.no_wait() {
                     th19.set_no_wait(false);
                 }
             }
-            SpectatorSessionState::Game(game) => game.update_th19(&mut self.props, th19)?,
+            SpectatorSessionState::Game(game) => {
+                game.update_th19(&mut self.props, self.relay.as_mut(), th19)?
+            }
             SpectatorSessionState::BackToSelect { .. } => {}
         }
         Ok(())
     }
 
     pub fn on_input_menu(&mut self, th19: &mut Th19) -> Result<bool, RecvError> {
+        self.start_relay_if_delegated();
         match &mut self.state {
             SpectatorSessionState::Prepare(prepare) => prepare.update_th19_on_input_menu(th19),
             SpectatorSessionState::Select(select) => {
@@ -154,7 +175,12 @@ impl SpectatorSession {
                 {
                     return Ok(false);
                 }
-                select.update_th19_on_input_menu(&mut self.props, main_menu, th19)?;
+                select.update_th19_on_input_menu(
+                    &mut self.props,
+                    self.relay.as_mut(),
+                    main_menu,
+                    th19,
+                )?;
             }
             SpectatorSessionState::GameLoading { .. } => {}
             SpectatorSessionState::Game { .. } => {}
@@ -176,6 +202,7 @@ impl SpectatorSession {
             text_renderer,
             initial.p1_name(),
             initial.p2_name(),
+            self.relay.as_ref(),
         );
     }
 
@@ -183,6 +210,6 @@ impl SpectatorSession {
         let SpectatorSessionState::Game(game) = &mut self.state else {
             return Ok(());
         };
-        game.on_round_over(&mut self.props, th19)
+        game.on_round_over(&mut self.props, self.relay.as_mut(), th19)
     }
 }
