@@ -101,6 +101,7 @@ impl BattleSession {
                 if th19.round_frame().is_some() {
                     return Some(None);
                 }
+                self.spectator_host_state.end_game();
                 self.change_to_back_to_select();
                 Some(None)
             }
