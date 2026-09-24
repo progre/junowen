@@ -40,11 +40,15 @@ pub fn on_render_texts(th19: &Th19, text_renderer: &c_void, status: RenderingSta
     } else {
         match status.spectator_host_state.waiting() {
             WaitingForSpectator::PureP2p(waiting) => match waiting {
-                WaitingForPureP2pSpectator::Standby { ready: false, .. }
-                | WaitingForPureP2pSpectator::SignalingCodeRecved { ready: false, .. }
-                | WaitingForPureP2pSpectator::SignalingCodeSent { ready: false, .. } => {
-                    ("".into(), "".into())
+                WaitingForPureP2pSpectator::Standby {
+                    show_hint: false, ..
                 }
+                | WaitingForPureP2pSpectator::SignalingCodeRecved {
+                    show_hint: false, ..
+                }
+                | WaitingForPureP2pSpectator::SignalingCodeSent {
+                    show_hint: false, ..
+                } => ("".into(), "".into()),
                 WaitingForPureP2pSpectator::Standby { .. } => (
                     "       __                                    ".into(),
                     "(Press F1 to accept spectator from clipboard)".into(),

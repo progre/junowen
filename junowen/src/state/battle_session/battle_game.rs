@@ -30,7 +30,7 @@ impl BattleGame {
                 .set_current(InputValue::empty());
             return Ok(());
         }
-        let current_pushed = pushed_f1(th19.input_devices());
+        let f1_pushed = pushed_f1(th19.input_devices());
         let input_devices = th19.input_devices_mut();
         let delay = if session.host() {
             inputed_number(input_devices)
@@ -46,7 +46,7 @@ impl BattleGame {
             .p2_input_mut()
             .set_current((p2 as u32).try_into().unwrap());
 
-        spectator_host_state.update(current_pushed, None, th19, session, p1, p2);
+        spectator_host_state.update(f1_pushed, None, th19, session, p1, p2);
 
         Ok(())
     }

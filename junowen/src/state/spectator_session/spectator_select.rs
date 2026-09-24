@@ -2,7 +2,6 @@ use std::sync::mpsc::RecvError;
 
 use anyhow::Result;
 use derive_new::new;
-use getset::{Getters, MutGetters};
 use junowen_lib::{
     Th19,
     structs::{
@@ -25,19 +24,34 @@ fn set_rand_seeds(th19: &mut Th19, round_initial: &RoundInitial) {
     th19.set_rand_seed4(round_initial.seed4).unwrap();
 }
 
-#[derive(new, Getters, MutGetters)]
+enum InitializingState {
+    Uninitialized,
+    /// ホストからの初期化情報 (同期ポイントの状態) を待っている
+    WaitingForHost,
+    /// 難易度選択画面の同期ポイントの状態を再現している
+    SyncingToDifficultySelect,
+    /// キャラクター選択画面の同期ポイントへ移動している
+    ///
+    /// ホストの同期ポイントはキャラクター選択画面に入った時点なので、
+    /// 難易度の決定や画面遷移を経た後、画面に到達した時点で乱数シードを設定する
+    SyncingToCharacterSelect {
+        round_initial: RoundInitial,
+    },
+    Synced,
+}
+
+#[derive(new)]
 pub struct SpectatorSelect {
-    /// 0: 未初期化, 1: ホストからの初期化情報待ち, 2: 同期ポイントへ移動中, 3: 同期済み
-    #[new(value = "0")]
-    initializing_state: u8,
-    /// キャラクター選択画面から同期する場合に、画面到達時に設定する乱数シード
-    #[new(default)]
-    round_initial: Option<RoundInitial>,
+    #[new(value = "InitializingState::Uninitialized")]
+    initializing_state: InitializingState,
 }
 
 impl SpectatorSelect {
     pub fn is_waiting_for_host(&self) -> bool {
-        self.initializing_state <= 1
+        matches!(
+            self.initializing_state,
+            InitializingState::Uninitialized | InitializingState::WaitingForHost
+        )
     }
 
     pub fn update_th19_on_input_players(
@@ -46,17 +60,18 @@ impl SpectatorSelect {
         main_menu: &MainMenu,
         th19: &mut Th19,
     ) -> Result<(), RecvError> {
-        if self.initializing_state == 0 {
+        if let InitializingState::Uninitialized = self.initializing_state {
             if session.spectator_initial().is_none() {
-                self.initializing_state = 1;
+                self.initializing_state = InitializingState::WaitingForHost;
                 reset_cursors(th19);
             } else {
-                self.initializing_state = 3;
+                // 対戦後にキャラクター選択画面へ戻ってきた
                 let round_initial = session.dequeue_init_round()?;
                 set_rand_seeds(th19, &round_initial);
+                self.initializing_state = InitializingState::Synced;
             }
         }
-        if self.initializing_state == 1 {
+        if let InitializingState::WaitingForHost = self.initializing_state {
             if !session.try_recv_init_spectator()? {
                 // ホストの準備が整うまで待機する
                 if th19.no_wait() {
@@ -72,33 +87,42 @@ impl SpectatorSelect {
                 return Ok(());
             }
             let round_initial = session.dequeue_init_round()?;
-            set_rand_seeds(th19, &round_initial);
-            self.round_initial = Some(round_initial);
-            self.initializing_state = 2;
+            let screen = session
+                .spectator_initial()
+                .unwrap()
+                .initial_state()
+                .screen();
+            self.initializing_state = match screen {
+                spectator::Screen::DifficultySelect => {
+                    // 既に難易度選択画面にいるので、そのまま設定する
+                    set_rand_seeds(th19, &round_initial);
+                    InitializingState::SyncingToDifficultySelect
+                }
+                spectator::Screen::CharacterSelect => {
+                    InitializingState::SyncingToCharacterSelect { round_initial }
+                }
+                spectator::Screen::Game => unimplemented!(),
+            };
         }
         if main_menu.screen_id() == ScreenId::DifficultySelect {
             return Ok(());
         }
-        if self.initializing_state == 2 {
-            let initial_state = session.spectator_initial().unwrap().initial_state().clone();
-            match initial_state.screen() {
-                spectator::Screen::DifficultySelect => {
+        match &self.initializing_state {
+            InitializingState::Uninitialized | InitializingState::WaitingForHost => unreachable!(),
+            InitializingState::SyncingToDifficultySelect => return Ok(()),
+            InitializingState::SyncingToCharacterSelect { round_initial } => {
+                if main_menu.screen_id() != ScreenId::CharacterSelect {
                     return Ok(());
                 }
-                spectator::Screen::CharacterSelect => {
-                    if main_menu.screen_id() != ScreenId::CharacterSelect {
-                        return Ok(());
-                    }
-                    // キャラクター選択画面に到達したので、ホストが同期ポイントに入った時点の状態を再現する
-                    let selection = th19.selection_mut();
-                    selection.p1_mut().card = initial_state.p1_card() as u32;
-                    selection.p2_mut().card = initial_state.p2_card() as u32;
-                    let round_initial = self.round_initial.take().unwrap();
-                    set_rand_seeds(th19, &round_initial);
-                    self.initializing_state = 3;
-                }
-                spectator::Screen::Game => unimplemented!(),
+                // キャラクター選択画面に到達したので、ホストが同期ポイントに入った時点の状態を再現する
+                let initial_state = session.spectator_initial().unwrap().initial_state();
+                let selection = th19.selection_mut();
+                selection.p1_mut().card = initial_state.p1_card() as u32;
+                selection.p2_mut().card = initial_state.p2_card() as u32;
+                set_rand_seeds(th19, round_initial);
+                self.initializing_state = InitializingState::Synced;
             }
+            InitializingState::Synced => {}
         }
         if !th19.no_wait() {
             th19.set_no_wait(true);
@@ -125,37 +149,37 @@ impl SpectatorSelect {
         if main_menu.screen_id() != ScreenId::DifficultySelect {
             return Ok(());
         }
-        if self.is_waiting_for_host() {
-            th19.menu_input_mut().set_current(InputValue::empty());
-            return Ok(());
-        }
-        let menu = main_menu.menu_mut();
-        if self.initializing_state == 2 {
-            let init = session.spectator_initial().unwrap();
-            trace!("spectator_initial: {:?}", init);
-            let initial_state = init.initial_state().clone();
-            if menu.cursor() != initial_state.difficulty() as u32 {
-                menu.set_cursor(initial_state.difficulty() as u32);
+        match &self.initializing_state {
+            InitializingState::Uninitialized | InitializingState::WaitingForHost => {
+                // 同期前はホストの入力を消費せず、観戦者の操作も受け付けない
                 th19.menu_input_mut().set_current(InputValue::empty());
                 return Ok(());
             }
-            let selection = th19.selection_mut();
-            selection.p1_mut().character = initial_state.p1_character() as u32;
-            selection.p2_mut().character = initial_state.p2_character() as u32;
-            match initial_state.screen() {
-                spectator::Screen::DifficultySelect => {
-                    th19.set_no_wait(false);
-                    self.round_initial = None;
-                    self.initializing_state = 3;
+            InitializingState::SyncingToDifficultySelect
+            | InitializingState::SyncingToCharacterSelect { .. } => {
+                let init = session.spectator_initial().unwrap();
+                trace!("spectator_initial: {:?}", init);
+                let initial_state = init.initial_state();
+                let menu = main_menu.menu_mut();
+                if menu.cursor() != initial_state.difficulty() as u32 {
+                    menu.set_cursor(initial_state.difficulty() as u32);
+                    th19.menu_input_mut().set_current(InputValue::empty());
+                    return Ok(());
                 }
-                spectator::Screen::CharacterSelect => {
+                let selection = th19.selection_mut();
+                selection.p1_mut().character = initial_state.p1_character() as u32;
+                selection.p2_mut().character = initial_state.p2_character() as u32;
+                if let InitializingState::SyncingToCharacterSelect { .. } = self.initializing_state
+                {
                     // 難易度を決定してキャラクター選択画面へ進む
                     let prev = th19.menu_input().prev();
                     th19.menu_input_mut().set_current(shot_repeatedly(prev));
                     return Ok(());
                 }
-                spectator::Screen::Game => unimplemented!(),
+                th19.set_no_wait(false);
+                self.initializing_state = InitializingState::Synced;
             }
+            InitializingState::Synced => {}
         }
 
         let (p1, p2) = session.dequeue_inputs()?;

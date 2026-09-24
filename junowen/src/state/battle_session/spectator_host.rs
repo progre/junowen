@@ -71,14 +71,14 @@ fn current_round_initial(th19: &Th19) -> RoundInitial {
 /// 画面に入った最初のフレームのみ同期ポイントにできる
 /// - 難易度選択画面 (カード選択状態が初期状態の場合のみ)
 /// - キャラクター選択画面
-fn sync_screen(screen_id: ScreenId, th19: &Th19) -> Option<ScreenId> {
+fn is_sync_point(screen_id: ScreenId, th19: &Th19) -> bool {
     match screen_id {
         ScreenId::DifficultySelect => {
             let vs_mode = th19.vs_mode();
-            (vs_mode.p1_card() == 0 && vs_mode.p2_card() == 0).then_some(ScreenId::DifficultySelect)
+            vs_mode.p1_card() == 0 && vs_mode.p2_card() == 0
         }
-        ScreenId::CharacterSelect => Some(ScreenId::CharacterSelect),
-        _ => None,
+        ScreenId::CharacterSelect => true,
+        _ => false,
     }
 }
 
@@ -86,6 +86,9 @@ fn sync_screen(screen_id: ScreenId, th19: &Th19) -> Option<ScreenId> {
 ///
 /// 途中参加した観戦者は同期ポイントの状態から記録済みのメッセージを早送りで再生し、
 /// ホストに追いつく
+///
+/// `messages` には毎フレームの入力が蓄積され続けるが、同期ポイントはキャラクター選択画面に
+/// 入るたびに作り直されるため、蓄積量はおおむね 1 対戦分 (1 分あたり約 3,600 件) に収まる
 struct SyncPoint {
     spectator_initial: SpectatorInitial,
     round_initial: RoundInitial,
@@ -179,12 +182,14 @@ impl SpectatorHostState {
         p2_input: u16,
     ) {
         let screen_id = main_menu.map(|x| x.screen_id());
-        let entered = screen_id.is_some() && screen_id != self.prev_screen_id;
-        self.prev_screen_id = screen_id;
-        if entered && let Some(screen) = sync_screen(screen_id.unwrap(), th19) {
+        let prev_screen_id = std::mem::replace(&mut self.prev_screen_id, screen_id);
+        if let Some(screen_id) = screen_id
+            && Some(screen_id) != prev_screen_id
+            && is_sync_point(screen_id, th19)
+        {
             self.sync_point = Some(SyncPoint {
                 spectator_initial: create_spectator_initial(
-                    screen,
+                    screen_id,
                     th19.selection(),
                     battle_session,
                     th19.vs_mode().player_name().to_string(),
