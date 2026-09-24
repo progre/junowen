@@ -59,7 +59,7 @@ impl BattleSelect {
             if session.match_initial().is_none() {
                 init_match(th19, session)?;
             }
-            init_round(th19, session, spectator_host_state)?;
+            init_round(th19, session)?;
         }
 
         if main_menu.screen_id() == ScreenId::DifficultySelect {
@@ -82,7 +82,7 @@ impl BattleSelect {
             .p2_input_mut()
             .set_current((p2 as u32).try_into().unwrap());
 
-        spectator_host_state.update(f1_pushed, Some(main_menu), th19, session, p1, p2);
+        spectator_host_state.update(f1_pushed, Some(main_menu), th19, session);
 
         Ok(())
     }
@@ -111,7 +111,7 @@ impl BattleSelect {
         menu_input.set_current((input as u32).try_into().unwrap());
 
         let f1_pushed = pushed_f1(input_devices);
-        spectator_host_state.update(f1_pushed, Some(main_menu), th19, session, p1, p2);
+        spectator_host_state.update(f1_pushed, Some(main_menu), th19, session);
 
         Ok(())
     }

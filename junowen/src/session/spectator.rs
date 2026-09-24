@@ -8,77 +8,12 @@ use derive_new::new;
 use getset::{CopyGetters, Getters, Setters};
 use junowen_lib::{
     connection::{DataChannel, PeerConnection},
-    structs::settings::{AbilityCard, GameSettings},
+    structs::settings::GameSettings,
 };
 use serde::{Deserialize, Serialize};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use super::{session_message::RoundInitial, to_channel};
-
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
-pub enum Screen {
-    DifficultySelect,
-    CharacterSelect,
-}
-
-/// キャラクター選択画面での各プレイヤーの進行段階
-///
-/// メモリ上の値は未解析のため、ホストが決定キーとキャンセルキーの押下から推定する
-#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
-pub enum CharacterSelectPhase {
-    #[default]
-    Character,
-    Card,
-    Ready,
-}
-
-impl CharacterSelectPhase {
-    pub fn decided(self, has_card_phase: bool) -> Self {
-        match self {
-            Self::Character if has_card_phase => Self::Card,
-            Self::Character | Self::Card | Self::Ready => Self::Ready,
-        }
-    }
-
-    pub fn canceled(self, has_card_phase: bool) -> Self {
-        match self {
-            Self::Ready if has_card_phase => Self::Card,
-            Self::Character | Self::Card | Self::Ready => Self::Character,
-        }
-    }
-}
-
-/// カード選択の段階があるかどうか
-///
-/// TODO: 実機で確認する。`Random` はカードが自動で決まるため選択の段階がないと仮定している
-pub fn has_card_select_phase(game_settings: &GameSettings) -> bool {
-    matches!(
-        game_settings.ability_card(),
-        AbilityCard::SelfCard | AbilityCard::AllCard
-    )
-}
-
-#[derive(new, Clone, Copy, Debug, Deserialize, CopyGetters, Serialize)]
-pub struct PlayerInitialState {
-    #[get_copy = "pub"]
-    character: u8,
-    #[get_copy = "pub"]
-    card: u8,
-    #[get_copy = "pub"]
-    phase: CharacterSelectPhase,
-}
-
-#[derive(new, Clone, Debug, Deserialize, CopyGetters, Serialize)]
-pub struct InitialState {
-    #[get_copy = "pub"]
-    screen: Screen,
-    #[get_copy = "pub"]
-    difficulty: u8,
-    #[get_copy = "pub"]
-    p1: PlayerInitialState,
-    #[get_copy = "pub"]
-    p2: PlayerInitialState,
-}
 
 #[derive(new, Clone, Debug, Deserialize, Getters, Serialize)]
 pub struct SpectatorInitial {
@@ -88,13 +23,33 @@ pub struct SpectatorInitial {
     p2_name: String,
     #[get = "pub"]
     game_settings: GameSettings,
+}
+
+#[derive(new, Clone, Copy, Debug, Deserialize, CopyGetters, PartialEq, Serialize)]
+pub struct PlayerGameInitial {
+    #[get_copy = "pub"]
+    character: u8,
+    #[get_copy = "pub"]
+    card: u8,
+}
+
+/// 試合開始時の状態。観戦者はこれに合わせてキャラクターとカードを決定する
+#[derive(new, Clone, Debug, Deserialize, CopyGetters, Getters, Serialize)]
+pub struct GameInitial {
+    #[get_copy = "pub"]
+    difficulty: u8,
+    #[get_copy = "pub"]
+    p1: PlayerGameInitial,
+    #[get_copy = "pub"]
+    p2: PlayerGameInitial,
     #[get = "pub"]
-    initial_state: InitialState,
+    round_initial: RoundInitial,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum SpectatorSessionMessage {
     InitSpectator(SpectatorInitial),
+    InitGame(GameInitial),
     InitRound(RoundInitial),
     Inputs(u16, u16),
 }
@@ -179,6 +134,28 @@ impl SpectatorSession {
         Ok(true)
     }
 
+    /// 試合開始時の状態をブロックせずに受信する
+    ///
+    /// 観戦者の試合がホストより早く終わった場合などに残った入力は読み捨てる
+    pub fn try_recv_init_game(&mut self) -> Result<Option<GameInitial>, RecvError> {
+        self.round_initial = None;
+        self.fill_buffer();
+        while let Some(msg) = self.buffer.pop_front() {
+            match msg {
+                SpectatorSessionMessage::InitGame(init) => return Ok(Some(init)),
+                SpectatorSessionMessage::InitSpectator(init) => {
+                    error!("unexpected init spectator message: {:?}", init);
+                    return Err(RecvError);
+                }
+                msg => warn!("discard message: {:?}", msg),
+            }
+        }
+        if self.disconnected {
+            return Err(RecvError);
+        }
+        Ok(None)
+    }
+
     pub fn dequeue_init_round(&mut self) -> Result<RoundInitial, RecvError> {
         if let Some(round_initial) = self.round_initial.take() {
             return Ok(round_initial);
@@ -187,6 +164,10 @@ impl SpectatorSession {
             match self.next_message()? {
                 SpectatorSessionMessage::InitSpectator(init) => {
                     error!("unexpected init spectator message: {:?}", init);
+                    return Err(RecvError);
+                }
+                SpectatorSessionMessage::InitGame(init) => {
+                    error!("unexpected init game message: {:?}", init);
                     return Err(RecvError);
                 }
                 SpectatorSessionMessage::InitRound(round_initial) => return Ok(round_initial),
@@ -202,6 +183,10 @@ impl SpectatorSession {
         match self.next_message()? {
             SpectatorSessionMessage::InitSpectator(init) => {
                 error!("unexpected init spectator message: {:?}", init);
+                Err(RecvError)
+            }
+            SpectatorSessionMessage::InitGame(init) => {
+                error!("unexpected init game message: {:?}", init);
                 Err(RecvError)
             }
             SpectatorSessionMessage::InitRound(round_initial) => {

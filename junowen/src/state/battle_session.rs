@@ -79,6 +79,7 @@ impl BattleSession {
                 let main_menu = th19.app().main_loop_tasks().find_main_menu().unwrap();
                 match main_menu.screen_id() {
                     ScreenId::GameLoading => {
+                        self.spectator_host_state.start_game(th19);
                         self.change_to_game_loading();
                         Some(Some(main_menu))
                     }
