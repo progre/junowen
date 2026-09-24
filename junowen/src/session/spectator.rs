@@ -58,11 +58,13 @@ pub enum SpectatorSessionMessage {
 pub struct SpectatorSession {
     _conn: PeerConnection,
     hook_incoming_rx: std::sync::mpsc::Receiver<SpectatorSessionMessage>,
-    /// 受信済みで未処理のメッセージ。途中参加時の遅れを把握するために使う
+    /// 受信済みで未処理のメッセージ。試合開始がホストより遅れた分を把握するために使う
     buffer: VecDeque<SpectatorSessionMessage>,
     disconnected: bool,
     spectator_initial: Option<SpectatorInitial>,
     round_initial: Option<RoundInitial>,
+    /// 観戦者の試合中に受け取った次の試合の開始時の状態
+    next_game_initial: Option<GameInitial>,
 }
 
 impl SpectatorSession {
@@ -76,6 +78,7 @@ impl SpectatorSession {
             disconnected: false,
             spectator_initial: None,
             round_initial: None,
+            next_game_initial: None,
         }
     }
 
@@ -134,11 +137,25 @@ impl SpectatorSession {
         Ok(true)
     }
 
+    /// 観戦者の試合中に次の試合が始まったかどうか
+    ///
+    /// 観戦者の試合がホストとずれた場合に起こる。この場合は今の試合を打ち切り、次の試合から同期し直す
+    pub fn has_next_game_initial(&self) -> bool {
+        self.next_game_initial.is_some()
+    }
+
+    /// 前の試合で残ったラウンドの初期化情報を破棄する。試合開始を待つ状態に入るときに呼ぶ
+    pub fn discard_round_initial(&mut self) {
+        self.round_initial = None;
+    }
+
     /// 試合開始時の状態をブロックせずに受信する
     ///
     /// 観戦者の試合がホストより早く終わった場合などに残った入力は読み捨てる
     pub fn try_recv_init_game(&mut self) -> Result<Option<GameInitial>, RecvError> {
-        self.round_initial = None;
+        if let Some(init) = self.next_game_initial.take() {
+            return Ok(Some(init));
+        }
         self.fill_buffer();
         while let Some(msg) = self.buffer.pop_front() {
             match msg {
@@ -156,9 +173,13 @@ impl SpectatorSession {
         Ok(None)
     }
 
-    pub fn dequeue_init_round(&mut self) -> Result<RoundInitial, RecvError> {
+    /// 次の試合が始まっている場合は `None` を返す
+    pub fn dequeue_init_round(&mut self) -> Result<Option<RoundInitial>, RecvError> {
         if let Some(round_initial) = self.round_initial.take() {
-            return Ok(round_initial);
+            return Ok(Some(round_initial));
+        }
+        if self.next_game_initial.is_some() {
+            return Ok(None);
         }
         loop {
             match self.next_message()? {
@@ -167,17 +188,20 @@ impl SpectatorSession {
                     return Err(RecvError);
                 }
                 SpectatorSessionMessage::InitGame(init) => {
-                    error!("unexpected init game message: {:?}", init);
-                    return Err(RecvError);
+                    warn!("next game started during round over");
+                    self.next_game_initial = Some(init);
+                    return Ok(None);
                 }
-                SpectatorSessionMessage::InitRound(round_initial) => return Ok(round_initial),
+                SpectatorSessionMessage::InitRound(round_initial) => {
+                    return Ok(Some(round_initial));
+                }
                 SpectatorSessionMessage::Inputs(..) => continue,
             }
         }
     }
 
     pub fn dequeue_inputs(&mut self) -> Result<(u16, u16), RecvError> {
-        if self.round_initial.is_some() {
+        if self.round_initial.is_some() || self.next_game_initial.is_some() {
             return Ok((0, 0));
         }
         match self.next_message()? {
@@ -186,8 +210,9 @@ impl SpectatorSession {
                 Err(RecvError)
             }
             SpectatorSessionMessage::InitGame(init) => {
-                error!("unexpected init game message: {:?}", init);
-                Err(RecvError)
+                warn!("next game started during game");
+                self.next_game_initial = Some(init);
+                Ok((0, 0))
             }
             SpectatorSessionMessage::InitRound(round_initial) => {
                 self.round_initial = Some(round_initial);

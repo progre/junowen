@@ -29,7 +29,7 @@ impl SpectatorGame {
                 .set_current(InputValue::empty());
             return Ok(());
         }
-        // 途中参加した場合は記録済みの入力が溜まっているので、早送りしてホストに追いつく
+        // 観戦者の試合開始はホストより遅れるため、溜まった入力を早送りしてホストに追いつく
         let no_wait = session.poll_buffered_len() > CATCH_UP_THRESHOLD;
         if th19.no_wait() != no_wait {
             th19.set_no_wait(no_wait);
@@ -50,8 +50,9 @@ impl SpectatorGame {
         session: &mut SpectatorSession,
         th19: &mut Th19,
     ) -> Result<(), RecvError> {
-        let init = session.dequeue_init_round()?;
-        set_rand_seeds(th19, &init);
+        if let Some(init) = session.dequeue_init_round()? {
+            set_rand_seeds(th19, &init);
+        }
         Ok(())
     }
 }

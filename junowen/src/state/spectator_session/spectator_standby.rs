@@ -9,7 +9,7 @@ use junowen_lib::{
     },
     th19_helpers::{reset_cursors, shot_repeatedly},
 };
-use tracing::trace;
+use tracing::{trace, warn};
 
 use crate::session::spectator::{GameInitial, SpectatorSession};
 
@@ -51,6 +51,11 @@ fn set_character_select(th19: &mut Th19, init: &GameInitial) {
     p2_cursor.prev_cursor = p2_cursor.cursor;
 }
 
+/// 試合開始時の状態を受け取ってから、試合開始までに許容するフレーム数
+///
+/// 状態を合わせられない場合 (カーソルの値とキャラクター番号の対応が想定と違う場合など) に諦める
+const MAX_SYNC_FRAMES: u32 = 60 * 60;
+
 /// 難易度選択画面またはキャラクター選択画面で、ホストの試合開始を待つ
 ///
 /// 試合開始時の状態を受け取ったら、難易度・キャラクター・カードを合わせ、
@@ -58,6 +63,9 @@ fn set_character_select(th19: &mut Th19, init: &GameInitial) {
 pub struct SpectatorStandby {
     cursors_reset: bool,
     game_initial: Option<GameInitial>,
+    sync_frames: u32,
+    /// 直前のフレームで PAUSE を自動で入力したか。観戦者自身の PAUSE と区別するために使う
+    pause_injected: bool,
 }
 
 impl SpectatorStandby {
@@ -66,7 +74,13 @@ impl SpectatorStandby {
         Self {
             cursors_reset: !first_time,
             game_initial: None,
+            sync_frames: 0,
+            pause_injected: false,
         }
+    }
+
+    pub fn pause_injected(&self) -> bool {
+        self.pause_injected
     }
 
     pub fn is_waiting_for_host(&self) -> bool {
@@ -109,9 +123,15 @@ impl SpectatorStandby {
             self.cursors_reset = true;
             reset_cursors(th19);
         }
+        self.pause_injected = false;
         if !self.recv(session, th19)? {
             clear_player_inputs(th19);
             return Ok(());
+        }
+        self.sync_frames += 1;
+        if self.sync_frames > MAX_SYNC_FRAMES {
+            warn!("failed to reproduce game initial");
+            return Err(RecvError);
         }
         let init = self.game_initial.clone().unwrap();
         if main_menu.screen_id() != ScreenId::CharacterSelect {
@@ -129,6 +149,7 @@ impl SpectatorStandby {
             let p1 = if prev_p1 == pause {
                 InputValue::empty()
             } else {
+                self.pause_injected = true;
                 pause
             };
             (p1, InputValue::empty())

@@ -95,7 +95,7 @@ impl WaitingForPureP2pSpectator {
         th19: &Th19,
     ) -> Result<()> {
         // 観戦者の受け付けはメニュー画面 (難易度選択・キャラクター選択) で行う。
-        // 合流のタイミングは `SpectatorHostState` が同期ポイントで制御する
+        // 観戦者は次の試合の開始 (`SpectatorHostState::start_game`) から合流する
         self.set_ready(main_menu.is_some());
 
         match self {

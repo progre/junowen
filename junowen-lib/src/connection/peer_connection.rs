@@ -82,7 +82,7 @@ impl Drop for PeerConnection {
 pub const BATTLE_PROTOCOL: &str = "JUNOWEN/1.1";
 /// 観戦用の接続のプロトコル。互換性のない変更をしたら上げる
 ///
-/// 1.2: キャラクター選択画面からの途中参加に対応
+/// 1.2: 試合開始時の状態を送り、いつ接続しても次の試合から観戦できるようにした
 pub const SPECTATOR_PROTOCOL: &str = "JUNOWEN/1.2";
 
 impl PeerConnection {

@@ -35,7 +35,7 @@ fn set_rand_seeds(th19: &mut Th19, round_initial: &RoundInitial) {
 }
 
 /// 観戦者の試合開始時の状態がホストと一致しているか確認する
-fn verify_game_initial(th19: &Th19, init: &GameInitial) {
+fn verify_game_initial(th19: &Th19, init: &GameInitial) -> bool {
     let selection = th19.selection();
     let actual = (
         selection.difficulty as u8,
@@ -56,7 +56,9 @@ fn verify_game_initial(th19: &Th19, init: &GameInitial) {
             "game initial mismatch. expected={:?}, actual={:?}",
             expected, actual
         );
+        return false;
     }
+    true
 }
 
 pub struct SpectatorSession {
@@ -85,7 +87,11 @@ impl SpectatorSession {
         self.props.spectator_initial().map(|x| x.game_settings())
     }
 
+    pub fn change_to_prepare(&mut self) {
+        self.state = SpectatorSessionState::Prepare(Prepare::new());
+    }
     pub fn change_to_standby(&mut self, first_time: bool) {
+        self.props.discard_round_initial();
         self.state = SpectatorSessionState::Standby(SpectatorStandby::new(first_time));
     }
     pub fn change_to_game_loading(&mut self, round_initial: Option<RoundInitial>) {
@@ -110,8 +116,9 @@ impl SpectatorSession {
                 Some(Some(main_menu))
             }
             SpectatorSessionState::Standby(standby) => {
-                // 待機中は観戦者側でキャンセルキーを入力することがあるため、キーボードの ESC で中断する
-                if pushed_escape(th19.input_devices()) {
+                // 自動で入力した PAUSE は観戦者の操作として扱わない
+                let pause = th19.input_devices().p1_input().current().0 & InputFlags::PAUSE != None;
+                if pushed_escape(th19.input_devices()) || (pause && !standby.pause_injected()) {
                     return None;
                 }
                 let main_menu = th19.app().main_loop_tasks().find_main_menu()?;
@@ -119,8 +126,11 @@ impl SpectatorSession {
                     ScreenId::PlayerMatchupSelect => None,
                     ScreenId::GameLoading => {
                         let init = standby.take_game_initial();
-                        if let Some(init) = &init {
-                            verify_game_initial(th19, init);
+                        if let Some(init) = &init
+                            && !verify_game_initial(th19, init)
+                        {
+                            // ずれた試合を見せ続けないよう、観戦を終了する
+                            return None;
                         }
                         self.change_to_game_loading(init.map(|x| x.round_initial().clone()));
                         Some(Some(main_menu))
@@ -141,6 +151,12 @@ impl SpectatorSession {
             SpectatorSessionState::Game { .. } => {
                 if th19.input_devices().p1_input().current().0 & InputFlags::PAUSE != None {
                     return None;
+                }
+                if self.props.has_next_game_initial() {
+                    // ホストの次の試合が始まったので、今の試合を打ち切って次の試合から同期し直す
+                    warn!("spectator game is out of sync. resync from next game");
+                    self.change_to_prepare();
+                    return Some(None);
                 }
                 if th19.round_frame().is_some() {
                     return Some(None);
