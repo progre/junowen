@@ -131,6 +131,7 @@ impl SpectatorStandby {
         self.sync_frames += 1;
         if self.sync_frames > MAX_SYNC_FRAMES {
             warn!("failed to reproduce game initial");
+            // NOTE: 呼び出し側はエラーでセッションを中断するため、`RecvError` を中断の合図として流用している
             return Err(RecvError);
         }
         let init = self.game_initial.clone().unwrap();
