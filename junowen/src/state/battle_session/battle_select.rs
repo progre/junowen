@@ -15,10 +15,7 @@ use crate::{
     session::{MatchInitial, battle::BattleSession},
 };
 
-use super::{
-    spectator_host::{SpectatorHostState, SpectatorMatchInfo},
-    utils::init_round,
-};
+use super::{spectator_host::SpectatorHostState, utils::init_round};
 
 fn init_match(th19: &mut Th19, battle_session: &mut BattleSession) -> Result<(), RecvError> {
     trace!("init_match");
@@ -85,8 +82,7 @@ impl BattleSelect {
             .p2_input_mut()
             .set_current((p2 as u32).try_into().unwrap());
 
-        let match_info = SpectatorMatchInfo::from_battle_session(session, th19);
-        spectator_host_state.update(f1_pushed, Some(main_menu), th19, match_info, p1, p2);
+        spectator_host_state.update(f1_pushed, Some(main_menu), th19, session, p1, p2);
 
         Ok(())
     }
@@ -115,8 +111,7 @@ impl BattleSelect {
         menu_input.set_current((input as u32).try_into().unwrap());
 
         let f1_pushed = pushed_f1(input_devices);
-        let match_info = SpectatorMatchInfo::from_battle_session(session, th19);
-        spectator_host_state.update(f1_pushed, Some(main_menu), th19, match_info, p1, p2);
+        spectator_host_state.update(f1_pushed, Some(main_menu), th19, session, p1, p2);
 
         Ok(())
     }

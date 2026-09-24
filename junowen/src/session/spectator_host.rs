@@ -5,7 +5,9 @@ use tracing::info;
 
 use super::{
     session_message::RoundInitial,
-    spectator::{SpectatorInitial, SpectatorRelayRoom, SpectatorSessionMessage},
+    spectator::{
+        SpectatorHostDelegation, SpectatorInitial, SpectatorRelayRoom, SpectatorSessionMessage,
+    },
     to_channel,
 };
 
@@ -32,7 +34,9 @@ impl SpectatorHostSession {
     pub fn send_delegate_spectator_host(&self, room: Option<SpectatorRelayRoom>) -> Result<()> {
         Ok(self
             .hook_outgoing_tx
-            .send(SpectatorSessionMessage::DelegateSpectatorHost(room))?)
+            .send(SpectatorSessionMessage::DelegateSpectatorHost(
+                SpectatorHostDelegation::new(room),
+            ))?)
     }
 
     pub fn send_init_spectator(&self, init: SpectatorInitial) -> Result<()> {

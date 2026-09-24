@@ -18,7 +18,7 @@ use crate::{
         RoundInitial,
         spectator::{self, SpectatorSession},
     },
-    state::battle_session::spectator_host::{SpectatorHostState, SpectatorMatchInfo},
+    state::battle_session::spectator_host::SpectatorHostState,
 };
 
 fn set_rand_seeds(th19: &mut Th19, round_initial: &RoundInitial) {
@@ -147,9 +147,8 @@ impl SpectatorSelect {
             .set_current((p2 as u32).try_into().unwrap());
 
         if let Some(relay) = relay {
-            let match_info =
-                SpectatorMatchInfo::from_spectator_initial(session.spectator_initial().unwrap());
-            relay.update(f1_pushed, Some(main_menu), th19, match_info, p1, p2);
+            let initial = session.spectator_initial().unwrap();
+            relay.update(f1_pushed, Some(main_menu), th19, initial, p1, p2);
         }
 
         Ok(())
@@ -205,9 +204,8 @@ impl SpectatorSelect {
 
         if let Some(relay) = relay {
             let f1_pushed = pushed_f1(th19.input_devices());
-            let match_info =
-                SpectatorMatchInfo::from_spectator_initial(session.spectator_initial().unwrap());
-            relay.update(f1_pushed, Some(main_menu), th19, match_info, p1, p2);
+            let initial = session.spectator_initial().unwrap();
+            relay.update(f1_pushed, Some(main_menu), th19, initial, p1, p2);
         }
         Ok(())
     }

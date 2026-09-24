@@ -11,7 +11,9 @@ use crate::{
     session::{
         RoundInitial,
         battle::BattleSession,
-        spectator::{self, InitialState, SpectatorInitial, SpectatorSessionMessage},
+        spectator::{
+            self, InitialState, SpectatorInitial, SpectatorRelayRoom, SpectatorSessionMessage,
+        },
         spectator_host::SpectatorHostSession,
     },
     signaling::waiting_for_match::WaitingForSpectator,
@@ -19,36 +21,39 @@ use crate::{
 
 /// 観戦者に送る対戦の情報
 pub struct SpectatorMatchInfo<'a> {
-    pub p1_name: &'a str,
-    pub p2_name: &'a str,
-    pub game_settings: &'a GameSettings,
+    p1_name: &'a str,
+    p2_name: &'a str,
+    game_settings: &'a GameSettings,
 }
 
-impl<'a> SpectatorMatchInfo<'a> {
-    pub fn from_battle_session(battle_session: &'a BattleSession, th19: &'a Th19) -> Self {
+/// 観戦者に送る対戦の情報の取得元
+pub trait SpectatorMatchSource {
+    fn match_info<'a>(&'a self, th19: &'a Th19) -> SpectatorMatchInfo<'a>;
+}
+
+impl SpectatorMatchSource for BattleSession {
+    fn match_info<'a>(&'a self, th19: &'a Th19) -> SpectatorMatchInfo<'a> {
         let local_player_name = th19.vs_mode().player_name();
-        let remote_player_name = battle_session.remote_player_name().as_str();
-        let (p1_name, p2_name) = if battle_session.host() {
+        let remote_player_name = self.remote_player_name().as_str();
+        let (p1_name, p2_name) = if self.host() {
             (local_player_name, remote_player_name)
         } else {
             (remote_player_name, local_player_name)
         };
-        Self {
+        SpectatorMatchInfo {
             p1_name,
             p2_name,
-            game_settings: &battle_session
-                .match_initial()
-                .as_ref()
-                .unwrap()
-                .game_settings,
+            game_settings: &self.match_initial().as_ref().unwrap().game_settings,
         }
     }
+}
 
-    pub fn from_spectator_initial(spectator_initial: &'a SpectatorInitial) -> Self {
-        Self {
-            p1_name: spectator_initial.p1_name(),
-            p2_name: spectator_initial.p2_name(),
-            game_settings: spectator_initial.game_settings(),
+impl SpectatorMatchSource for SpectatorInitial {
+    fn match_info<'a>(&'a self, _th19: &'a Th19) -> SpectatorMatchInfo<'a> {
+        SpectatorMatchInfo {
+            p1_name: self.p1_name(),
+            p2_name: self.p2_name(),
+            game_settings: self.game_settings(),
         }
     }
 }
@@ -131,11 +136,15 @@ impl SyncPoint {
 /// 対戦者は最初の観戦者のみを受け付け、その観戦者を観戦ホストに任命して以降の受け付けを委譲する。
 /// 観戦ホストは受け付けた観戦者に入力を中継する。
 /// 観戦ホストが離脱すると、その観戦者もすべて離脱する。
+/// 予約部屋の待ち受けは一度しか受信できないため、受信後に作り直す
+fn rearm(waiting: &mut WaitingForSpectator, room: Option<SpectatorRelayRoom>) {
+    if room.is_some() {
+        *waiting = WaitingForSpectator::new(room);
+    }
+}
+
 pub struct SpectatorHostState {
-    /// `None` の間は観戦ホストに受け付けを委譲している
-    waiting: Option<WaitingForSpectator>,
-    /// 最初の観戦者を観戦ホストに任命するかどうか
-    delegates: bool,
+    acceptance: Acceptance,
     sessions: Vec<SpectatorHostSession>,
     sync_point: Option<SyncPoint>,
     /// 同期ポイントがまだ無い間に接続した観戦者
@@ -143,21 +152,30 @@ pub struct SpectatorHostState {
     prev_screen_id: Option<ScreenId>,
 }
 
+/// 観戦者の受け付け状態
+enum Acceptance {
+    /// 対戦者: 最初の観戦者を待ち受け、観戦ホストに任命する
+    WaitingForSpectatorHost(WaitingForSpectator),
+    /// 対戦者: 観戦ホストに受け付けを委譲している
+    Delegated,
+    /// 観戦ホスト: 観戦者を待ち受け、入力を中継する
+    Relaying(WaitingForSpectator),
+}
+
 impl SpectatorHostState {
     /// 対戦者用
     pub fn new(waiting: WaitingForSpectator) -> Self {
-        Self::internal_new(waiting, true)
+        Self::internal_new(Acceptance::WaitingForSpectatorHost(waiting))
     }
 
     /// 観戦ホスト用
     pub fn new_relay(waiting: WaitingForSpectator) -> Self {
-        Self::internal_new(waiting, false)
+        Self::internal_new(Acceptance::Relaying(waiting))
     }
 
-    fn internal_new(waiting: WaitingForSpectator, delegates: bool) -> Self {
+    fn internal_new(acceptance: Acceptance) -> Self {
         Self {
-            waiting: Some(waiting),
-            delegates,
+            acceptance,
             sessions: Vec::new(),
             sync_point: None,
             pending_sessions: Vec::new(),
@@ -166,7 +184,12 @@ impl SpectatorHostState {
     }
 
     pub fn waiting(&self) -> Option<&WaitingForSpectator> {
-        self.waiting.as_ref()
+        match &self.acceptance {
+            Acceptance::WaitingForSpectatorHost(waiting) | Acceptance::Relaying(waiting) => {
+                Some(waiting)
+            }
+            Acceptance::Delegated => None,
+        }
     }
 
     pub fn count_spectators(&self) -> usize {
@@ -214,31 +237,36 @@ impl SpectatorHostState {
     }
 
     fn recv_session(&mut self, pushed: bool, main_menu: Option<&MainMenu>, th19: &Th19) {
-        let Some(waiting) = &mut self.waiting else {
-            if self.sessions.is_empty() && self.pending_sessions.is_empty() {
-                // 観戦ホストが離脱したので受け付けを再開する。
-                // 予約部屋は観戦ホストの離脱時に削除されるため、Pure P2P で待ち受ける
-                info!("spectator host left. resume waiting for spectator");
-                self.waiting = Some(WaitingForSpectator::new(None));
+        let (waiting, delegates) = match &mut self.acceptance {
+            Acceptance::WaitingForSpectatorHost(waiting) => (waiting, true),
+            Acceptance::Relaying(waiting) => (waiting, false),
+            Acceptance::Delegated => {
+                if self.sessions.is_empty() && self.pending_sessions.is_empty() {
+                    // 観戦ホストが離脱したので受け付けを再開する。
+                    // 予約部屋は観戦ホストの離脱時に削除されるため、Pure P2P で待ち受ける
+                    info!("spectator host left. resume waiting for spectator");
+                    self.acceptance =
+                        Acceptance::WaitingForSpectatorHost(WaitingForSpectator::new(None));
+                }
+                return;
             }
-            return;
         };
         let Some(session) = waiting.try_recv_session(pushed, main_menu, th19) else {
             return;
         };
         let room = waiting.room().cloned();
-        if self.delegates {
+        if delegates {
             if let Err(err) = session.send_delegate_spectator_host(room.clone()) {
                 info!("delegate spectator host failed: {:?}", err);
-                if room.is_some() {
-                    self.waiting = Some(WaitingForSpectator::new(room));
-                }
+                rearm(waiting, room);
                 return;
             }
+            // 予約部屋の待ち受けは観戦ホストが引き継ぐため、ここでは作り直さない
+            // (作り直した待ち受けを破棄すると部屋が削除されてしまう)
             info!("delegated spectator host");
-            self.waiting = None;
-        } else if room.is_some() {
-            self.waiting = Some(WaitingForSpectator::new(room));
+            self.acceptance = Acceptance::Delegated;
+        } else {
+            rearm(waiting, room);
         }
         self.join(session);
     }
@@ -248,7 +276,7 @@ impl SpectatorHostState {
         pushed: bool,
         main_menu: Option<&MainMenu>,
         th19: &Th19,
-        match_info: SpectatorMatchInfo,
+        match_source: &impl SpectatorMatchSource,
         p1_input: u16,
         p2_input: u16,
     ) {
@@ -262,7 +290,7 @@ impl SpectatorHostState {
                 spectator_initial: create_spectator_initial(
                     screen_id,
                     th19.selection(),
-                    match_info,
+                    match_source.match_info(th19),
                 ),
                 round_initial: current_round_initial(th19),
                 messages: Vec::new(),

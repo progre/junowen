@@ -65,10 +65,9 @@ impl SpectatorSession {
     }
 
     fn start_relay_if_delegated(&mut self) {
-        if let Some(room) = self.props.take_delegation() {
-            self.relay = Some(SpectatorHostState::new_relay(WaitingForSpectator::new(
-                room,
-            )));
+        if let Some(delegation) = self.props.take_delegation() {
+            let waiting = WaitingForSpectator::new(delegation.into_room());
+            self.relay = Some(SpectatorHostState::new_relay(waiting));
         }
     }
 

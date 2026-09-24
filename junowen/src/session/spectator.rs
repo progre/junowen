@@ -59,13 +59,26 @@ pub struct SpectatorRelayRoom {
     key: String,
 }
 
+/// 観戦ホストへの任命
+#[derive(new, Clone, Debug, Deserialize, Serialize)]
+pub struct SpectatorHostDelegation {
+    /// 予約部屋で待ち受ける場合の部屋の情報。`None` の場合は Pure P2P で待ち受ける
+    room: Option<SpectatorRelayRoom>,
+}
+
+impl SpectatorHostDelegation {
+    pub fn into_room(self) -> Option<SpectatorRelayRoom> {
+        self.room
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum SpectatorSessionMessage {
     InitSpectator(SpectatorInitial),
     InitRound(RoundInitial),
     Inputs(u16, u16),
     /// 受信した観戦者を観戦ホストに任命し、以降の観戦者の受け付けと中継を委譲する
-    DelegateSpectatorHost(Option<SpectatorRelayRoom>),
+    DelegateSpectatorHost(SpectatorHostDelegation),
 }
 
 #[derive(CopyGetters, Getters, Setters)]
@@ -77,7 +90,7 @@ pub struct SpectatorSession {
     disconnected: bool,
     spectator_initial: Option<SpectatorInitial>,
     round_initial: Option<RoundInitial>,
-    delegation: Option<Option<SpectatorRelayRoom>>,
+    delegation: Option<SpectatorHostDelegation>,
 }
 
 impl SpectatorSession {
@@ -99,8 +112,8 @@ impl SpectatorSession {
         self.spectator_initial.as_ref()
     }
 
-    /// 観戦ホストに任命された場合、観戦者を待ち受ける予約部屋の情報を返す
-    pub fn take_delegation(&mut self) -> Option<Option<SpectatorRelayRoom>> {
+    /// 観戦ホストに任命された場合、その任命を返す
+    pub fn take_delegation(&mut self) -> Option<SpectatorHostDelegation> {
         self.delegation.take()
     }
 
@@ -110,9 +123,9 @@ impl SpectatorSession {
         msg: SpectatorSessionMessage,
     ) -> Option<SpectatorSessionMessage> {
         match msg {
-            SpectatorSessionMessage::DelegateSpectatorHost(room) => {
+            SpectatorSessionMessage::DelegateSpectatorHost(delegation) => {
                 info!("delegated spectator host");
-                self.delegation = Some(room);
+                self.delegation = Some(delegation);
                 None
             }
             msg => Some(msg),

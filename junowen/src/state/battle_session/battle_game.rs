@@ -8,10 +8,7 @@ use crate::{
     session::battle::BattleSession,
 };
 
-use super::{
-    spectator_host::{SpectatorHostState, SpectatorMatchInfo},
-    utils::init_round,
-};
+use super::{spectator_host::SpectatorHostState, utils::init_round};
 
 pub struct BattleGame;
 
@@ -49,8 +46,7 @@ impl BattleGame {
             .p2_input_mut()
             .set_current((p2 as u32).try_into().unwrap());
 
-        let match_info = SpectatorMatchInfo::from_battle_session(session, th19);
-        spectator_host_state.update(f1_pushed, None, th19, match_info, p1, p2);
+        spectator_host_state.update(f1_pushed, None, th19, session, p1, p2);
 
         Ok(())
     }

@@ -4,9 +4,8 @@ use anyhow::Result;
 use junowen_lib::{Th19, structs::input_devices::InputValue};
 
 use crate::{
-    helper::pushed_f1,
-    session::spectator::SpectatorSession,
-    state::battle_session::spectator_host::{SpectatorHostState, SpectatorMatchInfo},
+    helper::pushed_f1, session::spectator::SpectatorSession,
+    state::battle_session::spectator_host::SpectatorHostState,
 };
 
 /// 未処理の入力がこのフレーム数を超えている場合、早送りして追いつく
@@ -48,9 +47,8 @@ impl SpectatorGame {
             .set_current((p2 as u32).try_into().unwrap());
 
         if let Some(relay) = relay {
-            let match_info =
-                SpectatorMatchInfo::from_spectator_initial(session.spectator_initial().unwrap());
-            relay.update(f1_pushed, None, th19, match_info, p1, p2);
+            let initial = session.spectator_initial().unwrap();
+            relay.update(f1_pushed, None, th19, initial, p1, p2);
         }
         Ok(())
     }
