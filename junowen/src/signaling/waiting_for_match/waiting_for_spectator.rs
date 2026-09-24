@@ -8,12 +8,12 @@ use junowen_lib::{
         SignalingCodeType, parse_signaling_code,
         socket::async_read_write_socket::SignalingServerMessage,
     },
-    structs::app::{MainMenu, ScreenId},
+    structs::app::MainMenu,
 };
 use tokio::sync::mpsc::{self, error::TryRecvError};
 use tracing::info;
 
-use crate::session::spectator_host::SpectatorHostSession;
+use crate::session::{spectator::SpectatorRelayRoom, spectator_host::SpectatorHostSession};
 
 use super::{super::Signaling, waiting_in_room::WaitingForSpectatorInReservedRoom};
 
@@ -38,26 +38,26 @@ fn try_start_signaling(th19: &Th19) -> Option<WaitingForPureP2pSpectator> {
     Some(WaitingForPureP2pSpectator::SignalingCodeRecved {
         signaling,
         session_rx,
-        ready: false,
+        show_hint: false,
         pushed: true,
     })
 }
 
 pub enum WaitingForPureP2pSpectator {
     Standby {
-        ready: bool,
+        show_hint: bool,
         pushed: bool,
     },
     SignalingCodeRecved {
         signaling: Signaling,
         session_rx: mpsc::Receiver<SpectatorHostSession>,
-        ready: bool,
+        show_hint: bool,
         pushed: bool,
     },
     SignalingCodeSent {
         _signaling: Signaling,
         session_rx: mpsc::Receiver<SpectatorHostSession>,
-        ready: bool,
+        show_hint: bool,
         pushed: bool,
     },
 }
@@ -65,23 +65,23 @@ pub enum WaitingForPureP2pSpectator {
 impl WaitingForPureP2pSpectator {
     pub fn standby() -> Self {
         Self::Standby {
-            ready: false,
+            show_hint: false,
             pushed: false,
         }
     }
 
     fn dummy() -> Self {
         Self::Standby {
-            ready: false,
+            show_hint: false,
             pushed: false,
         }
     }
 
-    fn set_ready(&mut self, value: bool) {
+    fn set_show_hint(&mut self, value: bool) {
         match self {
-            Self::Standby { ready, .. }
-            | Self::SignalingCodeRecved { ready, .. }
-            | Self::SignalingCodeSent { ready, .. } => *ready = value,
+            Self::Standby { show_hint, .. }
+            | Self::SignalingCodeRecved { show_hint, .. }
+            | Self::SignalingCodeSent { show_hint, .. } => *show_hint = value,
         }
     }
 
@@ -91,13 +91,9 @@ impl WaitingForPureP2pSpectator {
         main_menu: Option<&MainMenu>,
         th19: &Th19,
     ) -> Result<()> {
-        let selection = th19.selection();
-        self.set_ready(
-            main_menu.is_some()
-                && main_menu.unwrap().screen_id() == ScreenId::DifficultySelect
-                && selection.p1().card == 0
-                && selection.p2().card == 0,
-        );
+        // 観戦者はいつでも受け付ける (合流のタイミングは `SpectatorHostState` が制御する)。
+        // `show_hint` は案内表示の有無のみを表し、対戦画面の邪魔にならないようメニュー画面でのみ表示する
+        self.set_show_hint(main_menu.is_some());
 
         match self {
             Self::Standby { pushed, .. } => {
@@ -132,7 +128,7 @@ impl WaitingForPureP2pSpectator {
                 let Self::SignalingCodeRecved {
                     signaling,
                     session_rx,
-                    ready,
+                    show_hint,
                     pushed,
                 } = mem::replace(self, Self::dummy())
                 else {
@@ -141,7 +137,7 @@ impl WaitingForPureP2pSpectator {
                 *self = Self::SignalingCodeSent {
                     _signaling: signaling,
                     session_rx,
-                    ready,
+                    show_hint,
                     pushed,
                 };
                 Ok(())
@@ -163,7 +159,7 @@ impl WaitingForPureP2pSpectator {
         if let Err(err) = self.update_inner(pushed, menu, th19) {
             info!("spectator host error: {:?}", err);
             *self = Self::Standby {
-                ready: false,
+                show_hint: false,
                 pushed,
             };
         }
@@ -172,10 +168,35 @@ impl WaitingForPureP2pSpectator {
 
 pub enum WaitingForSpectator {
     PureP2p(WaitingForPureP2pSpectator),
-    ReservedRoom(WaitingForSpectatorInReservedRoom),
+    ReservedRoom {
+        room: SpectatorRelayRoom,
+        waiting: WaitingForSpectatorInReservedRoom,
+    },
 }
 
 impl WaitingForSpectator {
+    /// 予約部屋の情報があれば予約部屋で、無ければ Pure P2P で観戦者を待ち受ける
+    pub fn new(room: Option<SpectatorRelayRoom>) -> Self {
+        match room {
+            Some(room) => {
+                let waiting = WaitingForSpectatorInReservedRoom::new(
+                    room.room_name().clone(),
+                    room.key().clone(),
+                );
+                Self::ReservedRoom { room, waiting }
+            }
+            None => Self::PureP2p(WaitingForPureP2pSpectator::standby()),
+        }
+    }
+
+    pub fn room(&self) -> Option<&SpectatorRelayRoom> {
+        match self {
+            Self::PureP2p(_) => None,
+            Self::ReservedRoom { room, .. } => Some(room),
+        }
+    }
+
+    /// 予約部屋の場合、観戦者を受信した後は再度 `new` で待ち受けを作り直す必要がある
     pub fn try_recv_session(
         &mut self,
         pushed: bool,
@@ -203,13 +224,7 @@ impl WaitingForSpectator {
                     }
                 }
             }
-            Self::ReservedRoom(waiting) => match waiting.try_session_and_waiting_for_spectator() {
-                Ok((session, waiting)) => {
-                    *self = waiting;
-                    Some(session)
-                }
-                Err(_) => None,
-            },
+            Self::ReservedRoom { waiting, .. } => waiting.try_recv_session(),
         }
     }
 }

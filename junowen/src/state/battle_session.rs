@@ -1,7 +1,7 @@
 mod battle_game;
 mod battle_select;
-mod in_session;
-mod spectator_host;
+pub(super) mod in_session;
+pub(super) mod spectator_host;
 mod utils;
 
 use std::{ffi::c_void, sync::mpsc::RecvError};
