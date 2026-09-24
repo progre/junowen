@@ -54,6 +54,7 @@ pub struct PeerConnection {
     peer_connection_state_disconnected_rx: Option<broadcast::Receiver<()>>,
     peer_connection_state_failed_rx: Option<oneshot::Receiver<()>>,
     data_channel_rx: Option<oneshot::Receiver<DataChannel>>,
+    protocol: &'static str,
 }
 
 impl Drop for PeerConnection {
@@ -77,10 +78,20 @@ impl Drop for PeerConnection {
     }
 }
 
-const PROTOCOL: &str = "JUNOWEN/1.1";
+/// 対戦用の接続のプロトコル。互換性のない変更をしたら上げる
+pub const BATTLE_PROTOCOL: &str = "JUNOWEN/1.1";
+/// 観戦用の接続のプロトコル。互換性のない変更をしたら上げる
+///
+/// 1.2: キャラクター選択画面からの途中参加に対応
+pub const SPECTATOR_PROTOCOL: &str = "JUNOWEN/1.2";
 
 impl PeerConnection {
-    pub async fn new(timeout: Duration, ice_server_urls: Vec<String>) -> Result<Self> {
+    /// `protocol` はデータチャネルのプロトコルで、相手と一致しない場合は接続を拒否する
+    pub async fn new(
+        timeout: Duration,
+        ice_server_urls: Vec<String>,
+        protocol: &'static str,
+    ) -> Result<Self> {
         let rtc = create_default_peer_connection(timeout, ice_server_urls).await?;
 
         let (peer_connection_state_failed_tx, peer_connection_state_failed_rx) = oneshot::channel();
@@ -123,6 +134,7 @@ impl PeerConnection {
             peer_connection_state_failed_rx: Some(peer_connection_state_failed_rx),
             peer_connection_state_disconnected_rx: Some(peer_connection_state_disconnected_rx),
             data_channel_rx: None,
+            protocol,
         })
     }
 
@@ -136,7 +148,7 @@ impl PeerConnection {
             .create_data_channel(
                 "data",
                 Some(RTCDataChannelInit {
-                    protocol: Some(PROTOCOL.to_owned()),
+                    protocol: Some(self.protocol.to_owned()),
                     ..Default::default()
                 }),
             )
@@ -198,10 +210,11 @@ impl PeerConnection {
     }
 
     pub async fn wait_for_open_data_channel(&mut self) -> Result<DataChannel> {
+        let protocol = self.protocol;
         let data_channel_task = async {
             let mut data_channel = self.data_channel_rx.take().unwrap().await.unwrap();
             data_channel.wait_for_open_data_channel().await;
-            if data_channel.protocol() != PROTOCOL {
+            if data_channel.protocol() != protocol {
                 bail!("unexpected protocol: {}", data_channel.protocol());
             }
             Ok(data_channel)

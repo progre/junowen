@@ -1,9 +1,11 @@
-use anyhow::Result;
 use getset::Getters;
 use junowen_lib::{
     Th19,
-    structs::app::{MainMenu, ScreenId},
-    structs::selection::Selection,
+    structs::{
+        app::{MainMenu, ScreenId},
+        input_devices::{InputFlags, InputValue},
+        selection::Player,
+    },
 };
 use tracing::info;
 
@@ -11,51 +13,14 @@ use crate::{
     session::{
         RoundInitial,
         battle::BattleSession,
-        spectator::{self, InitialState, SpectatorInitial, SpectatorSessionMessage},
+        spectator::{
+            self, CharacterSelectPhase, InitialState, PlayerInitialState, SpectatorInitial,
+            has_card_select_phase,
+        },
         spectator_host::SpectatorHostSession,
     },
     signaling::waiting_for_match::WaitingForSpectator,
 };
-
-fn create_spectator_initial(
-    current_screen: ScreenId,
-    selection: &Selection,
-    battle_session: &BattleSession,
-    local_player_name: String,
-) -> SpectatorInitial {
-    let p1_name = if battle_session.host() {
-        local_player_name.to_owned()
-    } else {
-        battle_session.remote_player_name().clone()
-    };
-    let p2_name = if battle_session.host() {
-        battle_session.remote_player_name().clone()
-    } else {
-        local_player_name.to_owned()
-    };
-    SpectatorInitial::new(
-        p1_name,
-        p2_name,
-        battle_session
-            .match_initial()
-            .as_ref()
-            .unwrap()
-            .game_settings
-            .clone(),
-        InitialState::new(
-            match current_screen {
-                ScreenId::DifficultySelect => spectator::Screen::DifficultySelect,
-                ScreenId::CharacterSelect => spectator::Screen::CharacterSelect,
-                _ => unreachable!(),
-            },
-            selection.difficulty as u8,
-            selection.p1().character as u8,
-            selection.p1().card as u8,
-            selection.p2().character as u8,
-            selection.p2().card as u8,
-        ),
-    )
-}
 
 fn current_round_initial(th19: &Th19) -> RoundInitial {
     RoundInitial {
@@ -66,47 +31,28 @@ fn current_round_initial(th19: &Th19) -> RoundInitial {
     }
 }
 
-/// 同期ポイントにできる画面かどうかを判定する
-///
-/// 画面に入った最初のフレームのみ同期ポイントにできる
-/// - 難易度選択画面 (カード選択状態が初期状態の場合のみ)
-/// - キャラクター選択画面
-fn is_sync_point(screen_id: ScreenId, th19: &Th19) -> bool {
-    match screen_id {
-        ScreenId::DifficultySelect => {
-            let vs_mode = th19.vs_mode();
-            vs_mode.p1_card() == 0 && vs_mode.p2_card() == 0
-        }
-        ScreenId::CharacterSelect => true,
-        _ => false,
-    }
+fn pushed(prev: u16, current: u16, flag: InputFlags) -> bool {
+    let bits = InputValue::from(flag).bits() as u16;
+    prev & bits == 0 && current & bits != 0
 }
 
-/// 同期ポイント以降に記録するメッセージ数の上限 (60fps で約 10 分)
-///
-/// `messages` には毎フレームの入力が記録される。キャラクター選択画面で待機している間も
-/// 増え続けるため、上限を超えたら同期ポイントを破棄し、次の同期ポイントまで途中参加を受け付けない。
-/// 記録量が多いほど、途中参加時に送る量と観戦者が追いつくまでの時間も増える
-const MAX_SYNC_POINT_MESSAGES: usize = 60 * 60 * 10;
-
-/// 観戦者の途中参加用に、直近の同期ポイントの状態とそれ以降のメッセージを保持する
-///
-/// 途中参加した観戦者は同期ポイントの状態から記録済みのメッセージを早送りで再生し、
-/// ホストに追いつく
-struct SyncPoint {
-    spectator_initial: SpectatorInitial,
-    round_initial: RoundInitial,
-    messages: Vec<SpectatorSessionMessage>,
+/// キャラクター選択画面での各プレイヤーの進行段階を、決定キーとキャンセルキーの押下から推定する
+#[derive(Default)]
+struct CharacterSelectTracker {
+    phases: [CharacterSelectPhase; 2],
+    prev_inputs: [u16; 2],
 }
 
-impl SyncPoint {
-    fn send_to(&self, session: &SpectatorHostSession) -> Result<()> {
-        session.send_init_spectator(self.spectator_initial.clone())?;
-        session.send_init_round(self.round_initial.clone())?;
-        for msg in &self.messages {
-            session.send(msg.clone())?;
+impl CharacterSelectTracker {
+    fn update(&mut self, inputs: [u16; 2], has_card_phase: bool) {
+        for ((phase, prev), current) in self.phases.iter_mut().zip(self.prev_inputs).zip(inputs) {
+            if pushed(prev, current, InputFlags::SHOT) {
+                *phase = phase.decided(has_card_phase);
+            } else if pushed(prev, current, InputFlags::BOMB) {
+                *phase = phase.canceled(has_card_phase);
+            }
         }
-        Ok(())
+        self.prev_inputs = inputs;
     }
 }
 
@@ -115,8 +61,9 @@ pub struct SpectatorHostState {
     #[get = "pub"]
     waiting: WaitingForSpectator,
     sessions: Vec<SpectatorHostSession>,
-    /// 途中参加を受け付けられない間は `None`
-    sync_point: Option<SyncPoint>,
+    /// 対戦中など、状態を送れない間に接続した観戦者
+    pending_sessions: Vec<SpectatorHostSession>,
+    character_select: CharacterSelectTracker,
     prev_screen_id: Option<ScreenId>,
 }
 
@@ -125,7 +72,8 @@ impl SpectatorHostState {
         Self {
             waiting,
             sessions: Vec::new(),
-            sync_point: None,
+            pending_sessions: Vec::new(),
+            character_select: CharacterSelectTracker::default(),
             prev_screen_id: None,
         }
     }
@@ -134,50 +82,120 @@ impl SpectatorHostState {
         self.sessions.len()
     }
 
-    fn broadcast(&mut self, msg: SpectatorSessionMessage) {
+    pub fn send_init_round_if_connected(&mut self, th19: &Th19) {
+        let round_initial = current_round_initial(th19);
         self.sessions.retain(|session| {
-            if let Err(err) = session.send(msg.clone()) {
+            if let Err(err) = session.send_init_round(round_initial.clone()) {
                 info!("spectator host error: {:?}", err);
                 return false;
             }
             true
         });
-        if let Some(sync_point) = &mut self.sync_point {
-            if sync_point.messages.len() >= MAX_SYNC_POINT_MESSAGES {
-                info!(
-                    "too many messages since sync point. spectators cannot join until next sync point"
-                );
-                self.sync_point = None;
-            } else {
-                sync_point.messages.push(msg);
+    }
+
+    /// 観戦者に送る現在の状態を作る。状態を送れない画面では `None` を返す
+    ///
+    /// - 難易度選択画面 (カード選択状態が初期状態の場合のみ)
+    /// - キャラクター選択画面
+    fn create_initial_state(&self, main_menu: &MainMenu, th19: &Th19) -> Option<InitialState> {
+        let selection = th19.selection();
+        match main_menu.screen_id() {
+            ScreenId::DifficultySelect => {
+                let vs_mode = th19.vs_mode();
+                if vs_mode.p1_card() != 0 || vs_mode.p2_card() != 0 {
+                    return None;
+                }
+                let player = |player: &Player| {
+                    PlayerInitialState::new(
+                        player.character as u8,
+                        player.card as u8,
+                        CharacterSelectPhase::Character,
+                    )
+                };
+                Some(InitialState::new(
+                    spectator::Screen::DifficultySelect,
+                    main_menu.menu().cursor() as u8,
+                    player(selection.p1()),
+                    player(selection.p2()),
+                ))
             }
+            ScreenId::CharacterSelect => {
+                // キャラクター選択画面では `selection` のキャラクターが有効でないため、カーソル位置を使う
+                let menu = main_menu.menu();
+                let [p1_phase, p2_phase] = self.character_select.phases;
+                Some(InitialState::new(
+                    spectator::Screen::CharacterSelect,
+                    selection.difficulty as u8,
+                    PlayerInitialState::new(
+                        menu.p1_cursor().cursor as u8,
+                        selection.p1().card as u8,
+                        p1_phase,
+                    ),
+                    PlayerInitialState::new(
+                        menu.p2_cursor().cursor as u8,
+                        selection.p2().card as u8,
+                        p2_phase,
+                    ),
+                ))
+            }
+            _ => None,
         }
     }
 
-    pub fn send_init_round_if_connected(&mut self, th19: &Th19) {
-        self.broadcast(SpectatorSessionMessage::InitRound(current_round_initial(
-            th19,
-        )));
+    fn create_spectator_initial(
+        initial_state: InitialState,
+        battle_session: &BattleSession,
+        th19: &Th19,
+    ) -> SpectatorInitial {
+        let local_player_name = th19.vs_mode().player_name().to_string();
+        let remote_player_name = battle_session.remote_player_name().clone();
+        let (p1_name, p2_name) = if battle_session.host() {
+            (local_player_name, remote_player_name)
+        } else {
+            (remote_player_name, local_player_name)
+        };
+        SpectatorInitial::new(
+            p1_name,
+            p2_name,
+            battle_session
+                .match_initial()
+                .as_ref()
+                .unwrap()
+                .game_settings
+                .clone(),
+            initial_state,
+        )
     }
 
-    fn join(&mut self, session: SpectatorHostSession) {
-        let Some(sync_point) = &self.sync_point else {
-            // 最初の同期ポイントは難易度選択画面の最初のフレームで作られるため、
-            // ここに来るのは記録量が上限を超えた場合のみ
-            info!("spectator rejected. no sync point");
+    /// 保留中の観戦者に現在の状態を送り、観戦を開始させる
+    fn join_pending_sessions(
+        &mut self,
+        main_menu: Option<&MainMenu>,
+        th19: &Th19,
+        battle_session: &BattleSession,
+    ) {
+        if self.pending_sessions.is_empty() {
+            return;
+        }
+        let Some(initial_state) = main_menu.and_then(|x| self.create_initial_state(x, th19)) else {
             return;
         };
-        if let Err(err) = sync_point.send_to(&session) {
-            info!("initialize spectator failed: {:?}", err);
-            return;
+        let spectator_initial = Self::create_spectator_initial(initial_state, battle_session, th19);
+        let round_initial = current_round_initial(th19);
+        for session in std::mem::take(&mut self.pending_sessions) {
+            let result = session
+                .send_init_spectator(spectator_initial.clone())
+                .and_then(|_| session.send_init_round(round_initial.clone()));
+            if let Err(err) = result {
+                info!("initialize spectator failed: {:?}", err);
+                continue;
+            }
+            info!("spectator joined. {:?}", spectator_initial.initial_state());
+            self.sessions.push(session);
         }
-        info!(
-            "spectator joined. replaying {} messages",
-            sync_point.messages.len()
-        );
-        self.sessions.push(session);
     }
 
+    /// `p1_input` と `p2_input` はこのフレームで適用される入力
     pub fn update(
         &mut self,
         pushed: bool,
@@ -189,26 +207,30 @@ impl SpectatorHostState {
     ) {
         let screen_id = main_menu.map(|x| x.screen_id());
         let prev_screen_id = std::mem::replace(&mut self.prev_screen_id, screen_id);
-        if let Some(screen_id) = screen_id
-            && Some(screen_id) != prev_screen_id
-            && is_sync_point(screen_id, th19)
+        if screen_id == Some(ScreenId::CharacterSelect)
+            && prev_screen_id != Some(ScreenId::CharacterSelect)
         {
-            self.sync_point = Some(SyncPoint {
-                spectator_initial: create_spectator_initial(
-                    screen_id,
-                    th19.selection(),
-                    battle_session,
-                    th19.vs_mode().player_name().to_string(),
-                ),
-                round_initial: current_round_initial(th19),
-                messages: Vec::new(),
-            });
+            self.character_select = CharacterSelectTracker::default();
         }
 
         if let Some(session) = self.waiting.try_recv_session(pushed, main_menu, th19) {
-            self.join(session);
+            self.pending_sessions.push(session);
         }
+        // 状態はこのフレームの入力を適用する前のものなので、入力の送信より先に送る
+        self.join_pending_sessions(main_menu, th19, battle_session);
 
-        self.broadcast(SpectatorSessionMessage::Inputs(p1_input, p2_input));
+        self.sessions.retain(|session| {
+            if let Err(err) = session.send_inputs(p1_input, p2_input) {
+                info!("spectator host error: {:?}", err);
+                return false;
+            }
+            true
+        });
+
+        if screen_id == Some(ScreenId::CharacterSelect) {
+            let game_settings = &battle_session.match_initial().unwrap().game_settings;
+            self.character_select
+                .update([p1_input, p2_input], has_card_select_phase(game_settings));
+        }
     }
 }

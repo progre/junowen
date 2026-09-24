@@ -1,4 +1,4 @@
-use junowen_lib::connection::signaling::SignalingCodeType;
+use junowen_lib::connection::{BATTLE_PROTOCOL, SPECTATOR_PROTOCOL, signaling::SignalingCodeType};
 
 use crate::session::{battle::BattleSession, spectator::SpectatorSession};
 
@@ -17,6 +17,7 @@ pub fn pure_p2p_host() -> PureP2pOfferer<BattleSession> {
         SignalingCodeType::BattleOffer,
         SignalingCodeType::BattleAnswer,
         |pc, dc| BattleSession::new(pc, dc, true),
+        BATTLE_PROTOCOL,
         "Connect as a Host",
         Messages {
             share: "pure_p2p.host_share",
@@ -31,6 +32,7 @@ pub fn pure_p2p_spectator() -> PureP2pOfferer<SpectatorSession> {
         SignalingCodeType::SpectatorOffer,
         SignalingCodeType::SpectatorAnswer,
         SpectatorSession::new,
+        SPECTATOR_PROTOCOL,
         "Connect as a Spectator",
         Messages {
             share: "pure_p2p.spectator_share",

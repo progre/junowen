@@ -8,7 +8,7 @@ use derive_new::new;
 use getset::{CopyGetters, Getters, Setters};
 use junowen_lib::{
     connection::{DataChannel, PeerConnection},
-    structs::settings::GameSettings,
+    structs::settings::{AbilityCard, GameSettings},
 };
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
@@ -21,6 +21,53 @@ pub enum Screen {
     CharacterSelect,
 }
 
+/// キャラクター選択画面での各プレイヤーの進行段階
+///
+/// メモリ上の値は未解析のため、ホストが決定キーとキャンセルキーの押下から推定する
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
+pub enum CharacterSelectPhase {
+    #[default]
+    Character,
+    Card,
+    Ready,
+}
+
+impl CharacterSelectPhase {
+    pub fn decided(self, has_card_phase: bool) -> Self {
+        match self {
+            Self::Character if has_card_phase => Self::Card,
+            Self::Character | Self::Card | Self::Ready => Self::Ready,
+        }
+    }
+
+    pub fn canceled(self, has_card_phase: bool) -> Self {
+        match self {
+            Self::Ready if has_card_phase => Self::Card,
+            Self::Character | Self::Card | Self::Ready => Self::Character,
+        }
+    }
+}
+
+/// カード選択の段階があるかどうか
+///
+/// TODO: 実機で確認する。`Random` はカードが自動で決まるため選択の段階がないと仮定している
+pub fn has_card_select_phase(game_settings: &GameSettings) -> bool {
+    matches!(
+        game_settings.ability_card(),
+        AbilityCard::SelfCard | AbilityCard::AllCard
+    )
+}
+
+#[derive(new, Clone, Copy, Debug, Deserialize, CopyGetters, Serialize)]
+pub struct PlayerInitialState {
+    #[get_copy = "pub"]
+    character: u8,
+    #[get_copy = "pub"]
+    card: u8,
+    #[get_copy = "pub"]
+    phase: CharacterSelectPhase,
+}
+
 #[derive(new, Clone, Debug, Deserialize, CopyGetters, Serialize)]
 pub struct InitialState {
     #[get_copy = "pub"]
@@ -28,13 +75,9 @@ pub struct InitialState {
     #[get_copy = "pub"]
     difficulty: u8,
     #[get_copy = "pub"]
-    p1_character: u8,
+    p1: PlayerInitialState,
     #[get_copy = "pub"]
-    p1_card: u8,
-    #[get_copy = "pub"]
-    p2_character: u8,
-    #[get_copy = "pub"]
-    p2_card: u8,
+    p2: PlayerInitialState,
 }
 
 #[derive(new, Clone, Debug, Deserialize, Getters, Serialize)]
@@ -49,7 +92,7 @@ pub struct SpectatorInitial {
     initial_state: InitialState,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub enum SpectatorSessionMessage {
     InitSpectator(SpectatorInitial),
     InitRound(RoundInitial),
