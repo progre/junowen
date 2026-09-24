@@ -38,26 +38,26 @@ fn try_start_signaling(th19: &Th19) -> Option<WaitingForPureP2pSpectator> {
     Some(WaitingForPureP2pSpectator::SignalingCodeRecved {
         signaling,
         session_rx,
-        show_hint: false,
+        ready: false,
         pushed: true,
     })
 }
 
 pub enum WaitingForPureP2pSpectator {
     Standby {
-        show_hint: bool,
+        ready: bool,
         pushed: bool,
     },
     SignalingCodeRecved {
         signaling: Signaling,
         session_rx: mpsc::Receiver<SpectatorHostSession>,
-        show_hint: bool,
+        ready: bool,
         pushed: bool,
     },
     SignalingCodeSent {
         _signaling: Signaling,
         session_rx: mpsc::Receiver<SpectatorHostSession>,
-        show_hint: bool,
+        ready: bool,
         pushed: bool,
     },
 }
@@ -65,23 +65,23 @@ pub enum WaitingForPureP2pSpectator {
 impl WaitingForPureP2pSpectator {
     pub fn standby() -> Self {
         Self::Standby {
-            show_hint: false,
+            ready: false,
             pushed: false,
         }
     }
 
     fn dummy() -> Self {
         Self::Standby {
-            show_hint: false,
+            ready: false,
             pushed: false,
         }
     }
 
-    fn set_show_hint(&mut self, value: bool) {
+    fn set_ready(&mut self, value: bool) {
         match self {
-            Self::Standby { show_hint, .. }
-            | Self::SignalingCodeRecved { show_hint, .. }
-            | Self::SignalingCodeSent { show_hint, .. } => *show_hint = value,
+            Self::Standby { ready, .. }
+            | Self::SignalingCodeRecved { ready, .. }
+            | Self::SignalingCodeSent { ready, .. } => *ready = value,
         }
     }
 
@@ -91,9 +91,9 @@ impl WaitingForPureP2pSpectator {
         main_menu: Option<&MainMenu>,
         th19: &Th19,
     ) -> Result<()> {
-        // 観戦者はいつでも受け付ける (合流のタイミングは `SpectatorHostState` が制御する)。
-        // `show_hint` は案内表示の有無のみを表し、対戦画面の邪魔にならないようメニュー画面でのみ表示する
-        self.set_show_hint(main_menu.is_some());
+        // 観戦者の受け付けはメニュー画面 (難易度選択・キャラクター選択) で行う。
+        // 合流のタイミングは `SpectatorHostState` が同期ポイントで制御する
+        self.set_ready(main_menu.is_some());
 
         match self {
             Self::Standby { pushed, .. } => {
@@ -128,7 +128,7 @@ impl WaitingForPureP2pSpectator {
                 let Self::SignalingCodeRecved {
                     signaling,
                     session_rx,
-                    show_hint,
+                    ready,
                     pushed,
                 } = mem::replace(self, Self::dummy())
                 else {
@@ -137,7 +137,7 @@ impl WaitingForPureP2pSpectator {
                 *self = Self::SignalingCodeSent {
                     _signaling: signaling,
                     session_rx,
-                    show_hint,
+                    ready,
                     pushed,
                 };
                 Ok(())
@@ -159,7 +159,7 @@ impl WaitingForPureP2pSpectator {
         if let Err(err) = self.update_inner(pushed, menu, th19) {
             info!("spectator host error: {:?}", err);
             *self = Self::Standby {
-                show_hint: false,
+                ready: false,
                 pushed,
             };
         }

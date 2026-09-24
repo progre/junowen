@@ -82,13 +82,17 @@ fn is_sync_point(screen_id: ScreenId, th19: &Th19) -> bool {
     }
 }
 
+/// 同期ポイント以降に記録するメッセージ数の上限 (60fps で約 10 分)
+///
+/// `messages` には毎フレームの入力が記録される。キャラクター選択画面で待機している間も
+/// 増え続けるため、上限を超えたら同期ポイントを破棄し、次の同期ポイントまで途中参加を受け付けない。
+/// 記録量が多いほど、途中参加時に送る量と観戦者が追いつくまでの時間も増える
+const MAX_SYNC_POINT_MESSAGES: usize = 60 * 60 * 10;
+
 /// 観戦者の途中参加用に、直近の同期ポイントの状態とそれ以降のメッセージを保持する
 ///
 /// 途中参加した観戦者は同期ポイントの状態から記録済みのメッセージを早送りで再生し、
 /// ホストに追いつく
-///
-/// `messages` には毎フレームの入力が蓄積され続けるが、同期ポイントはキャラクター選択画面に
-/// 入るたびに作り直されるため、蓄積量はおおむね 1 対戦分 (1 分あたり約 3,600 件) に収まる
 struct SyncPoint {
     spectator_initial: SpectatorInitial,
     round_initial: RoundInitial,
@@ -111,9 +115,8 @@ pub struct SpectatorHostState {
     #[get = "pub"]
     waiting: WaitingForSpectator,
     sessions: Vec<SpectatorHostSession>,
+    /// 途中参加を受け付けられない間は `None`
     sync_point: Option<SyncPoint>,
-    /// 同期ポイントがまだ無い間に接続した観戦者
-    pending_sessions: Vec<SpectatorHostSession>,
     prev_screen_id: Option<ScreenId>,
 }
 
@@ -123,17 +126,12 @@ impl SpectatorHostState {
             waiting,
             sessions: Vec::new(),
             sync_point: None,
-            pending_sessions: Vec::new(),
             prev_screen_id: None,
         }
     }
 
     pub fn count_spectators(&self) -> usize {
         self.sessions.len()
-    }
-
-    pub fn count_pending_spectators(&self) -> usize {
-        self.pending_sessions.len()
     }
 
     fn broadcast(&mut self, msg: SpectatorSessionMessage) {
@@ -145,7 +143,14 @@ impl SpectatorHostState {
             true
         });
         if let Some(sync_point) = &mut self.sync_point {
-            sync_point.messages.push(msg);
+            if sync_point.messages.len() >= MAX_SYNC_POINT_MESSAGES {
+                info!(
+                    "too many messages since sync point. spectators cannot join until next sync point"
+                );
+                self.sync_point = None;
+            } else {
+                sync_point.messages.push(msg);
+            }
         }
     }
 
@@ -157,8 +162,9 @@ impl SpectatorHostState {
 
     fn join(&mut self, session: SpectatorHostSession) {
         let Some(sync_point) = &self.sync_point else {
-            info!("spectator connected. waiting for sync point");
-            self.pending_sessions.push(session);
+            // 最初の同期ポイントは難易度選択画面の最初のフレームで作られるため、
+            // ここに来るのは記録量が上限を超えた場合のみ
+            info!("spectator rejected. no sync point");
             return;
         };
         if let Err(err) = sync_point.send_to(&session) {
@@ -197,9 +203,6 @@ impl SpectatorHostState {
                 round_initial: current_round_initial(th19),
                 messages: Vec::new(),
             });
-            for session in std::mem::take(&mut self.pending_sessions) {
-                self.join(session);
-            }
         }
 
         if let Some(session) = self.waiting.try_recv_session(pushed, main_menu, th19) {

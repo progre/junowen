@@ -19,7 +19,6 @@ use super::{session_message::RoundInitial, to_channel};
 pub enum Screen {
     DifficultySelect,
     CharacterSelect,
-    Game,
 }
 
 #[derive(new, Clone, Debug, Deserialize, CopyGetters, Serialize)]
@@ -106,8 +105,10 @@ impl SpectatorSession {
         self.hook_incoming_rx.recv()
     }
 
-    /// 受信済みで未処理のメッセージ数
-    pub fn buffered_len(&mut self) -> usize {
+    /// 受信済みで未処理のメッセージ数を返す
+    ///
+    /// 呼び出し時点で受信できるメッセージをすべてバッファへ取り込む
+    pub fn poll_buffered_len(&mut self) -> usize {
         self.fill_buffer();
         self.buffer.len()
     }

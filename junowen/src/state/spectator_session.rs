@@ -1,6 +1,7 @@
 mod in_session;
 mod spectator_game;
 mod spectator_select;
+mod spectator_sync;
 
 use std::{ffi::c_void, sync::mpsc::RecvError};
 
@@ -14,11 +15,20 @@ use junowen_lib::{
     },
 };
 
-use crate::session::spectator::SpectatorSession as SpectatorSessionProps;
+use crate::session::{RoundInitial, spectator::SpectatorSession as SpectatorSessionProps};
 
 use super::prepare::Prepare;
 
-use {spectator_game::SpectatorGame, spectator_select::SpectatorSelect};
+use {
+    spectator_game::SpectatorGame, spectator_select::SpectatorSelect, spectator_sync::SpectatorSync,
+};
+
+fn set_rand_seeds(th19: &mut Th19, round_initial: &RoundInitial) {
+    th19.set_rand_seed1(round_initial.seed1).unwrap();
+    th19.set_rand_seed2(round_initial.seed2).unwrap();
+    th19.set_rand_seed3(round_initial.seed3).unwrap();
+    th19.set_rand_seed4(round_initial.seed4).unwrap();
+}
 
 pub struct SpectatorSession {
     props: SpectatorSessionProps,
@@ -27,6 +37,7 @@ pub struct SpectatorSession {
 
 enum SpectatorSessionState {
     Prepare(Prepare),
+    Sync(SpectatorSync),
     Select(SpectatorSelect),
     GameLoading,
     Game(SpectatorGame),
@@ -45,8 +56,11 @@ impl SpectatorSession {
         self.props.spectator_initial().map(|x| x.game_settings())
     }
 
-    pub fn change_to_select(&mut self) {
-        self.state = SpectatorSessionState::Select(SpectatorSelect::new());
+    pub fn change_to_sync(&mut self) {
+        self.state = SpectatorSessionState::Sync(SpectatorSync::new());
+    }
+    pub fn change_to_select(&mut self, recv_round_initial: bool) {
+        self.state = SpectatorSessionState::Select(SpectatorSelect::new(recv_round_initial));
     }
     pub fn change_to_game_loading(&mut self) {
         self.state = SpectatorSessionState::GameLoading;
@@ -65,11 +79,11 @@ impl SpectatorSession {
                     return Some(None);
                 };
                 if prepare.update_state(main_menu, th19) {
-                    self.change_to_select();
+                    self.change_to_sync();
                 }
                 Some(Some(main_menu))
             }
-            SpectatorSessionState::Select { .. } => {
+            SpectatorSessionState::Sync(_) | SpectatorSessionState::Select(_) => {
                 let main_menu = th19.app().main_loop_tasks().find_main_menu().unwrap();
                 match main_menu.screen_id() {
                     ScreenId::PlayerMatchupSelect => None,
@@ -113,7 +127,7 @@ impl SpectatorSession {
                 if main_menu.screen_id() != ScreenId::CharacterSelect {
                     return Some(Some(main_menu));
                 }
-                self.change_to_select();
+                self.change_to_select(true);
                 Some(Some(main_menu))
             }
         }
@@ -124,8 +138,16 @@ impl SpectatorSession {
         menu: Option<&MainMenu>,
         th19: &mut Th19,
     ) -> Result<(), RecvError> {
+        if let SpectatorSessionState::Sync(sync) = &mut self.state {
+            if !sync.update_th19_on_input_players(&mut self.props, menu.unwrap(), th19)? {
+                return Ok(());
+            }
+            // 同期が完了したフレームからホストの入力を再生する
+            self.change_to_select(false);
+        }
         match &mut self.state {
             SpectatorSessionState::Prepare(prepare) => prepare.update_th19_on_input_players(th19),
+            SpectatorSessionState::Sync(_) => unreachable!(),
             SpectatorSessionState::Select(select) => {
                 select.update_th19_on_input_players(&mut self.props, menu.unwrap(), th19)?
             }
@@ -143,18 +165,8 @@ impl SpectatorSession {
     pub fn on_input_menu(&mut self, th19: &mut Th19) -> Result<bool, RecvError> {
         match &mut self.state {
             SpectatorSessionState::Prepare(prepare) => prepare.update_th19_on_input_menu(th19),
-            SpectatorSessionState::Select(select) => {
-                let main_menu = th19
-                    .app_mut()
-                    .main_loop_tasks_mut()
-                    .find_main_menu_mut()
-                    .unwrap();
-                if main_menu.screen_id() == ScreenId::DifficultySelect
-                    && th19.menu_input().current().0 & InputFlags::PAUSE != None
-                {
-                    return Ok(false);
-                }
-                select.update_th19_on_input_menu(&mut self.props, main_menu, th19)?;
+            SpectatorSessionState::Sync(_) | SpectatorSessionState::Select(_) => {
+                return self.on_input_menu_in_select(th19);
             }
             SpectatorSessionState::GameLoading { .. } => {}
             SpectatorSessionState::Game { .. } => {}
@@ -163,9 +175,34 @@ impl SpectatorSession {
         Ok(true)
     }
 
+    fn on_input_menu_in_select(&mut self, th19: &mut Th19) -> Result<bool, RecvError> {
+        let main_menu = th19
+            .app_mut()
+            .main_loop_tasks_mut()
+            .find_main_menu_mut()
+            .unwrap();
+        if main_menu.screen_id() == ScreenId::DifficultySelect
+            && th19.menu_input().current().0 & InputFlags::PAUSE != None
+        {
+            return Ok(false);
+        }
+        if let SpectatorSessionState::Sync(sync) = &mut self.state {
+            if !sync.update_th19_on_input_menu(&mut self.props, main_menu, th19)? {
+                return Ok(true);
+            }
+            // 同期が完了したフレームからホストの入力を再生する
+            self.change_to_select(false);
+        }
+        let SpectatorSessionState::Select(select) = &mut self.state else {
+            unreachable!()
+        };
+        select.update_th19_on_input_menu(&mut self.props, main_menu, th19)?;
+        Ok(true)
+    }
+
     pub fn on_render_texts(&self, th19: &Th19, text_renderer: &c_void) {
         let Some(initial) = self.props.spectator_initial() else {
-            if matches!(&self.state, SpectatorSessionState::Select(select) if select.is_waiting_for_host())
+            if matches!(&self.state, SpectatorSessionState::Sync(sync) if sync.is_waiting_for_host())
             {
                 in_session::on_render_texts_waiting_for_host(th19, text_renderer);
             }
