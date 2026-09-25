@@ -4,11 +4,14 @@ use anyhow::Result;
 use clipboard_win::{get_clipboard_string, set_clipboard_string};
 use junowen_lib::{
     Th19,
-    connection::signaling::{
-        SignalingCodeType, parse_signaling_code,
-        socket::async_read_write_socket::SignalingServerMessage,
+    connection::{
+        SPECTATOR_PROTOCOL,
+        signaling::{
+            SignalingCodeType, parse_signaling_code,
+            socket::async_read_write_socket::SignalingServerMessage,
+        },
     },
-    structs::app::{MainMenu, ScreenId},
+    structs::app::MainMenu,
 };
 use tokio::sync::mpsc::{self, error::TryRecvError};
 use tracing::info;
@@ -27,7 +30,7 @@ fn try_start_signaling(th19: &Th19) -> Option<WaitingForPureP2pSpectator> {
         return None;
     };
     let (session_tx, session_rx) = mpsc::channel(1);
-    let mut signaling = Signaling::new(session_tx, SpectatorHostSession::new);
+    let mut signaling = Signaling::new(session_tx, SpectatorHostSession::new, SPECTATOR_PROTOCOL);
     signaling
         .msg_tx_mut()
         .take()
@@ -91,13 +94,9 @@ impl WaitingForPureP2pSpectator {
         main_menu: Option<&MainMenu>,
         th19: &Th19,
     ) -> Result<()> {
-        let selection = th19.selection();
-        self.set_ready(
-            main_menu.is_some()
-                && main_menu.unwrap().screen_id() == ScreenId::DifficultySelect
-                && selection.p1().card == 0
-                && selection.p2().card == 0,
-        );
+        // 観戦者の受け付けはメニュー画面 (難易度選択・キャラクター選択) で行う。
+        // 観戦者は次の試合の開始 (`SpectatorHostState::start_game`) から合流する
+        self.set_ready(main_menu.is_some());
 
         match self {
             Self::Standby { pushed, .. } => {

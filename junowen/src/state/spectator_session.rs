@@ -1,6 +1,6 @@
 mod in_session;
 mod spectator_game;
-mod spectator_select;
+mod spectator_standby;
 
 use std::{ffi::c_void, sync::mpsc::RecvError};
 
@@ -13,12 +13,53 @@ use junowen_lib::{
         input_devices::InputFlags,
     },
 };
+use tracing::warn;
 
-use crate::session::spectator::SpectatorSession as SpectatorSessionProps;
+use crate::{
+    helper::pushed_escape,
+    session::{
+        RoundInitial,
+        spectator::{GameInitial, SpectatorSession as SpectatorSessionProps},
+    },
+};
 
 use super::prepare::Prepare;
 
-use {spectator_game::SpectatorGame, spectator_select::SpectatorSelect};
+use {spectator_game::SpectatorGame, spectator_standby::SpectatorStandby};
+
+fn set_rand_seeds(th19: &mut Th19, round_initial: &RoundInitial) {
+    th19.set_rand_seed1(round_initial.seed1).unwrap();
+    th19.set_rand_seed2(round_initial.seed2).unwrap();
+    th19.set_rand_seed3(round_initial.seed3).unwrap();
+    th19.set_rand_seed4(round_initial.seed4).unwrap();
+}
+
+/// 観戦者の試合開始時の状態がホストと一致しているか確認する
+fn verify_game_initial(th19: &Th19, init: &GameInitial) -> bool {
+    let selection = th19.selection();
+    let actual = (
+        selection.difficulty as u8,
+        selection.p1().character as u8,
+        selection.p1().card as u8,
+        selection.p2().character as u8,
+        selection.p2().card as u8,
+    );
+    let expected = (
+        init.difficulty(),
+        init.p1().character(),
+        init.p1().card(),
+        init.p2().character(),
+        init.p2().card(),
+    );
+    if actual != expected {
+        warn!(
+            "game initial mismatch. expected={:?}, actual={:?}",
+            expected, actual
+        );
+        return false;
+    }
+    true
+}
 
 pub struct SpectatorSession {
     props: SpectatorSessionProps,
@@ -27,8 +68,9 @@ pub struct SpectatorSession {
 
 enum SpectatorSessionState {
     Prepare(Prepare),
-    Select(SpectatorSelect),
-    GameLoading,
+    Standby(SpectatorStandby),
+    /// 最初のフレームで乱数シードを設定する
+    GameLoading(Option<RoundInitial>),
     Game(SpectatorGame),
     BackToSelect,
 }
@@ -45,11 +87,15 @@ impl SpectatorSession {
         self.props.spectator_initial().map(|x| x.game_settings())
     }
 
-    pub fn change_to_select(&mut self) {
-        self.state = SpectatorSessionState::Select(SpectatorSelect::new());
+    pub fn change_to_prepare(&mut self) {
+        self.state = SpectatorSessionState::Prepare(Prepare::new());
     }
-    pub fn change_to_game_loading(&mut self) {
-        self.state = SpectatorSessionState::GameLoading;
+    pub fn change_to_standby(&mut self, first_time: bool) {
+        self.props.discard_round_initial();
+        self.state = SpectatorSessionState::Standby(SpectatorStandby::new(first_time));
+    }
+    pub fn change_to_game_loading(&mut self, round_initial: Option<RoundInitial>) {
+        self.state = SpectatorSessionState::GameLoading(round_initial);
     }
     pub fn change_to_game(&mut self) {
         self.state = SpectatorSessionState::Game(SpectatorGame);
@@ -65,28 +111,34 @@ impl SpectatorSession {
                     return Some(None);
                 };
                 if prepare.update_state(main_menu, th19) {
-                    self.change_to_select();
+                    self.change_to_standby(true);
                 }
                 Some(Some(main_menu))
             }
-            SpectatorSessionState::Select { .. } => {
-                let main_menu = th19.app().main_loop_tasks().find_main_menu().unwrap();
+            SpectatorSessionState::Standby(standby) => {
+                // 自動で入力した PAUSE は観戦者の操作として扱わない
+                let pause = th19.input_devices().p1_input().current().0 & InputFlags::PAUSE != None;
+                if pushed_escape(th19.input_devices()) || (pause && !standby.pause_injected()) {
+                    return None;
+                }
+                let main_menu = th19.app().main_loop_tasks().find_main_menu()?;
                 match main_menu.screen_id() {
                     ScreenId::PlayerMatchupSelect => None,
-                    ScreenId::CharacterSelect => {
-                        if th19.input_devices().p1_input().current().0 & InputFlags::PAUSE != None {
+                    ScreenId::GameLoading => {
+                        let init = standby.take_game_initial();
+                        if let Some(init) = &init
+                            && !verify_game_initial(th19, init)
+                        {
+                            // ずれた試合を見せ続けないよう、観戦を終了する
                             return None;
                         }
-                        Some(Some(main_menu))
-                    }
-                    ScreenId::GameLoading => {
-                        self.change_to_game_loading();
+                        self.change_to_game_loading(init.map(|x| x.round_initial().clone()));
                         Some(Some(main_menu))
                     }
                     _ => Some(Some(main_menu)),
                 }
             }
-            SpectatorSessionState::GameLoading { .. } => {
+            SpectatorSessionState::GameLoading(_) => {
                 let Some(round_frame) = th19.round_frame() else {
                     return Some(None);
                 };
@@ -100,20 +152,26 @@ impl SpectatorSession {
                 if th19.input_devices().p1_input().current().0 & InputFlags::PAUSE != None {
                     return None;
                 }
+                if self.props.has_next_game_initial() {
+                    // ホストの次の試合が始まったので、今の試合を打ち切って次の試合から同期し直す
+                    warn!("spectator game is out of sync. resync from next game");
+                    self.change_to_prepare();
+                    return Some(None);
+                }
                 if th19.round_frame().is_some() {
                     return Some(None);
                 }
                 self.change_to_back_to_select();
                 Some(None)
             }
-            SpectatorSessionState::BackToSelect { .. } => {
+            SpectatorSessionState::BackToSelect => {
                 let Some(main_menu) = th19.app().main_loop_tasks().find_main_menu() else {
                     return Some(None);
                 };
                 if main_menu.screen_id() != ScreenId::CharacterSelect {
                     return Some(Some(main_menu));
                 }
-                self.change_to_select();
+                self.change_to_standby(false);
                 Some(Some(main_menu))
             }
         }
@@ -126,16 +184,19 @@ impl SpectatorSession {
     ) -> Result<(), RecvError> {
         match &mut self.state {
             SpectatorSessionState::Prepare(prepare) => prepare.update_th19_on_input_players(th19),
-            SpectatorSessionState::Select(select) => {
-                select.update_th19_on_input_players(&mut self.props, menu.unwrap(), th19)?
+            SpectatorSessionState::Standby(standby) => {
+                standby.update_th19_on_input_players(&mut self.props, menu.unwrap(), th19)?
             }
-            SpectatorSessionState::GameLoading { .. } => {
+            SpectatorSessionState::GameLoading(round_initial) => {
+                if let Some(round_initial) = round_initial.take() {
+                    set_rand_seeds(th19, &round_initial);
+                }
                 if th19.no_wait() {
                     th19.set_no_wait(false);
                 }
             }
             SpectatorSessionState::Game(game) => game.update_th19(&mut self.props, th19)?,
-            SpectatorSessionState::BackToSelect { .. } => {}
+            SpectatorSessionState::BackToSelect => {}
         }
         Ok(())
     }
@@ -143,7 +204,7 @@ impl SpectatorSession {
     pub fn on_input_menu(&mut self, th19: &mut Th19) -> Result<bool, RecvError> {
         match &mut self.state {
             SpectatorSessionState::Prepare(prepare) => prepare.update_th19_on_input_menu(th19),
-            SpectatorSessionState::Select(select) => {
+            SpectatorSessionState::Standby(standby) => {
                 let main_menu = th19
                     .app_mut()
                     .main_loop_tasks_mut()
@@ -154,17 +215,24 @@ impl SpectatorSession {
                 {
                     return Ok(false);
                 }
-                select.update_th19_on_input_menu(&mut self.props, main_menu, th19)?;
+                standby.update_th19_on_input_menu(&mut self.props, main_menu, th19)?;
             }
-            SpectatorSessionState::GameLoading { .. } => {}
+            SpectatorSessionState::GameLoading(_) => {}
             SpectatorSessionState::Game { .. } => {}
-            SpectatorSessionState::BackToSelect { .. } => {}
+            SpectatorSessionState::BackToSelect => {}
         }
         Ok(true)
     }
 
     pub fn on_render_texts(&self, th19: &Th19, text_renderer: &c_void) {
+        let waiting_for_host = matches!(
+            &self.state,
+            SpectatorSessionState::Standby(standby) if standby.is_waiting_for_host()
+        );
         let Some(initial) = self.props.spectator_initial() else {
+            if waiting_for_host {
+                in_session::on_render_texts_waiting_for_host(th19, text_renderer);
+            }
             return;
         };
         in_session::on_render_texts_spectator(
@@ -172,6 +240,7 @@ impl SpectatorSession {
             text_renderer,
             initial.p1_name(),
             initial.p2_name(),
+            waiting_for_host,
         );
     }
 
