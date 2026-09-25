@@ -1,6 +1,6 @@
 pub mod battle;
 mod delayed_inputs;
-mod session_message;
+pub mod session_message;
 pub mod spectator;
 pub mod spectator_host;
 
