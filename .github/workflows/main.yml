@@ -39,11 +39,15 @@ jobs:
             target/i686-pc-windows-msvc/release/junowen-standalone.exe \
             target/i686-pc-windows-msvc/release/junowen.exe
           cargo build --locked --release --workspace
+          cargo build --locked --release --package junowen --example mock_client
           cargo bundle-licenses --format yaml --output THIRDPARTY.yml
-          mkdir --parents artifact/modules
+          mkdir --parents artifact/modules artifact/examples
           mv \
             target/i686-pc-windows-msvc/release/th19_*.dll \
             artifact/modules/
+          mv \
+            target/i686-pc-windows-msvc/release/examples/mock_client.exe \
+            artifact/examples/
           mv \
             target/i686-pc-windows-msvc/release/*.dll \
             target/i686-pc-windows-msvc/release/*.exe \
