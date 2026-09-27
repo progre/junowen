@@ -64,6 +64,8 @@ fn verify_game_initial(th19: &Th19, init: &GameInitial) -> bool {
 pub struct SpectatorSession {
     props: SpectatorSessionProps,
     state: SpectatorSessionState,
+    /// 観戦者側の現在のカード。タイトル画面で初期位置に戻り、以降は前の試合の選択が引き継がれる
+    cards: [u8; 2],
 }
 
 enum SpectatorSessionState {
@@ -80,6 +82,7 @@ impl SpectatorSession {
         Self {
             props,
             state: SpectatorSessionState::Prepare(Prepare::new()),
+            cards: [0, 0],
         }
     }
 
@@ -89,10 +92,12 @@ impl SpectatorSession {
 
     pub fn change_to_prepare(&mut self) {
         self.state = SpectatorSessionState::Prepare(Prepare::new());
+        // タイトル画面を経由するので、カードは初期位置に戻る
+        self.cards = [0, 0];
     }
     pub fn change_to_standby(&mut self, first_time: bool) {
         self.props.discard_round_initial();
-        self.state = SpectatorSessionState::Standby(SpectatorStandby::new(first_time));
+        self.state = SpectatorSessionState::Standby(SpectatorStandby::new(first_time, self.cards));
     }
     pub fn change_to_game_loading(&mut self, round_initial: Option<RoundInitial>) {
         self.state = SpectatorSessionState::GameLoading(round_initial);
@@ -131,6 +136,9 @@ impl SpectatorSession {
                         {
                             // ずれた試合を見せ続けないよう、観戦を終了する
                             return None;
+                        }
+                        if let Some(init) = &init {
+                            self.cards = [init.p1().card(), init.p2().card()];
                         }
                         self.change_to_game_loading(init.map(|x| x.round_initial().clone()));
                         Some(Some(main_menu))
