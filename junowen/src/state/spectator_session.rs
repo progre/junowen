@@ -37,12 +37,13 @@ fn set_rand_seeds(th19: &mut Th19, round_initial: &RoundInitial) {
 /// 観戦者の試合開始時の状態がホストと一致しているか確認する
 fn verify_game_initial(th19: &Th19, init: &GameInitial) -> bool {
     let selection = th19.selection();
+    let vs_mode = th19.vs_mode();
     let actual = (
         selection.difficulty as u8,
         selection.p1().character as u8,
-        selection.p1().card as u8,
+        vs_mode.p1_card(),
         selection.p2().character as u8,
-        selection.p2().card as u8,
+        vs_mode.p2_card(),
     );
     let expected = (
         init.difficulty(),

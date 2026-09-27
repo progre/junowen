@@ -1,10 +1,7 @@
 use anyhow::Result;
 use getset::Getters;
-use junowen_lib::{
-    Th19,
-    structs::{app::MainMenu, selection::Player},
-};
-use tracing::info;
+use junowen_lib::{Th19, structs::app::MainMenu};
+use tracing::{info, warn};
 
 use crate::{
     session::{
@@ -156,12 +153,21 @@ impl SpectatorHostState {
     /// 試合開始時 (キャラクター選択画面から読み込み画面に移ったとき) に呼ぶ
     pub fn start_game(&mut self, th19: &Th19) {
         let selection = th19.selection();
-        let player =
-            |player: &Player| PlayerGameInitial::new(player.character as u8, player.card as u8);
+        // NOTE: `selection` のカードは v1.10c で構造体の配置が変わった後、正しい値を指していない可能性が高い。
+        //       前回の選択を保持している `vs_mode` の値を使う
+        let vs_mode = th19.vs_mode();
+        // TODO: カードの値の場所が確定したら削除する (ログファイルには WARN 以上しか出力されない)
+        warn!(
+            "start game. selection.card=({}, {}) vs_mode.card=({}, {})",
+            selection.p1().card,
+            selection.p2().card,
+            vs_mode.p1_card(),
+            vs_mode.p2_card(),
+        );
         let init = GameInitial::new(
             selection.difficulty as u8,
-            player(selection.p1()),
-            player(selection.p2()),
+            PlayerGameInitial::new(selection.p1().character as u8, vs_mode.p1_card()),
+            PlayerGameInitial::new(selection.p2().character as u8, vs_mode.p2_card()),
             current_round_initial(th19),
         );
         self.sessions.append(&mut self.standby_sessions);
