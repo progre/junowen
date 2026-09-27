@@ -46,54 +46,118 @@ fn set_characters(th19: &mut Th19, init: &GameInitial) {
 }
 
 /// キャラクター選択画面に入ってからカードを切り替え始めるまでのフレーム数
-///
-/// 画面遷移中の入力は無視される可能性があるため、少し待つ
 const CARD_MOVE_START_DELAY_FRAMES: u32 = 30;
-/// カードを1つ切り替えるごとに空けるフレーム数
+/// 左右を押す前に低速移動を押したまま待つフレーム数
 const CARD_MOVE_INTERVAL_FRAMES: u32 = 4;
+/// 左右を押してから、カードが切り替わったかを判定するまでに待つ最大フレーム数。
+/// 切り替わらなければ入力が受け付けられなかったとみなして押し直す
+const CARD_MOVE_ACCEPT_FRAMES: u32 = 10;
+
+#[derive(Clone, Copy)]
+enum CardMoveState {
+    /// 低速移動を押したまま待っている
+    Waiting(u32),
+    /// 左右を押した。`before` は押す前の `selection.card`
+    Pressed { before: u32, frames: u32 },
+}
 
 /// カードの選択状態はメモリへの書き込みでは反映されないため、
 /// 通常の操作と同じく「低速移動を押しながら左右」の入力で切り替える
 ///
 /// カードはタイトル画面で初期位置に戻り、以降は前の試合の選択が引き継がれるので、
-/// 観戦者側で現在のカードを把握しておき、目標との差の分だけ入力する
-struct CardMover {
-    current: [u8; 2],
-    wait: u32,
+/// 観戦者側で現在のカードを把握しておき、目標との差の分だけ入力する。
+/// 画面遷移中などは入力が無視されるため、`selection.card` の変化で入力が受け付けられたことを確認し、
+/// 変化しなければ押し直す
+struct PlayerCardMover {
+    current: u8,
+    state: CardMoveState,
+    retries: u32,
 }
 
-impl CardMover {
-    fn is_done(&self, targets: [u8; 2]) -> bool {
-        self.current == targets
+impl PlayerCardMover {
+    fn new(current: u8) -> Self {
+        Self {
+            current,
+            state: CardMoveState::Waiting(CARD_MOVE_START_DELAY_FRAMES),
+            retries: 0,
+        }
     }
 
-    /// 1フレーム分の入力を返す
-    fn next_inputs(&mut self, targets: [u8; 2]) -> [InputValue; 2] {
-        let mut inputs = [InputValue::empty(); 2];
-        for ((current, target), input) in self.current.iter_mut().zip(targets).zip(&mut inputs) {
-            if *current == target {
-                continue;
-            }
-            if self.wait > 0 {
-                // 低速移動は押したままにする
-                *input = InputFlags::SLOW.into();
-                continue;
-            }
-            let direction = if *current < target {
-                *current += 1;
-                InputFlags::RIGHT
-            } else {
-                *current -= 1;
-                InputFlags::LEFT
-            };
-            *input = InputValue(InputFlags::SLOW | direction);
+    /// 1フレーム分の入力を返す。`card` は現在の `selection.card`
+    fn next_input(&mut self, target: u8, card: u32) -> InputValue {
+        if self.current == target {
+            return InputValue::empty();
         }
-        if self.wait > 0 {
-            self.wait -= 1;
-        } else {
-            self.wait = CARD_MOVE_INTERVAL_FRAMES;
+        let slow: InputValue = InputFlags::SLOW.into();
+        match self.state {
+            CardMoveState::Waiting(frames) if frames > 0 => {
+                self.state = CardMoveState::Waiting(frames - 1);
+                slow
+            }
+            CardMoveState::Waiting(_) => {
+                let direction = if self.current < target {
+                    InputFlags::RIGHT
+                } else {
+                    InputFlags::LEFT
+                };
+                self.state = CardMoveState::Pressed {
+                    before: card,
+                    frames: 0,
+                };
+                InputValue(InputFlags::SLOW | direction)
+            }
+            CardMoveState::Pressed { before, .. } if card != before => {
+                // 入力が受け付けられた
+                if self.current < target {
+                    self.current += 1;
+                } else {
+                    self.current -= 1;
+                }
+                self.retries = 0;
+                self.state = CardMoveState::Waiting(CARD_MOVE_INTERVAL_FRAMES);
+                slow
+            }
+            CardMoveState::Pressed { frames, .. } if frames >= CARD_MOVE_ACCEPT_FRAMES => {
+                // 入力が受け付けられなかったので押し直す
+                self.retries += 1;
+                if self.retries.is_multiple_of(10) {
+                    warn!(
+                        "card move is not accepted. retries={}, card={}",
+                        self.retries, card
+                    );
+                }
+                self.state = CardMoveState::Waiting(CARD_MOVE_INTERVAL_FRAMES);
+                slow
+            }
+            CardMoveState::Pressed { before, frames } => {
+                self.state = CardMoveState::Pressed {
+                    before,
+                    frames: frames + 1,
+                };
+                slow
+            }
         }
-        inputs
+    }
+}
+
+struct CardMover([PlayerCardMover; 2]);
+
+impl CardMover {
+    fn new(current_cards: [u8; 2]) -> Self {
+        Self(current_cards.map(PlayerCardMover::new))
+    }
+
+    fn is_done(&self, targets: [u8; 2]) -> bool {
+        self.0[0].current == targets[0] && self.0[1].current == targets[1]
+    }
+
+    /// 1フレーム分の入力を返す。`cards` は現在の `selection.card`
+    fn next_inputs(&mut self, targets: [u8; 2], cards: [u32; 2]) -> [InputValue; 2] {
+        let [p1, p2] = &mut self.0;
+        [
+            p1.next_input(targets[0], cards[0]),
+            p2.next_input(targets[1], cards[1]),
+        ]
     }
 }
 
@@ -123,10 +187,7 @@ impl SpectatorStandby {
             game_initial: None,
             sync_frames: 0,
             pause_injected: false,
-            card_mover: CardMover {
-                current: current_cards,
-                wait: CARD_MOVE_START_DELAY_FRAMES,
-            },
+            card_mover: CardMover::new(current_cards),
         }
     }
 
@@ -210,7 +271,9 @@ impl SpectatorStandby {
             set_characters(th19, &init);
             (InputValue::empty(), InputValue::empty())
         } else if !self.card_mover.is_done(card_targets) {
-            let [p1, p2] = self.card_mover.next_inputs(card_targets);
+            let selection = th19.selection();
+            let cards = [selection.p1().card, selection.p2().card];
+            let [p1, p2] = self.card_mover.next_inputs(card_targets, cards);
             (p1, p2)
         } else {
             // 一致していることを確認できたので決定する
