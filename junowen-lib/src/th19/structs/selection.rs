@@ -15,18 +15,6 @@ pub struct Player {
     _unknown3: [u8; 0x34],
 }
 
-impl Player {
-    /// 未解析の領域を調べるための生のバイト列
-    pub fn raw_bytes(&self) -> &[u8] {
-        unsafe {
-            std::slice::from_raw_parts(
-                (self as *const Self).cast::<u8>(),
-                std::mem::size_of::<Self>(),
-            )
-        }
-    }
-}
-
 #[derive(Clone, Copy, PartialEq)]
 #[repr(u32)]
 pub enum Difficulty {
