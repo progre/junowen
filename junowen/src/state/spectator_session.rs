@@ -16,7 +16,7 @@ use junowen_lib::{
 use tracing::warn;
 
 use crate::{
-    helper::pushed_escape,
+    helper::{dump_card_candidates, pushed_escape},
     session::{
         RoundInitial,
         spectator::{GameInitial, SpectatorSession as SpectatorSessionProps},
@@ -125,6 +125,7 @@ impl SpectatorSession {
                 match main_menu.screen_id() {
                     ScreenId::PlayerMatchupSelect => None,
                     ScreenId::GameLoading => {
+                        dump_card_candidates("spectator", main_menu, th19);
                         let init = standby.take_game_initial();
                         if let Some(init) = &init
                             && !verify_game_initial(th19, init)
