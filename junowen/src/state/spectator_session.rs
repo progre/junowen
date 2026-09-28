@@ -25,7 +25,10 @@ use crate::{
 
 use super::prepare::Prepare;
 
-use {spectator_game::SpectatorGame, spectator_standby::SpectatorStandby};
+use {
+    spectator_game::{SpectatorGame, update_no_wait_for_catch_up},
+    spectator_standby::SpectatorStandby,
+};
 
 fn set_rand_seeds(th19: &mut Th19, round_initial: &RoundInitial) {
     th19.set_rand_seed1(round_initial.seed1).unwrap();
@@ -191,9 +194,7 @@ impl SpectatorSession {
                 if let Some(round_initial) = round_initial.take() {
                     set_rand_seeds(th19, &round_initial);
                 }
-                if th19.no_wait() {
-                    th19.set_no_wait(false);
-                }
+                update_no_wait_for_catch_up(&mut self.props, th19);
             }
             SpectatorSessionState::Game(game) => game.update_th19(&mut self.props, th19)?,
             SpectatorSessionState::BackToSelect => {}
