@@ -40,6 +40,11 @@ pub struct VSMode {
 }
 
 impl VSMode {
+    /// 未解析の領域を調べるための生のバイト列 (+2ea00h から 0x40 バイト。カードの値の周辺)
+    pub fn raw_bytes_around_cards(&self) -> &[u8] {
+        unsafe { std::slice::from_raw_parts((self as *const Self).cast::<u8>().add(0x2ea00), 0x40) }
+    }
+
     pub fn player_name(&self) -> &str {
         CStr::from_bytes_until_nul(&self.player_name)
             .unwrap_or_default()

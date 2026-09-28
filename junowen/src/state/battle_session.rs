@@ -14,7 +14,8 @@ use junowen_lib::{
 };
 
 use crate::{
-    file::Features, session::battle::BattleSession as BattleSessionProps,
+    file::Features, helper::dump_card_candidates,
+    session::battle::BattleSession as BattleSessionProps,
     signaling::waiting_for_match::WaitingForSpectator,
 };
 
@@ -79,6 +80,7 @@ impl BattleSession {
                 let main_menu = th19.app().main_loop_tasks().find_main_menu().unwrap();
                 match main_menu.screen_id() {
                     ScreenId::GameLoading => {
+                        dump_card_candidates("host", main_menu, th19);
                         self.spectator_host_state.start_game(th19);
                         self.change_to_game_loading();
                         Some(Some(main_menu))
