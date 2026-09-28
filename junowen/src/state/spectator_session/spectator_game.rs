@@ -1,7 +1,11 @@
-use std::sync::mpsc::RecvError;
+use std::sync::{
+    atomic::{AtomicU32, Ordering},
+    mpsc::RecvError,
+};
 
 use anyhow::Result;
 use junowen_lib::{Th19, structs::input_devices::InputValue};
+use tracing::warn;
 
 use crate::session::spectator::SpectatorSession;
 
@@ -16,9 +20,22 @@ const CATCH_UP_THRESHOLD: usize = 30;
 /// NOTE: 試合中に no wait を切り替えても反映されない可能性があるため、読み込み画面でも判定する。
 ///       早送り中も入力が届くまで待つので、追いついた後はホストの速度で進む
 pub fn update_no_wait_for_catch_up(session: &mut SpectatorSession, th19: &mut Th19) {
-    let no_wait = session.poll_buffered_len() > CATCH_UP_THRESHOLD;
-    if th19.no_wait() != no_wait {
+    let buffered_len = session.poll_buffered_len();
+    let no_wait = buffered_len > CATCH_UP_THRESHOLD;
+    let before = th19.no_wait();
+    if before != no_wait {
         th19.set_no_wait(no_wait);
+    }
+    // TODO: 早送りが効かない原因を調べるための一時的なログ。原因がわかったら削除する
+    static COUNTER: AtomicU32 = AtomicU32::new(0);
+    if COUNTER.fetch_add(1, Ordering::Relaxed).is_multiple_of(60) {
+        warn!(
+            "[catch-up-diagnostics] buffered_len={} target_no_wait={} before={} after={}",
+            buffered_len,
+            no_wait,
+            before,
+            th19.no_wait()
+        );
     }
 }
 
