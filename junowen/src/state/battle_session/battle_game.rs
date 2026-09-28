@@ -42,7 +42,8 @@ impl BattleGame {
             .p2_input_mut()
             .set_current((p2 as u32).try_into().unwrap());
 
-        spectator_host_state.update(false, None, th19, session, p1, p2);
+        spectator_host_state.update(false, None, th19, session);
+        spectator_host_state.send_inputs(p1, p2);
 
         Ok(())
     }
@@ -53,6 +54,8 @@ impl BattleGame {
         spectator_host_state: &mut SpectatorHostState,
         th19: &mut Th19,
     ) -> Result<(), RecvError> {
-        init_round(th19, session, spectator_host_state)
+        init_round(th19, session)?;
+        spectator_host_state.send_init_round(th19);
+        Ok(())
     }
 }

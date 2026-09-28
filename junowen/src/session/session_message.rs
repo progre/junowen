@@ -6,7 +6,7 @@ pub struct MatchInitial {
     pub game_settings: GameSettings,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RoundInitial {
     pub seed1: u32,
     pub seed2: u32,

@@ -3,8 +3,9 @@ use std::ffi::c_void;
 use clipboard_win::set_clipboard_string;
 use junowen_lib::{
     Th19,
-    connection::signaling::{
-        SignalingCodeType, socket::async_read_write_socket::SignalingServerMessage,
+    connection::{
+        BATTLE_PROTOCOL,
+        signaling::{SignalingCodeType, socket::async_read_write_socket::SignalingServerMessage},
     },
     structs::input_devices::InputValue,
 };
@@ -45,7 +46,11 @@ impl PureP2pGuest {
                     0,
                 ),
             ),
-            signaling: Signaling::new(session_tx, |conn, dc| BattleSession::new(conn, dc, false)),
+            signaling: Signaling::new(
+                session_tx,
+                |conn, dc| BattleSession::new(conn, dc, false),
+                BATTLE_PROTOCOL,
+            ),
             session_rx: Some(session_rx),
             offer: None,
             answer_generated: false,

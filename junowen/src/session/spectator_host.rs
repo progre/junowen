@@ -5,7 +5,7 @@ use tracing::info;
 
 use super::{
     session_message::RoundInitial,
-    spectator::{SpectatorInitial, SpectatorSessionMessage},
+    spectator::{GameInitial, SpectatorInitial, SpectatorSessionMessage},
     to_channel,
 };
 
@@ -29,6 +29,12 @@ impl SpectatorHostSession {
         Ok(self
             .hook_outgoing_tx
             .send(SpectatorSessionMessage::InitSpectator(init))?)
+    }
+
+    pub fn send_init_game(&self, init: GameInitial) -> Result<()> {
+        Ok(self
+            .hook_outgoing_tx
+            .send(SpectatorSessionMessage::InitGame(init))?)
     }
 
     pub fn send_init_round(&self, init: RoundInitial) -> Result<()> {

@@ -3,9 +3,12 @@ use std::time::Duration;
 use anyhow::{Error, Result, bail};
 use async_trait::async_trait;
 use junowen_lib::{
-    connection::signaling::{
-        CompressedSdp,
-        socket::{OfferResponse, SignalingSocket},
+    connection::{
+        SPECTATOR_PROTOCOL,
+        signaling::{
+            CompressedSdp,
+            socket::{OfferResponse, SignalingSocket},
+        },
     },
     signaling_server::reserved_room::{
         GetReservedRoomResponse, PostReservedRoomSpectateRequestBody,
@@ -50,6 +53,10 @@ impl SignalingServerReservedRoomSpectatorSocket {
 impl SignalingSocket for SignalingServerReservedRoomSpectatorSocket {
     fn timeout() -> Duration {
         Duration::from_secs(10)
+    }
+
+    fn protocol(&self) -> &'static str {
+        SPECTATOR_PROTOCOL
     }
 
     async fn offer(&mut self, _desc: CompressedSdp) -> Result<OfferResponse> {

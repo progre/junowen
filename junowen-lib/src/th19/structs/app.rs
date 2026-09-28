@@ -53,7 +53,7 @@ pub struct CharacterCursor {
     _unknown1: [u8; 0xd0],
 }
 
-#[derive(CopyGetters, Debug, MutGetters, Setters)]
+#[derive(CopyGetters, Debug, Getters, MutGetters, Setters)]
 #[repr(C)]
 pub struct Menu {
     #[getset(get_copy = "pub", get_mut = "pub", set = "pub")]
