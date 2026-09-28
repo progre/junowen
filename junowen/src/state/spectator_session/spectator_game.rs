@@ -7,7 +7,7 @@ use anyhow::Result;
 use junowen_lib::{Th19, structs::input_devices::InputValue};
 use tracing::warn;
 
-use crate::session::spectator::SpectatorSession;
+use crate::{present_skipper, session::spectator::SpectatorSession};
 
 use super::set_rand_seeds;
 
@@ -25,6 +25,10 @@ pub fn update_no_wait_for_catch_up(session: &mut SpectatorSession, th19: &mut Th
     let before = th19.no_wait();
     if before != no_wait {
         th19.set_no_wait(no_wait);
+    }
+    if no_wait {
+        // 試合中は no wait が効かないため、表示を間引いて垂直同期の待ちをなくす
+        present_skipper::request_skip();
     }
     // TODO: 早送りが効かない原因を調べるための一時的なログ。原因がわかったら削除する
     static COUNTER: AtomicU32 = AtomicU32::new(0);
