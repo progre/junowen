@@ -16,7 +16,7 @@ use junowen_lib::{
 use tracing::warn;
 
 use crate::{
-    helper::{dump_card_candidates, pushed_escape},
+    helper::pushed_escape,
     session::{
         RoundInitial,
         spectator::{GameInitial, SpectatorSession as SpectatorSessionProps},
@@ -37,13 +37,12 @@ fn set_rand_seeds(th19: &mut Th19, round_initial: &RoundInitial) {
 /// 観戦者の試合開始時の状態がホストと一致しているか確認する
 fn verify_game_initial(th19: &Th19, init: &GameInitial) -> bool {
     let selection = th19.selection();
-    let vs_mode = th19.vs_mode();
     let actual = (
         selection.difficulty as u8,
         selection.p1().character as u8,
-        vs_mode.p1_card(),
+        selection.p1().card as u8,
         selection.p2().character as u8,
-        vs_mode.p2_card(),
+        selection.p2().card as u8,
     );
     let expected = (
         init.difficulty(),
@@ -65,8 +64,6 @@ fn verify_game_initial(th19: &Th19, init: &GameInitial) -> bool {
 pub struct SpectatorSession {
     props: SpectatorSessionProps,
     state: SpectatorSessionState,
-    /// 観戦者側の現在のカード。タイトル画面で初期位置に戻り、以降は前の試合の選択が引き継がれる
-    cards: [u8; 2],
 }
 
 enum SpectatorSessionState {
@@ -83,7 +80,6 @@ impl SpectatorSession {
         Self {
             props,
             state: SpectatorSessionState::Prepare(Prepare::new()),
-            cards: [0, 0],
         }
     }
 
@@ -93,12 +89,10 @@ impl SpectatorSession {
 
     pub fn change_to_prepare(&mut self) {
         self.state = SpectatorSessionState::Prepare(Prepare::new());
-        // タイトル画面を経由するので、カードは初期位置に戻る
-        self.cards = [0, 0];
     }
     pub fn change_to_standby(&mut self, first_time: bool) {
         self.props.discard_round_initial();
-        self.state = SpectatorSessionState::Standby(SpectatorStandby::new(first_time, self.cards));
+        self.state = SpectatorSessionState::Standby(SpectatorStandby::new(first_time));
     }
     pub fn change_to_game_loading(&mut self, round_initial: Option<RoundInitial>) {
         self.state = SpectatorSessionState::GameLoading(round_initial);
@@ -131,16 +125,12 @@ impl SpectatorSession {
                 match main_menu.screen_id() {
                     ScreenId::PlayerMatchupSelect => None,
                     ScreenId::GameLoading => {
-                        dump_card_candidates("spectator", main_menu, th19);
                         let init = standby.take_game_initial();
                         if let Some(init) = &init
                             && !verify_game_initial(th19, init)
                         {
                             // ずれた試合を見せ続けないよう、観戦を終了する
                             return None;
-                        }
-                        if let Some(init) = &init {
-                            self.cards = [init.p1().card(), init.p2().card()];
                         }
                         self.change_to_game_loading(init.map(|x| x.round_initial().clone()));
                         Some(Some(main_menu))

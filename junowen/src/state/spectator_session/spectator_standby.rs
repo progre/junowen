@@ -23,14 +23,20 @@ fn clear_player_inputs(th19: &mut Th19) {
         .set_current(InputValue::empty());
 }
 
-/// キャラクター選択画面のカーソルが試合開始時の状態と一致しているか
-fn matches_characters(main_menu: &MainMenu, init: &GameInitial) -> bool {
+/// キャラクター選択画面のカーソルとカードが試合開始時の状態と一致しているか
+fn matches_character_select(main_menu: &MainMenu, th19: &Th19, init: &GameInitial) -> bool {
     let menu = main_menu.menu();
+    let selection = th19.selection();
     menu.p1_cursor().cursor == init.p1().character() as u32
         && menu.p2_cursor().cursor == init.p2().character() as u32
+        && selection.p1().card == init.p1().card() as u32
+        && selection.p2().card == init.p2().card() as u32
 }
 
-fn set_characters(th19: &mut Th19, init: &GameInitial) {
+fn set_character_select(th19: &mut Th19, init: &GameInitial) {
+    let selection = th19.selection_mut();
+    selection.p1_mut().card = init.p1().card() as u32;
+    selection.p2_mut().card = init.p2().card() as u32;
     let menu = th19
         .app_mut()
         .main_loop_tasks_mut()
@@ -43,59 +49,6 @@ fn set_characters(th19: &mut Th19, init: &GameInitial) {
     let p2_cursor = menu.p2_cursor_mut();
     p2_cursor.cursor = init.p2().character() as u32;
     p2_cursor.prev_cursor = p2_cursor.cursor;
-}
-
-/// キャラクター選択画面に入ってからカードを切り替え始めるまでのフレーム数
-///
-/// 画面遷移中の入力は無視される可能性があるため、少し待つ。
-/// カードの現在値を読み取れる場所がわかっていないため、入力が受け付けられたかは確認できない
-const CARD_MOVE_START_DELAY_FRAMES: u32 = 60;
-/// カードを1つ切り替えるごとに空けるフレーム数
-const CARD_MOVE_INTERVAL_FRAMES: u32 = 4;
-
-/// カードの選択状態はメモリへの書き込みでは反映されないため、
-/// 通常の操作と同じく「低速移動を押しながら左右」の入力で切り替える
-///
-/// カードはタイトル画面で初期位置に戻り、以降は前の試合の選択が引き継がれるので、
-/// 観戦者側で現在のカードを把握しておき、目標との差の分だけ入力する
-struct CardMover {
-    current: [u8; 2],
-    wait: u32,
-}
-
-impl CardMover {
-    fn is_done(&self, targets: [u8; 2]) -> bool {
-        self.current == targets
-    }
-
-    /// 1フレーム分の入力を返す
-    fn next_inputs(&mut self, targets: [u8; 2]) -> [InputValue; 2] {
-        let mut inputs = [InputValue::empty(); 2];
-        for ((current, target), input) in self.current.iter_mut().zip(targets).zip(&mut inputs) {
-            if *current == target {
-                continue;
-            }
-            if self.wait > 0 {
-                // 低速移動は押したままにする
-                *input = InputFlags::SLOW.into();
-                continue;
-            }
-            let direction = if *current < target {
-                *current += 1;
-                InputFlags::RIGHT
-            } else {
-                *current -= 1;
-                InputFlags::LEFT
-            };
-            *input = InputValue(InputFlags::SLOW | direction);
-        }
-        if self.wait > 0 {
-            self.wait -= 1;
-        } else {
-            self.wait = CARD_MOVE_INTERVAL_FRAMES;
-        }
-        inputs
-    }
 }
 
 /// 試合開始時の状態を受け取ってから、試合開始までに許容するフレーム数
@@ -113,21 +66,16 @@ pub struct SpectatorStandby {
     sync_frames: u32,
     /// 直前のフレームで PAUSE を自動で入力したか。観戦者自身の PAUSE と区別するために使う
     pause_injected: bool,
-    card_mover: CardMover,
 }
 
 impl SpectatorStandby {
-    /// `first_time` は観戦を開始した直後かどうか。`current_cards` は観戦者側の現在のカード
-    pub fn new(first_time: bool, current_cards: [u8; 2]) -> Self {
+    /// `first_time` は観戦を開始した直後かどうか
+    pub fn new(first_time: bool) -> Self {
         Self {
             cursors_reset: !first_time,
             game_initial: None,
             sync_frames: 0,
             pause_injected: false,
-            card_mover: CardMover {
-                current: current_cards,
-                wait: CARD_MOVE_START_DELAY_FRAMES,
-            },
         }
     }
 
@@ -191,7 +139,6 @@ impl SpectatorStandby {
             clear_player_inputs(th19);
             return Ok(());
         }
-        let card_targets = [init.p1().card(), init.p2().card()];
         let input_devices = th19.input_devices();
         let (prev_p1, prev_p2) = (
             input_devices.p1_input().prev(),
@@ -207,15 +154,12 @@ impl SpectatorStandby {
                 pause
             };
             (p1, InputValue::empty())
-        } else if !matches_characters(main_menu, &init) {
-            set_characters(th19, &init);
-            (InputValue::empty(), InputValue::empty())
-        } else if !self.card_mover.is_done(card_targets) {
-            let [p1, p2] = self.card_mover.next_inputs(card_targets);
-            (p1, p2)
-        } else {
-            // 一致していることを確認できたので決定する
+        } else if matches_character_select(main_menu, th19, &init) {
+            // 一致していることを確認できたので決定する。準備完了後もカードは変更できるため合わせ続ける
             (shot_repeatedly(prev_p1), shot_repeatedly(prev_p2))
+        } else {
+            set_character_select(th19, &init);
+            (InputValue::empty(), InputValue::empty())
         };
         let input_devices = th19.input_devices_mut();
         input_devices.p1_input_mut().set_current(p1);

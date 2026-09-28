@@ -3,28 +3,16 @@ use std::mem::transmute;
 use anyhow::{Result, bail};
 use getset::{Getters, MutGetters};
 
-/// length=c0
+/// length=c8
 #[repr(C)]
 pub struct Player {
     _unknown1: [u8; 0x0c],
     /// NOT available on player select screen
     pub character: u32,
-    _unknown2: [u8; 0x80],
-    /// Available on player select screen
+    _unknown2: [u8; 0x84],
+    /// Available on player select screen (+94h)
     pub card: u32,
-    _unknown3: [u8; 0x34],
-}
-
-impl Player {
-    /// 未解析の領域を調べるための生のバイト列
-    pub fn raw_bytes(&self) -> &[u8] {
-        unsafe {
-            std::slice::from_raw_parts(
-                (self as *const Self).cast::<u8>(),
-                std::mem::size_of::<Self>(),
-            )
-        }
-    }
+    _unknown3: [u8; 0x30],
 }
 
 #[derive(Clone, Copy, PartialEq)]
