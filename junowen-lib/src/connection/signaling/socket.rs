@@ -42,10 +42,9 @@ pub trait SignalingSocket {
     }
 
     async fn receive_signaling(&mut self) -> Result<(PeerConnection, DataChannel, bool)> {
-        let mut conn =
-            PeerConnection::new(Self::timeout(), self.ice_server_urls(), self.protocol()).await?;
+        let mut conn = PeerConnection::new(Self::timeout(), self.ice_server_urls()).await?;
         let offer_desc = conn
-            .start_as_offerer()
+            .start_as_offerer(self.protocol())
             .await
             .context("Failed to start as host")?;
         let answer_desc = self.offer(offer_desc).await?;
@@ -57,9 +56,7 @@ pub trait SignalingSocket {
                 (conn, true)
             }
             OfferResponse::Offer(offer_desc) => {
-                let mut conn =
-                    PeerConnection::new(Self::timeout(), self.ice_server_urls(), self.protocol())
-                        .await?;
+                let mut conn = PeerConnection::new(Self::timeout(), self.ice_server_urls()).await?;
                 let answer_desc = conn
                     .start_as_answerer(offer_desc)
                     .await
@@ -68,7 +65,7 @@ pub trait SignalingSocket {
                 (conn, false)
             }
         };
-        let data_channel = conn.wait_for_open_data_channel().await?;
+        let data_channel = conn.wait_for_open_data_channel(self.protocol()).await?;
         Ok((conn, data_channel, host))
     }
 }
