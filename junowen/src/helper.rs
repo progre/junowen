@@ -9,3 +9,8 @@ pub fn pushed_f1(input_devices: &InputDevices) -> bool {
     let raw_keys = input_devices.keyboard_input().raw_keys();
     raw_keys[0x70] & 0x80 != 0
 }
+
+pub fn pushed_escape(input_devices: &InputDevices) -> bool {
+    let raw_keys = input_devices.keyboard_input().raw_keys();
+    raw_keys[0x1b] & 0x80 != 0
+}

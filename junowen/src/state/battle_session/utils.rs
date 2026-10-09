@@ -5,13 +5,7 @@ use junowen_lib::Th19;
 
 use crate::session::{RoundInitial, battle::BattleSession};
 
-use super::spectator_host::SpectatorHostState;
-
-pub fn init_round(
-    th19: &mut Th19,
-    battle_session: &mut BattleSession,
-    spectator_host_state: &mut SpectatorHostState,
-) -> Result<(), RecvError> {
+pub fn init_round(th19: &mut Th19, battle_session: &mut BattleSession) -> Result<(), RecvError> {
     if battle_session.host() {
         let opt = battle_session.init_round(Some(RoundInitial {
             seed1: th19.rand_seed1().unwrap(),
@@ -27,6 +21,5 @@ pub fn init_round(
         th19.set_rand_seed3(init.seed3).unwrap();
         th19.set_rand_seed4(init.seed4).unwrap();
     }
-    spectator_host_state.send_init_round_if_connected(th19);
     Ok(())
 }

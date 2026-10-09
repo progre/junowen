@@ -138,6 +138,9 @@ where
         hdestwindowoverride: HWND,
         pdirtyregion: *const RGNDATA,
     ) -> windows::core::Result<()> {
+        if self.delegate.should_skip_present() {
+            return Ok(());
+        }
         self.delegate.on_before_present(&self.instance);
         unsafe {
             self.instance

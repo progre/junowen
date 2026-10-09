@@ -77,7 +77,12 @@ impl Drop for PeerConnection {
     }
 }
 
-const PROTOCOL: &str = "JUNOWEN/1.1";
+/// 対戦用の接続のプロトコル。互換性のない変更をしたら上げる
+pub const BATTLE_PROTOCOL: &str = "JUNOWEN/1.1";
+/// 観戦用の接続のプロトコル。互換性のない変更をしたら上げる
+///
+/// 1.2: 試合開始時の状態を送り、いつ接続しても次の試合から観戦できるようにした
+pub const SPECTATOR_PROTOCOL: &str = "JUNOWEN/1.2";
 
 impl PeerConnection {
     pub async fn new(timeout: Duration, ice_server_urls: Vec<String>) -> Result<Self> {
@@ -130,13 +135,14 @@ impl PeerConnection {
         self.rtc.as_ref().unwrap()
     }
 
-    pub async fn start_as_offerer(&mut self) -> Result<CompressedSdp> {
+    /// `protocol` はデータチャネルのプロトコル
+    pub async fn start_as_offerer(&mut self, protocol: &'static str) -> Result<CompressedSdp> {
         let rtc_data_channel = self
             .rtc()
             .create_data_channel(
                 "data",
                 Some(RTCDataChannelInit {
-                    protocol: Some(PROTOCOL.to_owned()),
+                    protocol: Some(protocol.to_owned()),
                     ..Default::default()
                 }),
             )
@@ -197,11 +203,15 @@ impl PeerConnection {
         Ok(())
     }
 
-    pub async fn wait_for_open_data_channel(&mut self) -> Result<DataChannel> {
+    /// 相手のプロトコルが `protocol` と一致しない場合は接続を拒否する
+    pub async fn wait_for_open_data_channel(
+        &mut self,
+        protocol: &'static str,
+    ) -> Result<DataChannel> {
         let data_channel_task = async {
             let mut data_channel = self.data_channel_rx.take().unwrap().await.unwrap();
             data_channel.wait_for_open_data_channel().await;
-            if data_channel.protocol() != PROTOCOL {
+            if data_channel.protocol() != protocol {
                 bail!("unexpected protocol: {}", data_channel.protocol());
             }
             Ok(data_channel)

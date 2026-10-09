@@ -34,6 +34,13 @@ impl Session {
         }
     }
 
+    pub fn should_skip_present(&self) -> bool {
+        match self {
+            Self::BattleSession(_) => false,
+            Self::SpectatorSession(session_state) => session_state.should_skip_present(),
+        }
+    }
+
     pub fn update_state(&mut self, th19: &Th19) -> Option<Option<&'static MainMenu>> {
         match self {
             Self::BattleSession(session_state) => session_state.update_state(th19),

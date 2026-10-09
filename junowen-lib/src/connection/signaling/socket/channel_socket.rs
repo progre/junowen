@@ -13,6 +13,7 @@ pub struct ChannelSocket {
     offer_sender: Option<oneshot::Sender<CompressedSdp>>,
     answer_sender: Option<oneshot::Sender<CompressedSdp>>,
     message_receiver: Option<oneshot::Receiver<SignalingServerMessage>>,
+    protocol: &'static str,
 }
 
 impl ChannelSocket {
@@ -20,11 +21,13 @@ impl ChannelSocket {
         offer_sender: oneshot::Sender<CompressedSdp>,
         answer_sender: oneshot::Sender<CompressedSdp>,
         message_receiver: oneshot::Receiver<SignalingServerMessage>,
+        protocol: &'static str,
     ) -> Self {
         Self {
             offer_sender: Some(offer_sender),
             answer_sender: Some(answer_sender),
             message_receiver: Some(message_receiver),
+            protocol,
         }
     }
 }
@@ -33,6 +36,10 @@ impl ChannelSocket {
 impl SignalingSocket for ChannelSocket {
     fn timeout() -> Duration {
         Duration::from_secs(20 * 60)
+    }
+
+    fn protocol(&self) -> &'static str {
+        self.protocol
     }
 
     async fn offer(&mut self, desc: CompressedSdp) -> Result<OfferResponse> {

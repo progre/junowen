@@ -39,6 +39,7 @@ impl Signaling {
     pub fn new<T>(
         session_tx: mpsc::Sender<T>,
         create_session: fn(PeerConnection, DataChannel) -> T,
+        protocol: &'static str,
     ) -> Self
     where
         T: Send + 'static,
@@ -49,7 +50,7 @@ impl Signaling {
         let (error_tx, error_rx) = oneshot::channel();
         let (connected_tx, connected_rx) = oneshot::channel();
         TOKIO_RUNTIME.spawn(async move {
-            let mut socket = ChannelSocket::new(offer_tx, answer_tx, msg_rx);
+            let mut socket = ChannelSocket::new(offer_tx, answer_tx, msg_rx, protocol);
             let (conn, dc, _host) = match socket.receive_signaling().await {
                 Ok(ok) => ok,
                 Err(err) => {

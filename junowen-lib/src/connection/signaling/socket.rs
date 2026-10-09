@@ -10,7 +10,7 @@ use async_trait::async_trait;
 
 use crate::connection::data_channel::DataChannel;
 
-use super::super::peer_connection::PeerConnection;
+use super::super::peer_connection::{BATTLE_PROTOCOL, PeerConnection};
 
 use super::CompressedSdp;
 
@@ -36,10 +36,15 @@ pub trait SignalingSocket {
         vec![DEFAULT_STUN_SERVER_URL.to_owned()]
     }
 
+    /// データチャネルのプロトコル。観戦用の接続では `SPECTATOR_PROTOCOL` を返す
+    fn protocol(&self) -> &'static str {
+        BATTLE_PROTOCOL
+    }
+
     async fn receive_signaling(&mut self) -> Result<(PeerConnection, DataChannel, bool)> {
         let mut conn = PeerConnection::new(Self::timeout(), self.ice_server_urls()).await?;
         let offer_desc = conn
-            .start_as_offerer()
+            .start_as_offerer(self.protocol())
             .await
             .context("Failed to start as host")?;
         let answer_desc = self.offer(offer_desc).await?;
@@ -60,7 +65,7 @@ pub trait SignalingSocket {
                 (conn, false)
             }
         };
-        let data_channel = conn.wait_for_open_data_channel().await?;
+        let data_channel = conn.wait_for_open_data_channel(self.protocol()).await?;
         Ok((conn, data_channel, host))
     }
 }

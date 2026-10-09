@@ -90,6 +90,10 @@ impl Th19EventListener for Junowen {
 }
 
 impl Direct3DDeviceEventListener for &Junowen {
+    fn should_skip_present(&self) -> bool {
+        self.state.should_skip_present()
+    }
+
     fn on_before_present(&self, device: &IDirect3DDevice9) {
         if !self.title_menu_modifier.selected_junowen() {
             return;
