@@ -17,6 +17,7 @@ use tracing::warn;
 
 use crate::{
     helper::pushed_escape,
+    present_skipper::PresentSkipper,
     session::{
         RoundInitial,
         spectator::{GameInitial, SpectatorSession as SpectatorSessionProps},
@@ -66,6 +67,7 @@ fn verify_game_initial(th19: &Th19, init: &GameInitial) -> bool {
 
 pub struct SpectatorSession {
     props: SpectatorSessionProps,
+    present_skipper: PresentSkipper,
     state: SpectatorSessionState,
 }
 
@@ -82,8 +84,13 @@ impl SpectatorSession {
     pub fn prepare(props: SpectatorSessionProps) -> Self {
         Self {
             props,
+            present_skipper: PresentSkipper::default(),
             state: SpectatorSessionState::Prepare(Prepare::new()),
         }
+    }
+
+    pub fn should_skip_present(&self) -> bool {
+        self.present_skipper.should_skip_present()
     }
 
     pub fn game_settings(&self) -> Option<&GameSettings> {
@@ -194,9 +201,11 @@ impl SpectatorSession {
                 if let Some(round_initial) = round_initial.take() {
                     set_rand_seeds(th19, &round_initial);
                 }
-                update_no_wait_for_catch_up(&mut self.props, th19);
+                update_no_wait_for_catch_up(&mut self.props, &self.present_skipper, th19);
             }
-            SpectatorSessionState::Game(game) => game.update_th19(&mut self.props, th19)?,
+            SpectatorSessionState::Game(game) => {
+                game.update_th19(&mut self.props, &self.present_skipper, th19)?
+            }
             SpectatorSessionState::BackToSelect => {}
         }
         Ok(())

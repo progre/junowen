@@ -138,7 +138,7 @@ where
         hdestwindowoverride: HWND,
         pdirtyregion: *const RGNDATA,
     ) -> windows::core::Result<()> {
-        if crate::present_skipper::should_skip_present() {
+        if self.delegate.should_skip_present() {
             return Ok(());
         }
         self.delegate.on_before_present(&self.instance);

@@ -3,7 +3,7 @@ use std::sync::mpsc::RecvError;
 use anyhow::Result;
 use junowen_lib::{Th19, structs::input_devices::InputValue};
 
-use crate::{present_skipper, session::spectator::SpectatorSession};
+use crate::{present_skipper::PresentSkipper, session::spectator::SpectatorSession};
 
 use super::set_rand_seeds;
 
@@ -15,7 +15,11 @@ const CATCH_UP_THRESHOLD: usize = 30;
 /// 観戦者の試合開始はホストより遅れる。試合中に観戦を始めた場合は、試合の最初から追いかける。
 /// NOTE: 試合中に no wait を切り替えても反映されない可能性があるため、読み込み画面でも判定する。
 ///       早送り中も入力が届くまで待つので、追いついた後はホストの速度で進む
-pub fn update_no_wait_for_catch_up(session: &mut SpectatorSession, th19: &mut Th19) {
+pub fn update_no_wait_for_catch_up(
+    session: &mut SpectatorSession,
+    present_skipper: &PresentSkipper,
+    th19: &mut Th19,
+) {
     let buffered_len = session.poll_buffered_len();
     let no_wait = buffered_len > CATCH_UP_THRESHOLD;
     let before = th19.no_wait();
@@ -24,7 +28,7 @@ pub fn update_no_wait_for_catch_up(session: &mut SpectatorSession, th19: &mut Th
     }
     if no_wait {
         // 試合中は no wait が効かないため、表示を間引いて垂直同期の待ちをなくす
-        present_skipper::request_skip();
+        present_skipper.request_skip();
     }
 }
 
@@ -34,6 +38,7 @@ impl SpectatorGame {
     pub fn update_th19(
         &mut self,
         session: &mut SpectatorSession,
+        present_skipper: &PresentSkipper,
         th19: &mut Th19,
     ) -> Result<(), RecvError> {
         // -1フレーム目、0フレーム目は複数回呼ばれ、回数が不定なのでスキップする
@@ -47,7 +52,7 @@ impl SpectatorGame {
                 .set_current(InputValue::empty());
             return Ok(());
         }
-        update_no_wait_for_catch_up(session, th19);
+        update_no_wait_for_catch_up(session, present_skipper, th19);
         let input_devices = th19.input_devices_mut();
         let (p1, p2) = session.dequeue_inputs()?;
         input_devices

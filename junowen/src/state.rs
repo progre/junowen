@@ -104,6 +104,13 @@ impl State {
         }
     }
 
+    pub fn should_skip_present(&self) -> bool {
+        match self {
+            Self::Standby => false,
+            Self::Session(session) => session.should_skip_present(),
+        }
+    }
+
     pub fn on_before_render_object(
         &self,
         title_menu_modifier: &TitleMenuModifier,
