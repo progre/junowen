@@ -8,6 +8,7 @@ use junowen_lib::{
         signaling::{SignalingCodeType, socket::async_read_write_socket::SignalingServerMessage},
     },
 };
+use junowen_lobby::{TextLayout, signaling_code_line_count};
 use rust_i18n::t;
 use tokio::sync::mpsc;
 
@@ -19,10 +20,8 @@ use super::{
         CommonMenu, LobbyScene, Menu, MenuButtons, MenuItem, OnMenuInputResult, Th19MenuDevice,
         Th19MenuRenderer,
     },
-    helper::signaling_code_line_count,
     overlay::OverlayText,
     signaling_code::paste_signaling_code,
-    text_layout::TextLayout,
 };
 
 pub struct PureP2pGuest {
@@ -172,11 +171,12 @@ impl PureP2pGuest {
     }
 
     pub fn on_render_texts(&self, th19: &Th19, text_renderer: &c_void) {
-        self.common_menu.on_render_texts(&Th19MenuRenderer {
+        let renderer = Th19MenuRenderer {
             th19,
             text_renderer,
-        });
-        self.layout().render_codes(th19, text_renderer);
+        };
+        self.common_menu.on_render_texts(&renderer);
+        self.layout().render_codes(&renderer);
     }
 
     pub fn overlay_texts(&self) -> Vec<OverlayText> {

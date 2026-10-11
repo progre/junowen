@@ -1,5 +1,4 @@
 mod common_menu;
-mod helper;
 mod overlay;
 mod pure_p2p_guest;
 mod pure_p2p_offerer;
@@ -7,13 +6,13 @@ mod pure_p2p_scenes;
 mod room;
 mod root;
 mod signaling_code;
-mod text_layout;
 mod title_menu_modifier;
 
 use std::ffi::c_void;
 
 use getset::{Getters, MutGetters};
 use junowen_lib::{Th19, structs::input_devices::InputValue};
+use junowen_lobby::overlay_description;
 
 use crate::{
     file::SettingsRepo,
@@ -25,7 +24,6 @@ use crate::{
 
 use self::{
     common_menu::{LobbyScene, MenuButtons, to_menu_buttons},
-    helper::overlay_description,
     pure_p2p_scenes::PureP2pScenes,
     room::{reserved::ReservedRoom, shared::SharedRoom, tcp_signaling::TcpSignaling},
     root::Root,

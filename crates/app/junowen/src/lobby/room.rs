@@ -5,13 +5,11 @@ pub mod tcp_signaling;
 use std::{f64::consts::PI, ffi::c_void};
 
 use junowen_lib::{Th19, structs::others::RenderingText};
+use junowen_lobby::render_text_line;
 
 use crate::signaling::waiting_for_match::WaitingInRoom;
 
-use super::{
-    common_menu::{CommonMenu, Th19MenuRenderer, render_label_value},
-    helper::render_text_line,
-};
+use super::common_menu::{CommonMenu, Th19MenuRenderer, render_label_value};
 
 fn progress_alphas(progress: f64) -> Vec<u8> {
     const LENGTH: f64 = 20.0;
@@ -137,7 +135,7 @@ pub fn on_render_texts<T>(
         render_progress(th19, text_renderer, elapsed.as_secs_f64() / 4.0);
         for (i, error) in waiting.errors().iter().rev().enumerate() {
             let error_msg = format!("Failed: {}", error);
-            render_text_line(th19, text_renderer, 13 + i as u32, error_msg.as_bytes());
+            render_text_line(&renderer, 13 + i as u32, error_msg.as_bytes());
         }
     }
 }

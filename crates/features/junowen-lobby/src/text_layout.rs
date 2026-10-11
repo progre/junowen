@@ -1,10 +1,6 @@
-use std::ffi::c_void;
-
-use junowen_lib::Th19;
-
-use super::{
+use crate::{
+    MenuRenderer, OverlayText,
     helper::{overlay_text_line, render_signaling_code},
-    overlay::OverlayText,
 };
 
 /// 画面に並ぶ要素を行番号で組み立てたもの。
@@ -25,9 +21,9 @@ impl TextLayout {
         self.codes.push((line, code.into()));
     }
 
-    pub fn render_codes(&self, th19: &Th19, text_renderer: &c_void) {
+    pub fn render_codes(&self, renderer: &impl MenuRenderer) {
         for (line, code) in &self.codes {
-            render_signaling_code(th19, text_renderer, *line, code);
+            render_signaling_code(renderer, *line, code);
         }
     }
 

@@ -1,40 +1,36 @@
-use std::ffi::c_void;
-
-use junowen_lib::{Th19, structs::others::RenderingText};
-
-use super::overlay::OverlayText;
+use crate::{MenuRenderer, MenuText, OverlayText};
 
 const TEXT_LINE_LEFT: u32 = 32;
 const TEXT_LINE_TOP: u32 = 160;
 const TEXT_LINE_HEIGHT: u32 = 32;
 const SIGNALING_CODE_CHUNK_LEN: usize = 100;
 
-pub fn render_text_line(th19: &Th19, text_renderer: &c_void, line: u32, text: &[u8]) {
-    let mut rt = RenderingText::default();
-    rt.set_text(text);
-    rt.set_x(TEXT_LINE_LEFT, th19.window_inner());
-    rt.set_y(TEXT_LINE_TOP + line * TEXT_LINE_HEIGHT, th19.window_inner());
-    rt.color = 0xff000000;
-    rt.font_type = 8;
-    th19.render_text(text_renderer, &rt);
+pub fn render_text_line(renderer: &impl MenuRenderer, line: u32, text: &[u8]) {
+    let mut mt = MenuText {
+        text,
+        x: TEXT_LINE_LEFT,
+        y: TEXT_LINE_TOP + line * TEXT_LINE_HEIGHT,
+        color: 0xff000000,
+        font_type: 8,
+        ..Default::default()
+    };
+    renderer.render_text(&mt);
 
-    rt.color = 0xffffffff;
-    rt.font_type = 6;
-    th19.render_text(text_renderer, &rt);
+    mt.color = 0xffffffff;
+    mt.font_type = 6;
+    renderer.render_text(&mt);
 }
 
 /// シグナリングコードは 1 行に収まらないので、半分の行高に詰めて折り返す
-pub fn render_signaling_code(th19: &Th19, text_renderer: &c_void, line: u32, code: &str) {
+pub fn render_signaling_code(renderer: &impl MenuRenderer, line: u32, code: &str) {
     for (i, chunk) in code.as_bytes().chunks(SIGNALING_CODE_CHUNK_LEN).enumerate() {
-        let mut rt = RenderingText::default();
-        rt.set_text(chunk);
-        rt.set_x(TEXT_LINE_LEFT, th19.window_inner());
-        rt.set_y(
-            TEXT_LINE_TOP + (line * 2 + i as u32) * (TEXT_LINE_HEIGHT / 2),
-            th19.window_inner(),
-        );
-        rt.font_type = 1;
-        th19.render_text(text_renderer, &rt);
+        renderer.render_text(&MenuText {
+            text: chunk,
+            x: TEXT_LINE_LEFT,
+            y: TEXT_LINE_TOP + (line * 2 + i as u32) * (TEXT_LINE_HEIGHT / 2),
+            font_type: 1,
+            ..Default::default()
+        });
     }
 }
 

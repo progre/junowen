@@ -13,6 +13,7 @@ use junowen_lib::{
 use junowen_lobby::pure_p2p_offerer_menu::{
     COPY_ACTION_ID, PASTE_ACTION_ID, REGENERATE_ACTION_ID, make_empty_menu, make_menu,
 };
+use junowen_lobby::{TextLayout, signaling_code_line_count};
 use rust_i18n::t;
 use tokio::sync::mpsc;
 use tracing::trace;
@@ -22,10 +23,8 @@ use super::{
     common_menu::{
         CommonMenu, LobbyScene, MenuButtons, OnMenuInputResult, Th19MenuDevice, Th19MenuRenderer,
     },
-    helper::signaling_code_line_count,
     overlay::OverlayText,
     signaling_code::paste_signaling_code,
-    text_layout::TextLayout,
 };
 
 pub use self::role::{Messages, pure_p2p_host, pure_p2p_spectator};
@@ -174,11 +173,12 @@ where
     }
 
     pub fn on_render_texts(&self, th19: &Th19, text_renderer: &c_void) {
-        self.common_menu.on_render_texts(&Th19MenuRenderer {
+        let renderer = Th19MenuRenderer {
             th19,
             text_renderer,
-        });
-        self.layout().render_codes(th19, text_renderer);
+        };
+        self.common_menu.on_render_texts(&renderer);
+        self.layout().render_codes(&renderer);
     }
 
     pub fn overlay_texts(&self) -> Vec<OverlayText> {
