@@ -1,4 +1,3 @@
-mod menu;
 mod role;
 
 use std::ffi::c_void;
@@ -10,6 +9,9 @@ use junowen_lib::{
         DataChannel, PeerConnection,
         signaling::{SignalingCodeType, socket::async_read_write_socket::SignalingServerMessage},
     },
+};
+use junowen_lobby::pure_p2p_offerer_menu::{
+    COPY_ACTION_ID, PASTE_ACTION_ID, REGENERATE_ACTION_ID, make_empty_menu, make_menu,
 };
 use rust_i18n::t;
 use tokio::sync::mpsc;
@@ -24,10 +26,6 @@ use super::{
     overlay::OverlayText,
     signaling_code::paste_signaling_code,
     text_layout::TextLayout,
-};
-
-use self::menu::{
-    COPY_ACTION_ID, PASTE_ACTION_ID, REGENERATE_ACTION_ID, make_empty_menu, make_menu,
 };
 
 pub use self::role::{Messages, pure_p2p_host, pure_p2p_spectator};

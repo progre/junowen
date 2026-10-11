@@ -1,18 +1,15 @@
-mod menu;
-
 use std::ffi::c_void;
 
 use junowen_lib::Th19;
+use junowen_lobby::tcp_signaling_menu::{
+    ADDRESS_INPUT_ACTION_ID, CHANGE_ADDRESS_ACTION_ID, GUEST_ACTION_ID, HOST_ACTION_ID,
+    OFFLINE_ACTION_ID, OFFLINE_ITEM_INDEX, TcpSignalingMenu,
+};
 use rust_i18n::t;
 
 use crate::{
     TOKIO_RUNTIME, file::SettingsRepo,
     signaling::waiting_for_match::WaitingForOpponentOverTcpSignaling,
-};
-
-use self::menu::{
-    ADDRESS_INPUT_ACTION_ID, CHANGE_ADDRESS_ACTION_ID, GUEST_ACTION_ID, HOST_ACTION_ID,
-    OFFLINE_ACTION_ID, OFFLINE_ITEM_INDEX, TcpSignalingMenu,
 };
 
 use super::{

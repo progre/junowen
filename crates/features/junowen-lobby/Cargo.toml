@@ -1,5 +1,5 @@
 [package]
-name = "junowen-menu"
+name = "junowen-lobby"
 edition = "2024"
 version.workspace = true
 authors.workspace = true

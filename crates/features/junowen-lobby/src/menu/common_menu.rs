@@ -1,17 +1,17 @@
 use getset::{Getters, MutGetters};
 
-use crate::{
+use crate::menu::{
     action::{Action, OnMenuInputResult},
     device::{MenuDevice, MenuSound},
     input::{
         MenuButtons, MenuController, MenuControllerInputResult, MenuControllerUpdateDecideResult,
         OnTextInputResult,
     },
-    menu::{
+    render::{MenuRenderer, render_title},
+    tree::{
         CurrentMenuSceneMutResult, CurrentMenuSceneResult, Menu, MenuItem, current_menu_scene,
         current_menu_scene_mut,
     },
-    render::{MenuRenderer, render_title},
 };
 
 #[derive(Getters, MutGetters)]

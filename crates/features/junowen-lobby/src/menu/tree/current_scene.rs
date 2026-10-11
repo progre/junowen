@@ -1,4 +1,4 @@
-use crate::input::TextInput;
+use crate::menu::input::TextInput;
 
 use super::{Menu, MenuItem};
 

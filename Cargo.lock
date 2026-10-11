@@ -2023,7 +2023,7 @@ dependencies = [
  "getset",
  "junowen-direct3d",
  "junowen-lib",
- "junowen-menu",
+ "junowen-lobby",
  "reqwest",
  "rmp-serde",
  "rust-i18n",
@@ -2085,7 +2085,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "junowen-menu"
+name = "junowen-lobby"
 version = "1.2.0"
 dependencies = [
  "derive-new",

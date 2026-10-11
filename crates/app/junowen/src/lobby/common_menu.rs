@@ -7,25 +7,12 @@ use junowen_lib::{
         others::RenderingText,
     },
 };
-use junowen_menu::{MenuDevice, MenuRenderer, MenuSound, MenuText};
+use junowen_lobby::{MenuDevice, MenuRenderer, MenuSound, MenuText};
 
-pub use junowen_menu::{MenuButtons, menu_item_color, render_label_value};
-
-#[derive(Clone, Copy, Debug)]
-pub enum LobbyScene {
-    Root,
-    SharedRoom,
-    ReservedRoom,
-    TcpSignaling,
-    PureP2pHost,
-    PureP2pGuest,
-    PureP2pSpectator,
-}
-
-pub type CommonMenu = junowen_menu::CommonMenu<LobbyScene>;
-pub type Menu = junowen_menu::Menu<LobbyScene>;
-pub type MenuItem = junowen_menu::MenuItem<LobbyScene>;
-pub type OnMenuInputResult = junowen_menu::OnMenuInputResult<LobbyScene>;
+pub use junowen_lobby::{
+    CommonMenu, LobbyScene, Menu, MenuButtons, MenuItem, OnMenuInputResult, menu_item_color,
+    render_label_value,
+};
 
 pub fn to_menu_buttons(input: InputValue) -> MenuButtons {
     let bits = |flags: &[InputFlags]| {

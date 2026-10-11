@@ -1,6 +1,6 @@
 use getset::{CopyGetters, Getters, MutGetters, Setters};
 
-use crate::{action::Action, input::TextInput};
+use crate::menu::{action::Action, input::TextInput};
 
 use super::Menu;
 

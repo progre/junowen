@@ -3,7 +3,7 @@ use std::num::NonZeroU8;
 use getset::Setters;
 use windows::Win32::UI::Input::KeyboardAndMouse::{MAPVK_VK_TO_VSC, MapVirtualKeyW, ToUnicode};
 
-use crate::{
+use crate::menu::{
     device::MenuDevice,
     render::{MenuRenderer, render_label_value},
 };

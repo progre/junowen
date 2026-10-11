@@ -16,6 +16,8 @@ use windows_core::{HSTRING, w};
 
 use super::Lobby;
 
+pub use junowen_lobby::OverlayText;
+
 /// 縁取りの太さと文字サイズの比
 const OUTLINE_RATIO: f64 = 1.0 / 29.0;
 
@@ -102,15 +104,6 @@ fn render_text_to_screen(
         bottom: top + size.cy,
     };
     unsafe { DrawTextW(hdc, &mut text, &mut rect, DT_LEFT) };
-}
-
-/// ゲーム内フォントでは英数字しか描画できないため、多言語のテキストは
-/// GDI で画面に重ねて描画する。座標はゲーム内と同じ 1280x960 換算。
-pub struct OverlayText {
-    pub left: i32,
-    pub top: i32,
-    pub font_size: u32,
-    pub string: String,
 }
 
 pub struct Font {

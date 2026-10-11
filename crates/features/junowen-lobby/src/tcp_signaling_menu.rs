@@ -1,4 +1,4 @@
-use crate::lobby::common_menu::{CommonMenu, Menu, MenuItem};
+use crate::{CommonMenu, Menu, MenuItem};
 
 const HOST_LABEL: &str = "Connect as a Host";
 const GUEST_LABEL: &str = "Connect as a Guest";
@@ -45,6 +45,12 @@ pub struct TcpSignalingMenu {
     menu: CommonMenu,
     role: Option<Role>,
     offline: Option<bool>,
+}
+
+impl Default for TcpSignalingMenu {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TcpSignalingMenu {

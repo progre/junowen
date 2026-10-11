@@ -3,7 +3,7 @@ mod menu_item;
 
 use getset::{CopyGetters, Getters, MutGetters, Setters};
 
-use crate::{
+use crate::menu::{
     action::Action,
     device::{MenuDevice, MenuSound},
     input::MenuControllerInputResult,
@@ -13,9 +13,7 @@ use crate::{
 pub use current_scene::{
     CurrentMenuSceneMutResult, CurrentMenuSceneResult, current_menu_scene, current_menu_scene_mut,
 };
-pub use menu_item::{
-    MenuItem, MenuPlainItem, MenuSubMenuItem, MenuSubSceneItem, MenuTextInputItem,
-};
+pub use menu_item::MenuItem;
 
 #[derive(CopyGetters, Debug, Getters, MutGetters, Setters)]
 pub struct Menu<S> {

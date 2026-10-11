@@ -1,4 +1,4 @@
-use crate::lobby::common_menu::{CommonMenu, Menu, MenuItem};
+use crate::{CommonMenu, Menu, MenuItem};
 
 const BASE_HEIGHT: u32 = 720;
 
