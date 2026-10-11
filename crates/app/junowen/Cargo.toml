@@ -22,6 +22,7 @@ bytes.workspace = true
 clipboard-win.workspace = true
 derive-new = "0.6.0"
 getset = "0.1.2"
+junowen-direct3d.workspace = true
 junowen-lib.workspace = true
 reqwest = { version = "0.12.7", features = ["json"] }
 rmp-serde.workspace = true

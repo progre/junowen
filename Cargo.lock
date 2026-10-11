@@ -2021,6 +2021,7 @@ dependencies = [
  "clipboard-win",
  "derive-new",
  "getset",
+ "junowen-direct3d",
  "junowen-lib",
  "reqwest",
  "rmp-serde",
@@ -2038,6 +2039,14 @@ dependencies = [
  "tracing-appender",
  "tracing-subscriber",
  "urlencoding",
+ "windows 0.59.0",
+ "windows-core 0.59.0",
+]
+
+[[package]]
+name = "junowen-direct3d"
+version = "1.2.0"
+dependencies = [
  "windows 0.59.0",
  "windows-core 0.59.0",
 ]

@@ -1,5 +1,6 @@
 use std::ffi::c_void;
 
+use junowen_direct3d::Direct3DDeviceEventListener;
 use junowen_lib::{
     Th19, Th19EventListener,
     structs::{app::ScreenId, others::RenderingText},
@@ -7,7 +8,6 @@ use junowen_lib::{
 use windows::Win32::Graphics::Direct3D9::IDirect3DDevice9;
 
 use crate::{
-    custom_direct_3d::Direct3DDeviceEventListener,
     file::{Features, SettingsRepo},
     lobby::{self, Lobby, TitleMenuModifier},
     state::State,

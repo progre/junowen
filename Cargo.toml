@@ -11,6 +11,7 @@ members = [
   "crates/app/junowen",
   "crates/app/junowen-server",
   "crates/app/th19loader",
+  "crates/features/junowen-direct3d",
   "crates/features/junowen-lib",
 ]
 default-members = ["crates/app/junowen"]
@@ -26,6 +27,7 @@ anyhow = { version = "1.0.95", features = ["backtrace"] }
 async-trait = "0.1.85"
 bytes = "1.9.0"
 clipboard-win = "5.4.0"
+junowen-direct3d = { path = "./crates/features/junowen-direct3d" }
 junowen-lib = { path = "./crates/features/junowen-lib" }
 rmp-serde = "1.3.0"
 serde = { version = "1.0.217", features = ["derive"] }

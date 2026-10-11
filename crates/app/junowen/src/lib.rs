@@ -1,4 +1,3 @@
-mod custom_direct_3d;
 mod file;
 mod helper;
 mod junowen;
@@ -13,7 +12,7 @@ rust_i18n::i18n!("locales", fallback = "en");
 
 use std::{cell::OnceCell, mem::take, path::Path, ptr::null_mut, slice, sync::LazyLock};
 
-use custom_direct_3d::CustomDirect3D9;
+use junowen_direct3d::CustomDirect3D9;
 use junowen_lib::{
     Th19, Th19EventDispatcher,
     hook_utils::{WELL_KNOWN_VERSION_HASHES, calc_th19_hash, show_warn_dialog},
