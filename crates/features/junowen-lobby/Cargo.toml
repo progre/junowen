@@ -1,0 +1,14 @@
+[package]
+name = "junowen-lobby"
+edition = "2024"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+derive-new.workspace = true
+getset.workspace = true
+windows.workspace = true
+
+[lints.clippy]
+self_named_module_files = "warn"
