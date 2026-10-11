@@ -15,7 +15,7 @@ winres = "0.1"
 
 [dependencies]
 anyhow.workspace = true
-junowen-lib = { path = "../junowen-lib" }
+junowen-lib = { path = "../../features/junowen-lib" }
 windows.workspace = true
 
 [package.metadata.winres]
