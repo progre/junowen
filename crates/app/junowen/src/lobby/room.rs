@@ -9,8 +9,8 @@ use junowen_lib::{Th19, structs::others::RenderingText};
 use crate::signaling::waiting_for_match::WaitingInRoom;
 
 use super::{
-    common_menu::CommonMenu,
-    helper::{render_label_value, render_text_line},
+    common_menu::{CommonMenu, Th19MenuRenderer, render_label_value},
+    helper::render_text_line,
 };
 
 fn progress_alphas(progress: f64) -> Vec<u8> {
@@ -123,10 +123,14 @@ pub fn on_render_texts<T>(
     th19: &Th19,
     text_renderer: &c_void,
 ) {
-    menu.on_render_texts(th19, text_renderer);
+    let renderer = Th19MenuRenderer {
+        th19,
+        text_renderer,
+    };
+    menu.on_render_texts(&renderer);
 
     if let Some(value) = value {
-        render_label_value(th19, text_renderer, 240 - 56, 1, label, value);
+        render_label_value(&renderer, 240 - 56, 1, label, value);
     }
     if let Some(waiting) = waiting {
         let elapsed = waiting.elapsed();

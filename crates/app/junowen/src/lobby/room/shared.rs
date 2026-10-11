@@ -1,6 +1,6 @@
 use std::ffi::c_void;
 
-use junowen_lib::{Th19, structs::input_devices::InputValue};
+use junowen_lib::Th19;
 use rust_i18n::t;
 
 use crate::{
@@ -8,7 +8,9 @@ use crate::{
 };
 
 use super::{
-    super::common_menu::{CommonMenu, LobbyScene, Menu, MenuItem, OnMenuInputResult},
+    super::common_menu::{
+        CommonMenu, LobbyScene, Menu, MenuButtons, MenuItem, OnMenuInputResult, Th19MenuDevice,
+    },
     on_render_texts,
 };
 
@@ -57,8 +59,8 @@ impl SharedRoom {
     pub fn on_input_menu(
         &mut self,
         settings_repo: &SettingsRepo,
-        current_input: InputValue,
-        prev_input: InputValue,
+        current_input: MenuButtons,
+        prev_input: MenuButtons,
         th19: &Th19,
         waiting: &mut Option<WaitingForOpponentInSharedRoom>,
     ) -> Option<LobbyScene> {
@@ -76,7 +78,10 @@ impl SharedRoom {
         if let Some(waiting) = waiting {
             waiting.recv();
         }
-        match self.menu.on_input_menu(current_input, prev_input, th19) {
+        match self
+            .menu
+            .on_input_menu(current_input, prev_input, &Th19MenuDevice(th19))
+        {
             OnMenuInputResult::None => None,
             OnMenuInputResult::Cancel => Some(LobbyScene::Root),
             OnMenuInputResult::SubScene(_) => unreachable!(),

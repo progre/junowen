@@ -1,12 +1,12 @@
 use std::ffi::c_void;
 
-use junowen_lib::{
-    Th19,
-    structs::input_devices::{InputFlags, InputValue},
-};
+use junowen_lib::{Th19, structs::input_devices::InputFlags};
 use rust_i18n::t;
 
-use super::common_menu::{CommonMenu, LobbyScene, Menu, MenuItem, OnMenuInputResult};
+use super::common_menu::{
+    CommonMenu, LobbyScene, Menu, MenuButtons, MenuItem, OnMenuInputResult, Th19MenuDevice,
+    Th19MenuRenderer,
+};
 
 pub struct Root {
     common_menu: CommonMenu,
@@ -48,13 +48,13 @@ impl Root {
 
     pub fn on_input_menu(
         &mut self,
-        current_input: InputValue,
-        prev_input: InputValue,
+        current_input: MenuButtons,
+        prev_input: MenuButtons,
         th19: &mut Th19,
     ) -> Option<LobbyScene> {
         match self
             .common_menu
-            .on_input_menu(current_input, prev_input, th19)
+            .on_input_menu(current_input, prev_input, &Th19MenuDevice(th19))
         {
             OnMenuInputResult::None => None,
             OnMenuInputResult::Cancel => {
@@ -67,7 +67,10 @@ impl Root {
     }
 
     pub fn on_render_texts(&self, th19: &Th19, text_renderer: &c_void) {
-        self.common_menu.on_render_texts(th19, text_renderer);
+        self.common_menu.on_render_texts(&Th19MenuRenderer {
+            th19,
+            text_renderer,
+        });
     }
 
     pub fn text(&self) -> String {

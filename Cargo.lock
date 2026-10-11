@@ -2023,6 +2023,7 @@ dependencies = [
  "getset",
  "junowen-direct3d",
  "junowen-lib",
+ "junowen-menu",
  "reqwest",
  "rmp-serde",
  "rust-i18n",
@@ -2080,6 +2081,15 @@ dependencies = [
  "tracing",
  "uuid",
  "webrtc",
+ "windows 0.59.0",
+]
+
+[[package]]
+name = "junowen-menu"
+version = "1.2.0"
+dependencies = [
+ "derive-new",
+ "getset",
  "windows 0.59.0",
 ]
 

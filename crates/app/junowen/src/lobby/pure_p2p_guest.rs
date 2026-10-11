@@ -7,7 +7,6 @@ use junowen_lib::{
         BATTLE_PROTOCOL,
         signaling::{SignalingCodeType, socket::async_read_write_socket::SignalingServerMessage},
     },
-    structs::input_devices::InputValue,
 };
 use rust_i18n::t;
 use tokio::sync::mpsc;
@@ -16,7 +15,10 @@ use crate::session::battle::BattleSession;
 
 use super::{
     super::signaling::Signaling,
-    common_menu::{CommonMenu, LobbyScene, Menu, MenuItem, OnMenuInputResult},
+    common_menu::{
+        CommonMenu, LobbyScene, Menu, MenuButtons, MenuItem, OnMenuInputResult, Th19MenuDevice,
+        Th19MenuRenderer,
+    },
     helper::signaling_code_line_count,
     overlay::OverlayText,
     signaling_code::paste_signaling_code,
@@ -60,8 +62,8 @@ impl PureP2pGuest {
 
     pub fn on_input_menu(
         &mut self,
-        current_input: InputValue,
-        prev_input: InputValue,
+        current_input: MenuButtons,
+        prev_input: MenuButtons,
         th19: &Th19,
         session_rx: &mut Option<mpsc::Receiver<BattleSession>>,
     ) -> Option<LobbyScene> {
@@ -95,7 +97,7 @@ impl PureP2pGuest {
         }
         match self
             .common_menu
-            .on_input_menu(current_input, prev_input, th19)
+            .on_input_menu(current_input, prev_input, &Th19MenuDevice(th19))
         {
             OnMenuInputResult::None => None,
             OnMenuInputResult::Cancel => {
@@ -170,7 +172,10 @@ impl PureP2pGuest {
     }
 
     pub fn on_render_texts(&self, th19: &Th19, text_renderer: &c_void) {
-        self.common_menu.on_render_texts(th19, text_renderer);
+        self.common_menu.on_render_texts(&Th19MenuRenderer {
+            th19,
+            text_renderer,
+        });
         self.layout().render_codes(th19, text_renderer);
     }
 

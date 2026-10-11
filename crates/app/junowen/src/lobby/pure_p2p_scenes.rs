@@ -1,6 +1,6 @@
 use std::ffi::c_void;
 
-use junowen_lib::{Th19, structs::input_devices::InputValue};
+use junowen_lib::Th19;
 
 use crate::{
     session::{battle::BattleSession, spectator::SpectatorSession},
@@ -10,7 +10,7 @@ use crate::{
 };
 
 use super::{
-    common_menu::LobbyScene,
+    common_menu::{LobbyScene, MenuButtons},
     overlay::OverlayText,
     pure_p2p_guest::PureP2pGuest,
     pure_p2p_offerer::{PureP2pOfferer, pure_p2p_host, pure_p2p_spectator},
@@ -28,8 +28,8 @@ impl PureP2pScenes {
     pub fn on_input_menu(
         &mut self,
         scene: LobbyScene,
-        current_input: InputValue,
-        prev_input: InputValue,
+        current_input: MenuButtons,
+        prev_input: MenuButtons,
         th19: &Th19,
         waiting_for_match: &mut Option<WaitingForMatch>,
     ) -> Option<LobbyScene> {

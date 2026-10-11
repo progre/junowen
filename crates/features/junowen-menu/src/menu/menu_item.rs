@@ -1,6 +1,8 @@
 use getset::{CopyGetters, Getters, MutGetters, Setters};
 
-use super::{Action, LobbyScene, menu::Menu, text_input::TextInput};
+use crate::{action::Action, input::TextInput};
+
+use super::Menu;
 
 #[derive(Debug, Setters)]
 pub struct MenuPlainItem {
@@ -12,13 +14,13 @@ pub struct MenuPlainItem {
 }
 
 #[derive(Debug, Getters, MutGetters, Setters)]
-pub struct MenuSubMenuItem {
+pub struct MenuSubMenuItem<S> {
     #[set = "pub"]
     label: &'static str,
     enabled: bool,
     decided_action: Option<u8>,
     #[getset(get = "pub", get_mut = "pub")]
-    sub_menu: Menu,
+    sub_menu: Menu<S>,
 }
 
 #[derive(CopyGetters, Debug, Getters, MutGetters, Setters)]
@@ -32,23 +34,28 @@ pub struct MenuTextInputItem {
 }
 
 #[derive(CopyGetters, Debug, Setters)]
-pub struct MenuSubSceneItem {
+pub struct MenuSubSceneItem<S> {
     #[getset(get_copy = "pub", set = "pub")]
     label: &'static str,
     enabled: bool,
-    #[get_copy = "pub"]
-    sub_scene: LobbyScene,
+    sub_scene: S,
+}
+
+impl<S: Copy> MenuSubSceneItem<S> {
+    pub fn sub_scene(&self) -> S {
+        self.sub_scene
+    }
 }
 
 #[derive(Debug)]
-pub enum MenuItem {
+pub enum MenuItem<S> {
     Plain(MenuPlainItem),
-    SubMenu(MenuSubMenuItem),
+    SubMenu(MenuSubMenuItem<S>),
     TextInput(MenuTextInputItem),
-    SubScene(MenuSubSceneItem),
+    SubScene(MenuSubSceneItem<S>),
 }
 
-impl MenuItem {
+impl<S> MenuItem<S> {
     pub fn plain(label: &'static str, decided_action: u8, play_sound: bool) -> Self {
         Self::Plain(MenuPlainItem {
             label,
@@ -58,7 +65,7 @@ impl MenuItem {
         })
     }
 
-    pub fn sub_menu(label: &'static str, decided_action: Option<u8>, sub_menu: Menu) -> Self {
+    pub fn sub_menu(label: &'static str, decided_action: Option<u8>, sub_menu: Menu<S>) -> Self {
         Self::SubMenu(MenuSubMenuItem {
             label,
             enabled: true,
@@ -67,7 +74,7 @@ impl MenuItem {
         })
     }
 
-    pub fn sub_scene(label: &'static str, sub_scene: LobbyScene) -> Self {
+    pub fn sub_scene(label: &'static str, sub_scene: S) -> Self {
         Self::SubScene(MenuSubSceneItem {
             label,
             enabled: true,

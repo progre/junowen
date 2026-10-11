@@ -20,10 +20,11 @@ anyhow.workspace = true
 async-trait.workspace = true
 bytes.workspace = true
 clipboard-win.workspace = true
-derive-new = "0.6.0"
-getset = "0.1.2"
+derive-new.workspace = true
+getset.workspace = true
 junowen-direct3d.workspace = true
 junowen-lib.workspace = true
+junowen-menu.workspace = true
 reqwest = { version = "0.12.7", features = ["json"] }
 rmp-serde.workspace = true
 rust-i18n = "3.1.2"

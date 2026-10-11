@@ -1,10 +1,12 @@
-use std::{ffi::c_void, num::NonZeroU8};
+use std::num::NonZeroU8;
 
 use getset::Setters;
-use junowen_lib::Th19;
 use windows::Win32::UI::Input::KeyboardAndMouse::{MAPVK_VK_TO_VSC, MapVirtualKeyW, ToUnicode};
 
-use crate::lobby::helper::render_label_value;
+use crate::{
+    device::MenuDevice,
+    render::{MenuRenderer, render_label_value},
+};
 
 fn to_ascii(vk: u32, current: &[u8; 256]) -> Option<NonZeroU8> {
     let mut buf = [0u16; 2];
@@ -50,10 +52,10 @@ impl TextInputState {
             }
         }
         if current[self.current_vk as usize] & 0x80 != 0 {
-            if self.current_vk_count > 30 {
-                if let Some(ascii) = to_ascii(self.current_vk as u32, current) {
-                    result.push(ascii.get());
-                }
+            if self.current_vk_count > 30
+                && let Some(ascii) = to_ascii(self.current_vk as u32, current)
+            {
+                result.push(ascii.get());
             }
             self.current_vk_count += 1;
         } else {
@@ -64,7 +66,7 @@ impl TextInputState {
     }
 }
 
-pub enum OnMenuInputResult {
+pub enum OnTextInputResult {
     None,
     Cancel,
     Decide(u8, String),
@@ -97,33 +99,28 @@ impl TextInput {
         self.state.as_mut().unwrap()
     }
 
-    pub fn on_input_menu(&mut self, th19: &Th19) -> OnMenuInputResult {
+    pub fn on_input_menu(&mut self, device: &impl MenuDevice) -> OnTextInputResult {
         if self.state.is_none() {
-            self.state = Some(TextInputState::new(
-                th19.input_devices().keyboard_input().raw_keys(),
-            ));
-            return OnMenuInputResult::None;
+            self.state = Some(TextInputState::new(device.keyboard_raw_keys()));
+            return OnTextInputResult::None;
         }
-        for ascii in self
-            .state_mut()
-            .tick(th19.input_devices().keyboard_input().raw_keys())
-        {
+        for ascii in self.state_mut().tick(device.keyboard_raw_keys()) {
             if (0x20..0x7f).contains(&ascii) {
                 self.value.push(ascii as char);
             } else if ascii == 0x08 {
                 self.value.pop();
             } else if ascii == 0x0d {
                 // CR
-                return OnMenuInputResult::Decide(self.changed_action, self.value.clone());
+                return OnTextInputResult::Decide(self.changed_action, self.value.clone());
             } else if ascii == 0x1b {
                 // ESC
-                return OnMenuInputResult::Cancel;
+                return OnTextInputResult::Cancel;
             }
         }
-        OnMenuInputResult::None
+        OnTextInputResult::None
     }
 
-    pub fn on_render_texts(&self, th19: &Th19, text_renderer: &c_void) {
-        render_label_value(th19, text_renderer, 480, 0, self.name, &self.value);
+    pub fn on_render_texts(&self, renderer: &impl MenuRenderer) {
+        render_label_value(renderer, 480, 0, self.name, &self.value);
     }
 }

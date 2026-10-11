@@ -8,7 +8,7 @@ use junowen_lib::{
     structs::others::RenderingText,
 };
 
-use super::helper::menu_item_color;
+use super::common_menu::menu_item_color;
 
 fn direction(input: &Input, flag: InputFlags) -> bool {
     input.current().0 & InputValue::from(flag).0 != None

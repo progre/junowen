@@ -1,8 +1,4 @@
-use junowen_lib::structs::input_devices::{InputFlags, InputValue};
-
-fn pulse(current: InputValue, prev: InputValue, flag: InputFlags) -> bool {
-    current.0 & flag != None && prev.0 & flag == None
-}
+use super::MenuButtons;
 
 pub enum MenuControllerUpdateDecideResult {
     None,
@@ -47,11 +43,13 @@ impl MenuController {
         MenuControllerUpdateDecideResult::Wait
     }
 
-    fn cancel(&mut self, current_input: InputValue, prev_input: InputValue, instant: bool) -> bool {
-        if !pulse(current_input, prev_input, InputFlags::CHARGE)
-            && !pulse(current_input, prev_input, InputFlags::BOMB)
-            && !pulse(current_input, prev_input, InputFlags::PAUSE)
-        {
+    fn cancel(
+        &mut self,
+        current_input: MenuButtons,
+        prev_input: MenuButtons,
+        instant: bool,
+    ) -> bool {
+        if !current_input.cancel_pulsed(prev_input) {
             return false;
         }
         if !instant {
@@ -64,10 +62,13 @@ impl MenuController {
         self.decide_count = -1;
     }
 
-    fn decide(&mut self, current_input: InputValue, prev_input: InputValue, instant: bool) -> bool {
-        if !pulse(current_input, prev_input, InputFlags::SHOT)
-            && !pulse(current_input, prev_input, InputFlags::ENTER)
-        {
+    fn decide(
+        &mut self,
+        current_input: MenuButtons,
+        prev_input: MenuButtons,
+        instant: bool,
+    ) -> bool {
+        if !current_input.decide_pulsed(prev_input) {
             return false;
         }
         if !instant {
@@ -76,11 +77,9 @@ impl MenuController {
         true
     }
 
-    fn select(&mut self, current_input: InputValue, prev_input: InputValue) -> Option<bool> {
+    fn select(&mut self, current_input: MenuButtons, prev_input: MenuButtons) -> Option<bool> {
         let mut mv = None;
-        if current_input.0 & InputFlags::UP != None
-            && (prev_input.0 & InputFlags::UP == None || self.repeat_up > 0)
-        {
+        if current_input.up && (!prev_input.up || self.repeat_up > 0) {
             if [0, 25].contains(&self.repeat_up) {
                 mv = Some(true);
             }
@@ -91,9 +90,7 @@ impl MenuController {
         } else {
             self.repeat_up = 0;
         }
-        if current_input.0 & InputFlags::DOWN != None
-            && (prev_input.0 & InputFlags::DOWN == None || self.repeat_down > 0)
-        {
+        if current_input.down && (!prev_input.down || self.repeat_down > 0) {
             if [0, 25].contains(&self.repeat_down) {
                 mv = Some(false);
             }
@@ -109,8 +106,8 @@ impl MenuController {
 
     pub fn input(
         &mut self,
-        current_input: InputValue,
-        prev_input: InputValue,
+        current_input: MenuButtons,
+        prev_input: MenuButtons,
         instant_decide: bool,
         instant_cancel: bool,
     ) -> MenuControllerInputResult {

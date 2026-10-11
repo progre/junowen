@@ -1,30 +1,40 @@
-use std::ffi::c_void;
+mod current_scene;
+mod menu_item;
 
 use getset::{CopyGetters, Getters, MutGetters, Setters};
-use junowen_lib::Th19;
 
-use crate::lobby::helper::render_menu_item;
+use crate::{
+    action::Action,
+    device::{MenuDevice, MenuSound},
+    input::MenuControllerInputResult,
+    render::{MenuRenderer, render_menu_item},
+};
 
-use super::{Action, LobbyScene, menu_controller::MenuControllerInputResult, menu_item::MenuItem};
+pub use current_scene::{
+    CurrentMenuSceneMutResult, CurrentMenuSceneResult, current_menu_scene, current_menu_scene_mut,
+};
+pub use menu_item::{
+    MenuItem, MenuPlainItem, MenuSubMenuItem, MenuSubSceneItem, MenuTextInputItem,
+};
 
 #[derive(CopyGetters, Debug, Getters, MutGetters, Setters)]
-pub struct Menu {
+pub struct Menu<S> {
     #[get_copy = "pub"]
     title: &'static str,
     canceled_action: Option<u8>,
     #[getset(get = "pub", get_mut = "pub")]
-    items: Vec<MenuItem>,
+    items: Vec<MenuItem<S>>,
     #[get_copy = "pub"]
     cursor: usize,
     #[get_copy = "pub"]
     decided: bool,
 }
 
-impl Menu {
+impl<S: Copy> Menu<S> {
     pub fn new(
         title: &'static str,
         canceled_action: Option<u8>,
-        items: Vec<MenuItem>,
+        items: Vec<MenuItem<S>>,
         cursor: usize,
     ) -> Self {
         Self {
@@ -36,15 +46,15 @@ impl Menu {
         }
     }
 
-    pub fn selected_item(&self) -> &MenuItem {
+    pub fn selected_item(&self) -> &MenuItem<S> {
         &self.items[self.cursor]
     }
 
-    pub fn selected_item_mut(&mut self) -> &mut MenuItem {
+    pub fn selected_item_mut(&mut self) -> &mut MenuItem<S> {
         &mut self.items[self.cursor]
     }
 
-    pub fn dig(&mut self) -> Option<LobbyScene> {
+    pub fn dig(&mut self) -> Option<S> {
         if !self.decided {
             if let MenuItem::SubScene(scene) = self.selected_item() {
                 return Some(scene.sub_scene());
@@ -73,18 +83,11 @@ impl Menu {
         sub_menu.sub_menu_mut().bury()
     }
 
-    pub fn on_render_texts(&self, base_height: u32, th19: &Th19, text_renderer: &c_void) {
+    pub fn on_render_texts(&self, base_height: u32, renderer: &impl MenuRenderer) {
         for (i, item) in self.items().iter().enumerate() {
             let label = item.label().as_bytes();
             let height = base_height + 56 * i as u32;
-            render_menu_item(
-                th19,
-                text_renderer,
-                label,
-                height,
-                item.enabled(),
-                i == self.cursor(),
-            );
+            render_menu_item(renderer, label, height, item.enabled(), i == self.cursor());
         }
     }
 
@@ -114,12 +117,12 @@ impl Menu {
         input_result: MenuControllerInputResult,
         ignore_decide: bool,
         play_decide_sound: bool,
-        th19: &Th19,
+        device: &impl MenuDevice,
     ) -> Option<Action> {
         match input_result {
             MenuControllerInputResult::None => None,
             MenuControllerInputResult::Cancel => {
-                th19.play_sound(th19.sound_manager(), 0x09, 0);
+                device.play_sound(MenuSound::Cancel);
                 self.canceled_action.map(|id| Action::new(id, false, None))
             }
             MenuControllerInputResult::Decide => {
@@ -127,7 +130,7 @@ impl Menu {
                     return None;
                 }
                 if play_decide_sound {
-                    th19.play_sound(th19.sound_manager(), 0x07, 0);
+                    device.play_sound(MenuSound::Decide);
                 }
                 self.selected_item().decided_action()
             }
@@ -135,14 +138,14 @@ impl Menu {
                 if !self.decrement_cursor() {
                     return None;
                 }
-                th19.play_sound(th19.sound_manager(), 0x0a, 0);
+                device.play_sound(MenuSound::Select);
                 None
             }
             MenuControllerInputResult::Down => {
                 if !self.increment_cursor() {
                     return None;
                 }
-                th19.play_sound(th19.sound_manager(), 0x0a, 0);
+                device.play_sound(MenuSound::Select);
                 None
             }
         }

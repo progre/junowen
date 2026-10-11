@@ -24,7 +24,7 @@ use crate::{
 };
 
 use self::{
-    common_menu::LobbyScene,
+    common_menu::{LobbyScene, MenuButtons, to_menu_buttons},
     helper::overlay_description,
     pure_p2p_scenes::PureP2pScenes,
     room::{reserved::ReservedRoom, shared::SharedRoom, tcp_signaling::TcpSignaling},
@@ -44,7 +44,7 @@ pub struct Lobby {
     reserved_room: ReservedRoom,
     tcp_signaling: TcpSignaling,
     pure_p2p: PureP2pScenes,
-    prev_input: InputValue,
+    prev_input: MenuButtons,
     #[getset(get = "pub", get_mut = "pub")]
     waiting_for_match: Option<WaitingForMatch>,
 }
@@ -61,17 +61,17 @@ impl Lobby {
             reserved_room: ReservedRoom::new(),
             tcp_signaling: TcpSignaling::new(),
             pure_p2p: PureP2pScenes::default(),
-            prev_input: InputValue::full(),
+            prev_input: to_menu_buttons(InputValue::full()),
         }
     }
 
     pub fn clear_input(&mut self) {
-        self.prev_input = InputValue::full();
+        self.prev_input = to_menu_buttons(InputValue::full());
     }
 
     pub fn on_input_menu(&mut self, th19: &mut Th19) {
         self.prev_scene = self.scene;
-        let current_input = th19.menu_input().current();
+        let current_input = to_menu_buttons(th19.menu_input().current());
         th19.menu_input_mut().set_current(InputValue::empty());
 
         if let Some(scene) = match self.scene {
@@ -134,7 +134,7 @@ impl Lobby {
             ),
         } {
             self.scene = scene;
-            self.prev_input = InputValue::full();
+            self.prev_input = to_menu_buttons(InputValue::full());
         } else {
             self.prev_input = current_input;
         }
