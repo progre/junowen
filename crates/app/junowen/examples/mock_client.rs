@@ -153,14 +153,13 @@ async fn connect_as_offerer(
     protocol: &'static str,
     stdin_rx: &mpsc::Receiver<String>,
 ) -> Result<(PeerConnection, DataChannel)> {
-    let mut conn =
-        PeerConnection::new(TIMEOUT, vec![DEFAULT_STUN_SERVER_URL.to_owned()], protocol).await?;
-    let offer = conn.start_as_offerer().await?;
+    let mut conn = PeerConnection::new(TIMEOUT, vec![DEFAULT_STUN_SERVER_URL.to_owned()]).await?;
+    let offer = conn.start_as_offerer(protocol).await?;
     print_and_copy_code(offer_type, &offer);
     let answer = wait_for_code(answer_type, stdin_rx).await?;
     conn.set_answer_desc(answer).await?;
     println!("Waiting for connection...");
-    let data_channel = conn.wait_for_open_data_channel().await?;
+    let data_channel = conn.wait_for_open_data_channel(protocol).await?;
     Ok((conn, data_channel))
 }
 
@@ -171,12 +170,11 @@ async fn connect_as_answerer(
     stdin_rx: &mpsc::Receiver<String>,
 ) -> Result<(PeerConnection, DataChannel)> {
     let offer = wait_for_code(offer_type, stdin_rx).await?;
-    let mut conn =
-        PeerConnection::new(TIMEOUT, vec![DEFAULT_STUN_SERVER_URL.to_owned()], protocol).await?;
+    let mut conn = PeerConnection::new(TIMEOUT, vec![DEFAULT_STUN_SERVER_URL.to_owned()]).await?;
     let answer = conn.start_as_answerer(offer).await?;
     print_and_copy_code(answer_type, &answer);
     println!("Waiting for connection...");
-    let data_channel = conn.wait_for_open_data_channel().await?;
+    let data_channel = conn.wait_for_open_data_channel(protocol).await?;
     Ok((conn, data_channel))
 }
 
