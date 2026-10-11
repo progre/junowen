@@ -1,75 +1,25 @@
+mod acceptance;
+mod game_log;
+mod initial;
+mod status_text;
+
 use anyhow::Result;
-use getset::Getters;
-use junowen_lib::{
-    Th19,
-    structs::{app::MainMenu, selection::Player},
-};
+use junowen_lib::{Th19, structs::app::MainMenu};
 use tracing::info;
 
 use crate::{
-    session::{
-        RoundInitial,
-        battle::BattleSession,
-        spectator::{GameInitial, PlayerGameInitial, SpectatorInitial},
-        spectator_host::SpectatorHostSession,
-    },
+    session::{RoundInitial, spectator::GameInitial, spectator_host::SpectatorHostSession},
     signaling::waiting_for_match::WaitingForSpectator,
 };
 
-fn current_round_initial(th19: &Th19) -> RoundInitial {
-    RoundInitial {
-        seed1: th19.rand_seed1().unwrap(),
-        seed2: th19.rand_seed2().unwrap(),
-        seed3: th19.rand_seed3().unwrap(),
-        seed4: th19.rand_seed4().unwrap(),
-    }
-}
-
-fn create_spectator_initial(battle_session: &BattleSession, th19: &Th19) -> SpectatorInitial {
-    let local_player_name = th19.vs_mode().player_name().to_string();
-    let remote_player_name = battle_session.remote_player_name().clone();
-    let (p1_name, p2_name) = if battle_session.host() {
-        (local_player_name, remote_player_name)
-    } else {
-        (remote_player_name, local_player_name)
-    };
-    SpectatorInitial::new(
-        p1_name,
-        p2_name,
-        battle_session
-            .match_initial()
-            .as_ref()
-            .unwrap()
-            .game_settings
-            .clone(),
-    )
-}
-
-/// 進行中の試合の記録。試合の途中で接続した観戦者は、これを受け取って試合の最初から早送りで追いかける
-struct GameLog {
-    init: GameInitial,
-    messages: Vec<GameLogMessage>,
-}
-
-enum GameLogMessage {
-    InitRound(RoundInitial),
-    Inputs(u16, u16),
-}
-
-impl GameLog {
-    fn send_to(&self, session: &SpectatorHostSession) -> Result<()> {
-        session.send_init_game(self.init.clone())?;
-        for msg in &self.messages {
-            match msg {
-                GameLogMessage::InitRound(round_initial) => {
-                    session.send_init_round(round_initial.clone())?
-                }
-                GameLogMessage::Inputs(p1, p2) => session.send_inputs(*p1, *p2)?,
-            }
-        }
-        Ok(())
-    }
-}
+use self::{
+    acceptance::Acceptance,
+    game_log::{GameLog, GameLogMessage},
+};
+pub use self::{
+    initial::{SpectatorInitialSource, current_game_initial, current_round_initial},
+    status_text::status_text,
+};
 
 /// 観戦者の管理
 ///
@@ -77,10 +27,12 @@ impl GameLog {
 /// 選択画面で接続した場合は、次の試合の開始時にキャラクター・カード・乱数シードを受け取り、
 /// それに合わせて試合を始める。
 /// 試合中に接続した場合は、その試合の開始時の状態とそれまでの入力を受け取り、試合の最初から追いかける
-#[derive(Getters)]
+///
+/// 対戦者は最初の観戦者のみを受け付け、その観戦者を観戦ホストに任命して以降の受け付けを委譲する。
+/// 観戦ホストは自分が処理した試合の進行を、同じ順序で配下の観戦者に中継する。
+/// 観戦ホストが離脱すると、配下の観戦者もすべて離脱する
 pub struct SpectatorHostState {
-    #[get = "pub"]
-    waiting: WaitingForSpectator,
+    acceptance: Acceptance,
     /// 次の試合の開始を待っている観戦者
     standby_sessions: Vec<SpectatorHostSession>,
     /// 試合を観戦している観戦者
@@ -90,13 +42,27 @@ pub struct SpectatorHostState {
 }
 
 impl SpectatorHostState {
+    /// 対戦者用。最初の観戦者を観戦ホストに任命する
     pub fn new(waiting: WaitingForSpectator) -> Self {
+        Self::with_acceptance(Acceptance::WaitingForSpectatorHost(waiting))
+    }
+
+    /// 観戦ホスト用
+    pub fn new_relay(waiting: WaitingForSpectator) -> Self {
+        Self::with_acceptance(Acceptance::Relaying(waiting))
+    }
+
+    fn with_acceptance(acceptance: Acceptance) -> Self {
         Self {
-            waiting,
+            acceptance,
             standby_sessions: Vec::new(),
             sessions: Vec::new(),
             game_log: None,
         }
+    }
+
+    pub fn waiting(&self) -> Option<&WaitingForSpectator> {
+        self.acceptance.waiting()
     }
 
     pub fn count_spectators(&self) -> usize {
@@ -109,14 +75,16 @@ impl SpectatorHostState {
         pushed: bool,
         main_menu: Option<&MainMenu>,
         th19: &Th19,
-        battle_session: &BattleSession,
+        initial_source: &impl SpectatorInitialSource,
     ) {
-        let Some(session) = self.waiting.try_recv_session(pushed, main_menu, th19) else {
+        let has_spectators = self.count_spectators() > 0;
+        let Some(session) =
+            self.acceptance
+                .try_recv_session(has_spectators, pushed, main_menu, th19)
+        else {
             return;
         };
-        if let Err(err) =
-            session.send_init_spectator(create_spectator_initial(battle_session, th19))
-        {
+        if let Err(err) = session.send_init_spectator(initial_source.spectator_initial(th19)) {
             info!("initialize spectator failed: {:?}", err);
             return;
         }
@@ -131,7 +99,7 @@ impl SpectatorHostState {
         }
         info!(
             "spectator joined during game. replaying {} messages",
-            game_log.messages.len()
+            game_log.message_count()
         );
         self.sessions.push(session);
     }
@@ -149,21 +117,12 @@ impl SpectatorHostState {
             true
         });
         if let Some(game_log) = &mut self.game_log {
-            game_log.messages.push(msg);
+            game_log.push(msg);
         }
     }
 
     /// 試合開始時 (キャラクター選択画面から読み込み画面に移ったとき) に呼ぶ
-    pub fn start_game(&mut self, th19: &Th19) {
-        let selection = th19.selection();
-        let player =
-            |player: &Player| PlayerGameInitial::new(player.character as u8, player.card as u8);
-        let init = GameInitial::new(
-            selection.difficulty as u8,
-            player(selection.p1()),
-            player(selection.p2()),
-            current_round_initial(th19),
-        );
+    pub fn start_game(&mut self, init: GameInitial) {
         self.sessions.append(&mut self.standby_sessions);
         self.sessions.retain(|session| {
             if let Err(err) = session.send_init_game(init.clone()) {
@@ -172,10 +131,7 @@ impl SpectatorHostState {
             }
             true
         });
-        self.game_log = Some(GameLog {
-            init,
-            messages: Vec::new(),
-        });
+        self.game_log = Some(GameLog::new(init));
     }
 
     /// 試合終了時 (試合から選択画面に戻るとき) に呼ぶ
@@ -183,8 +139,7 @@ impl SpectatorHostState {
         self.game_log = None;
     }
 
-    pub fn send_init_round(&mut self, th19: &Th19) {
-        let round_initial = current_round_initial(th19);
+    pub fn send_init_round(&mut self, round_initial: RoundInitial) {
         self.broadcast(
             GameLogMessage::InitRound(round_initial.clone()),
             |session| session.send_init_round(round_initial.clone()),

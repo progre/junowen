@@ -13,9 +13,10 @@ use tracing::trace;
 use crate::{
     helper::{inputed_number, pushed_f1},
     session::{MatchInitial, battle::BattleSession},
+    state::spectator_host::SpectatorHostState,
 };
 
-use super::{spectator_host::SpectatorHostState, utils::init_round};
+use super::utils::init_round;
 
 fn init_match(th19: &mut Th19, battle_session: &mut BattleSession) -> Result<(), RecvError> {
     trace!("init_match");

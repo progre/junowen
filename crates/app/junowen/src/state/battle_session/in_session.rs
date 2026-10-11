@@ -1,13 +1,11 @@
-use std::{borrow::Cow, ffi::c_void};
+use std::ffi::c_void;
 
 use junowen_lib::{Th19, structs::settings::GameSettings};
 
-use crate::{
-    signaling::waiting_for_match::{WaitingForPureP2pSpectator, WaitingForSpectator},
-    state::render_parts::{render_footer, render_game_settings, render_names},
+use crate::state::{
+    render_parts::{render_footer, render_game_settings, render_names},
+    spectator_host::{SpectatorHostState, status_text},
 };
-
-use super::spectator_host::SpectatorHostState;
 
 pub struct RenderingStatus<'a> {
     pub host: bool,
@@ -24,38 +22,7 @@ pub fn on_render_texts(th19: &Th19, text_renderer: &c_void, status: RenderingSta
         render_game_settings(th19, text_renderer, game_settings);
     }
 
-    let (msg2_rear, msg2_front) = if status.spectator_host_state.count_spectators() > 0 {
-        (
-            "               ",
-            Cow::Owned(format!(
-                "Spectator(s): {}",
-                status.spectator_host_state.count_spectators()
-            )),
-        )
-    } else {
-        match status.spectator_host_state.waiting() {
-            WaitingForSpectator::PureP2p(waiting) => match waiting {
-                WaitingForPureP2pSpectator::Standby { ready: false, .. }
-                | WaitingForPureP2pSpectator::SignalingCodeRecved { ready: false, .. }
-                | WaitingForPureP2pSpectator::SignalingCodeSent { ready: false, .. } => {
-                    ("", "".into())
-                }
-                WaitingForPureP2pSpectator::Standby { .. } => (
-                    "       __                                    ",
-                    "(Press F1 to accept spectator from clipboard)".into(),
-                ),
-                WaitingForPureP2pSpectator::SignalingCodeRecved { .. } => (
-                    "                              ",
-                    "(Generating signaling code...)".into(),
-                ),
-                WaitingForPureP2pSpectator::SignalingCodeSent { .. } => (
-                    "                                                      ",
-                    "(Your signaling code has been copied to the clipboard)".into(),
-                ),
-            },
-            WaitingForSpectator::ReservedRoom(_) => ("", "".into()),
-        }
-    };
+    let (msg2_rear, msg2_front) = status_text(status.spectator_host_state);
 
     let delay_underline = if status.host { "_" } else { " " };
     let msg_front/* _ */= format!("Delay: {} {}", status.delay, msg2_front);

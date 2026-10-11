@@ -5,7 +5,7 @@ use junowen_lib::{Th19, structs::input_devices::InputValue};
 
 use crate::{present_skipper::PresentSkipper, session::spectator::SpectatorSession};
 
-use super::set_rand_seeds;
+use super::game_initial::set_rand_seeds;
 
 /// 未処理の入力がこのフレーム数を超えている場合、早送りして追いつく
 const CATCH_UP_THRESHOLD: usize = 30;

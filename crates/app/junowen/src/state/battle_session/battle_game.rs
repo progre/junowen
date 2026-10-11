@@ -3,9 +3,13 @@ use std::sync::mpsc::RecvError;
 use anyhow::Result;
 use junowen_lib::{Th19, structs::input_devices::InputValue};
 
-use crate::{helper::inputed_number, session::battle::BattleSession};
+use crate::{
+    helper::inputed_number,
+    session::battle::BattleSession,
+    state::spectator_host::{SpectatorHostState, current_round_initial},
+};
 
-use super::{spectator_host::SpectatorHostState, utils::init_round};
+use super::utils::init_round;
 
 pub struct BattleGame;
 
@@ -55,7 +59,7 @@ impl BattleGame {
         th19: &mut Th19,
     ) -> Result<(), RecvError> {
         init_round(th19, session)?;
-        spectator_host_state.send_init_round(th19);
+        spectator_host_state.send_init_round(current_round_initial(th19));
         Ok(())
     }
 }

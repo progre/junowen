@@ -1,7 +1,6 @@
 mod battle_game;
 mod battle_select;
 mod in_session;
-mod spectator_host;
 mod utils;
 
 use std::{ffi::c_void, sync::mpsc::RecvError};
@@ -20,9 +19,12 @@ use crate::{
 
 use self::in_session::RenderingStatus;
 
-use super::prepare::Prepare;
+use super::{
+    prepare::Prepare,
+    spectator_host::{SpectatorHostState, current_game_initial},
+};
 
-use {battle_game::BattleGame, battle_select::BattleSelect, spectator_host::SpectatorHostState};
+use {battle_game::BattleGame, battle_select::BattleSelect};
 
 pub struct BattleSession {
     props: BattleSessionProps,
@@ -79,7 +81,8 @@ impl BattleSession {
                 let main_menu = th19.app().main_loop_tasks().find_main_menu().unwrap();
                 match main_menu.screen_id() {
                     ScreenId::GameLoading => {
-                        self.spectator_host_state.start_game(th19);
+                        self.spectator_host_state
+                            .start_game(current_game_initial(th19));
                         self.change_to_game_loading();
                         Some(Some(main_menu))
                     }

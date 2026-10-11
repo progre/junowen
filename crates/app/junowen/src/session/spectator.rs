@@ -4,55 +4,20 @@ use std::{
 };
 
 use anyhow::Result;
-use derive_new::new;
 use getset::{CopyGetters, Getters, Setters};
-use junowen_lib::{
-    connection::{DataChannel, PeerConnection},
-    structs::settings::GameSettings,
-};
-use serde::{Deserialize, Serialize};
+use junowen_lib::connection::{DataChannel, PeerConnection};
 use tracing::{error, info, warn};
 
 use super::{session_message::RoundInitial, to_channel};
 
-#[derive(new, Clone, Debug, Deserialize, Getters, Serialize)]
-pub struct SpectatorInitial {
-    #[get = "pub"]
-    p1_name: String,
-    #[get = "pub"]
-    p2_name: String,
-    #[get = "pub"]
-    game_settings: GameSettings,
-}
+mod message;
+mod relay_outbox;
 
-#[derive(new, Clone, Copy, Debug, Deserialize, CopyGetters, PartialEq, Serialize)]
-pub struct PlayerGameInitial {
-    #[get_copy = "pub"]
-    character: u8,
-    #[get_copy = "pub"]
-    card: u8,
-}
-
-/// 試合開始時の状態。観戦者はこれに合わせてキャラクターとカードを決定する
-#[derive(new, Clone, Debug, Deserialize, CopyGetters, Getters, Serialize)]
-pub struct GameInitial {
-    #[get_copy = "pub"]
-    difficulty: u8,
-    #[get_copy = "pub"]
-    p1: PlayerGameInitial,
-    #[get_copy = "pub"]
-    p2: PlayerGameInitial,
-    #[get = "pub"]
-    round_initial: RoundInitial,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub enum SpectatorSessionMessage {
-    InitSpectator(SpectatorInitial),
-    InitGame(GameInitial),
-    InitRound(RoundInitial),
-    Inputs(u16, u16),
-}
+pub use message::{
+    GameInitial, PlayerGameInitial, SpectatorHostDelegation, SpectatorInitial, SpectatorRelayRoom,
+    SpectatorSessionMessage,
+};
+pub use relay_outbox::RelayOutbox;
 
 #[derive(CopyGetters, Getters, Setters)]
 pub struct SpectatorSession {
@@ -63,6 +28,7 @@ pub struct SpectatorSession {
     disconnected: bool,
     spectator_initial: Option<SpectatorInitial>,
     round_initial: Option<RoundInitial>,
+    relay_outbox: RelayOutbox,
 }
 
 impl SpectatorSession {
@@ -76,6 +42,7 @@ impl SpectatorSession {
             disconnected: false,
             spectator_initial: None,
             round_initial: None,
+            relay_outbox: RelayOutbox::default(),
         }
     }
 
@@ -83,10 +50,18 @@ impl SpectatorSession {
         self.spectator_initial.as_ref()
     }
 
+    pub fn relay_outbox_mut(&mut self) -> &mut RelayOutbox {
+        &mut self.relay_outbox
+    }
+
     fn fill_buffer(&mut self) {
         loop {
             match self.hook_incoming_rx.try_recv() {
-                Ok(msg) => self.buffer.push_back(msg),
+                Ok(msg) => {
+                    if let Some(msg) = self.relay_outbox.filter_delegation(msg) {
+                        self.buffer.push_back(msg);
+                    }
+                }
                 Err(TryRecvError::Empty) => return,
                 Err(TryRecvError::Disconnected) => {
                     self.disconnected = true;
@@ -97,10 +72,21 @@ impl SpectatorSession {
     }
 
     fn next_message(&mut self) -> Result<SpectatorSessionMessage, RecvError> {
+        let msg = self.pop_message()?;
+        self.relay_outbox.push_processed(&msg);
+        Ok(msg)
+    }
+
+    fn pop_message(&mut self) -> Result<SpectatorSessionMessage, RecvError> {
         if let Some(msg) = self.buffer.pop_front() {
             return Ok(msg);
         }
-        self.hook_incoming_rx.recv()
+        loop {
+            let msg = self.hook_incoming_rx.recv()?;
+            if let Some(msg) = self.relay_outbox.filter_delegation(msg) {
+                return Ok(msg);
+            }
+        }
     }
 
     /// 受信済みで未処理のメッセージ数を返す
@@ -158,7 +144,11 @@ impl SpectatorSession {
         self.fill_buffer();
         while let Some(msg) = self.buffer.pop_front() {
             match msg {
-                SpectatorSessionMessage::InitGame(init) => return Ok(Some(init)),
+                SpectatorSessionMessage::InitGame(init) => {
+                    self.relay_outbox
+                        .push(SpectatorSessionMessage::InitGame(init.clone()));
+                    return Ok(Some(init));
+                }
                 SpectatorSessionMessage::InitSpectator(init) => {
                     error!("unexpected init spectator message: {:?}", init);
                     return Err(RecvError);
@@ -192,6 +182,7 @@ impl SpectatorSession {
                     return Ok(Some(round_initial));
                 }
                 SpectatorSessionMessage::Inputs(..) => continue,
+                SpectatorSessionMessage::DelegateSpectatorHost(..) => unreachable!(),
             }
         }
     }
@@ -215,6 +206,7 @@ impl SpectatorSession {
                 Ok((0, 0))
             }
             SpectatorSessionMessage::Inputs(p1, p2) => Ok((p1, p2)),
+            SpectatorSessionMessage::DelegateSpectatorHost(..) => unreachable!(),
         }
     }
 }

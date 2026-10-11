@@ -1,4 +1,6 @@
+mod game_initial;
 mod in_session;
+mod relay;
 mod spectator_game;
 mod spectator_standby;
 
@@ -18,55 +20,21 @@ use tracing::warn;
 use crate::{
     helper::pushed_escape,
     present_skipper::PresentSkipper,
-    session::{
-        RoundInitial,
-        spectator::{GameInitial, SpectatorSession as SpectatorSessionProps},
-    },
+    session::{RoundInitial, spectator::SpectatorSession as SpectatorSessionProps},
 };
 
 use super::prepare::Prepare;
 
 use {
+    game_initial::{set_rand_seeds, verify_game_initial},
+    relay::Relay,
     spectator_game::{SpectatorGame, update_no_wait_for_catch_up},
     spectator_standby::SpectatorStandby,
 };
 
-fn set_rand_seeds(th19: &mut Th19, round_initial: &RoundInitial) {
-    th19.set_rand_seed1(round_initial.seed1).unwrap();
-    th19.set_rand_seed2(round_initial.seed2).unwrap();
-    th19.set_rand_seed3(round_initial.seed3).unwrap();
-    th19.set_rand_seed4(round_initial.seed4).unwrap();
-}
-
-/// 観戦者の試合開始時の状態がホストと一致しているか確認する
-fn verify_game_initial(th19: &Th19, init: &GameInitial) -> bool {
-    let selection = th19.selection();
-    let actual = (
-        selection.difficulty as u8,
-        selection.p1().character as u8,
-        selection.p1().card as u8,
-        selection.p2().character as u8,
-        selection.p2().card as u8,
-    );
-    let expected = (
-        init.difficulty(),
-        init.p1().character(),
-        init.p1().card(),
-        init.p2().character(),
-        init.p2().card(),
-    );
-    if actual != expected {
-        warn!(
-            "game initial mismatch. expected={:?}, actual={:?}",
-            expected, actual
-        );
-        return false;
-    }
-    true
-}
-
 pub struct SpectatorSession {
     props: SpectatorSessionProps,
+    relay: Relay,
     present_skipper: PresentSkipper,
     state: SpectatorSessionState,
 }
@@ -84,6 +52,7 @@ impl SpectatorSession {
     pub fn prepare(props: SpectatorSessionProps) -> Self {
         Self {
             props,
+            relay: Relay::default(),
             present_skipper: PresentSkipper::default(),
             state: SpectatorSessionState::Prepare(Prepare::new()),
         }
@@ -98,6 +67,7 @@ impl SpectatorSession {
     }
 
     pub fn change_to_prepare(&mut self) {
+        self.relay.end_game();
         self.state = SpectatorSessionState::Prepare(Prepare::new());
     }
     pub fn change_to_standby(&mut self, first_time: bool) {
@@ -111,6 +81,7 @@ impl SpectatorSession {
         self.state = SpectatorSessionState::Game(SpectatorGame);
     }
     pub fn change_to_back_to_select(&mut self) {
+        self.relay.end_game();
         self.state = SpectatorSessionState::BackToSelect;
     }
 
@@ -192,10 +163,12 @@ impl SpectatorSession {
         menu: Option<&MainMenu>,
         th19: &mut Th19,
     ) -> Result<(), RecvError> {
+        self.relay.start_if_delegated(&mut self.props);
         match &mut self.state {
             SpectatorSessionState::Prepare(prepare) => prepare.update_th19_on_input_players(th19),
             SpectatorSessionState::Standby(standby) => {
-                standby.update_th19_on_input_players(&mut self.props, menu.unwrap(), th19)?
+                standby.update_th19_on_input_players(&mut self.props, menu.unwrap(), th19)?;
+                self.relay.accept_spectators(&self.props, menu, th19);
             }
             SpectatorSessionState::GameLoading(round_initial) => {
                 if let Some(round_initial) = round_initial.take() {
@@ -204,14 +177,17 @@ impl SpectatorSession {
                 update_no_wait_for_catch_up(&mut self.props, &self.present_skipper, th19);
             }
             SpectatorSessionState::Game(game) => {
-                game.update_th19(&mut self.props, &self.present_skipper, th19)?
+                game.update_th19(&mut self.props, &self.present_skipper, th19)?;
+                self.relay.accept_spectators(&self.props, None, th19);
             }
             SpectatorSessionState::BackToSelect => {}
         }
+        self.relay.forward(&mut self.props);
         Ok(())
     }
 
     pub fn on_input_menu(&mut self, th19: &mut Th19) -> Result<bool, RecvError> {
+        self.relay.start_if_delegated(&mut self.props);
         match &mut self.state {
             SpectatorSessionState::Prepare(prepare) => prepare.update_th19_on_input_menu(th19),
             SpectatorSessionState::Standby(standby) => {
@@ -226,11 +202,14 @@ impl SpectatorSession {
                     return Ok(false);
                 }
                 standby.update_th19_on_input_menu(&mut self.props, main_menu, th19)?;
+                self.relay
+                    .accept_spectators(&self.props, Some(&*main_menu), th19);
             }
             SpectatorSessionState::GameLoading(_) => {}
             SpectatorSessionState::Game { .. } => {}
             SpectatorSessionState::BackToSelect => {}
         }
+        self.relay.forward(&mut self.props);
         Ok(true)
     }
 
@@ -251,6 +230,7 @@ impl SpectatorSession {
             initial.p1_name(),
             initial.p2_name(),
             waiting_for_host,
+            self.relay.state(),
         );
     }
 
@@ -258,6 +238,8 @@ impl SpectatorSession {
         let SpectatorSessionState::Game(game) = &mut self.state else {
             return Ok(());
         };
-        game.on_round_over(&mut self.props, th19)
+        game.on_round_over(&mut self.props, th19)?;
+        self.relay.forward(&mut self.props);
+        Ok(())
     }
 }

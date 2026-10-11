@@ -5,6 +5,7 @@ mod shared_room_opponent_socket;
 mod socket;
 mod tcp_signaling_guest_socket;
 mod tcp_signaling_host_socket;
+mod waiting_for_pure_p2p_spectator;
 pub mod waiting_for_spectator;
 mod waiting_in_room;
 
@@ -13,7 +14,8 @@ use tokio::sync::mpsc;
 
 use crate::session::{battle::BattleSession, spectator::SpectatorSession};
 
-pub use waiting_for_spectator::{WaitingForPureP2pSpectator, WaitingForSpectator};
+pub use waiting_for_pure_p2p_spectator::WaitingForPureP2pSpectator;
+pub use waiting_for_spectator::WaitingForSpectator;
 pub use waiting_in_room::{
     WaitingForOpponentInReservedRoom, WaitingForOpponentInSharedRoom,
     WaitingForOpponentOverTcpSignaling, WaitingForSpectatorHostInReservedRoom, WaitingInRoom,
@@ -42,34 +44,19 @@ impl WaitingForOpponent {
         match self {
             Self::SharedRoom(waiting) => waiting
                 .try_into_session()
-                .map(|session| {
-                    (
-                        session,
-                        WaitingForSpectator::PureP2p(WaitingForPureP2pSpectator::standby()),
-                    )
-                })
+                .map(|session| (session, WaitingForSpectator::new(None)))
                 .map_err(WaitingForOpponent::SharedRoom),
             Self::ReservedRoom(waiting) => waiting
                 .try_into_session_and_waiting_for_spectator()
                 .map_err(WaitingForOpponent::ReservedRoom),
             Self::TcpSignaling(waiting) => waiting
                 .try_into_session()
-                .map(|session| {
-                    (
-                        session,
-                        WaitingForSpectator::PureP2p(WaitingForPureP2pSpectator::standby()),
-                    )
-                })
+                .map(|session| (session, WaitingForSpectator::new(None)))
                 .map_err(WaitingForOpponent::TcpSignaling),
             Self::PureP2p(mut waiting) => waiting
                 .battle_session_rx
                 .try_recv()
-                .map(|session| {
-                    (
-                        session,
-                        WaitingForSpectator::PureP2p(WaitingForPureP2pSpectator::standby()),
-                    )
-                })
+                .map(|session| (session, WaitingForSpectator::new(None)))
                 .map_err(|_| Self::PureP2p(waiting)),
         }
     }

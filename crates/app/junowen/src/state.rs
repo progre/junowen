@@ -2,6 +2,7 @@ mod battle_session;
 mod prepare;
 mod render_parts;
 mod session;
+mod spectator_host;
 mod spectator_session;
 pub mod standby;
 
